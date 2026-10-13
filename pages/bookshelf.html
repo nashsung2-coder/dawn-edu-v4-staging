@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>個人書架 — 曙光教育</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.entry { margin-bottom: 12px; cursor: pointer; }
+.entry .topic {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--brass-400); margin-bottom: 6px;
+}
+.entry .title { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.entry .summary { color: var(--paper-200); font-size: 14px; }
+.entry .full { display: none; margin-top: 12px; border-top: 1px solid oklch(1 0 0 / 0.06); padding-top: 12px; }
+.entry.open .full { display: block; }
+.entry .full h4 {
+  font-family: var(--font-display); font-size: 14px; margin: 12px 0 6px; color: var(--brass-300);
+}
+.entry .full p { color: var(--paper-200); font-size: 14px; white-space: pre-wrap; }
+.entry .date { font-family: var(--font-mono); font-size: 12px; color: var(--paper-400); margin-top: 10px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag {
+  font-size: 12px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid oklch(0.60 0.12 80 / 0.3); color: var(--paper-200);
+}
+.empty-img { max-width: 220px; border-radius: 4px; opacity: .75; margin-bottom: 16px; }
+</style>
+<link rel="manifest" href="../manifest.json"></head>
+<body>
+<main class="main">
+  <div class="page-head">
+    <div class="en">Bookshelf</div>
+    <h1>個人書架</h1>
+  </div>
+  <div id="v"></div>
+</main>
+<script type="module" src="../js/pages/bookshelf.js"></script>
+</body>
+</html>

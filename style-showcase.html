@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>曙光教育 v4 — 風格稿</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink-950: oklch(0.16 0.03 260);
+  --ink-900: oklch(0.20 0.04 260);
+  --ink-800: oklch(0.26 0.05 260);
+  --paper-50: oklch(0.96 0.02 90);
+  --paper-200: oklch(0.88 0.03 90);
+  --paper-400: oklch(0.72 0.03 90);
+  --brass-300: oklch(0.82 0.12 85);
+  --brass-400: oklch(0.74 0.14 80);
+  --brass-600: oklch(0.60 0.12 80);
+  --teal-400: oklch(0.68 0.10 200);
+  --signal-green: oklch(0.72 0.14 150);
+  --signal-red: oklch(0.62 0.18 25);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--ink-950);
+  color: var(--paper-50);
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 15px; line-height: 1.7;
+  min-height: 100vh;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px 96px; }
+.caption {
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+  letter-spacing: .25em; text-transform: uppercase;
+  color: var(--brass-400); margin-bottom: 8px;
+}
+h1 {
+  font-family: "Noto Serif TC", serif; font-weight: 900;
+  font-size: 40px; line-height: 1.2; margin-bottom: 8px;
+}
+.sub { color: var(--paper-400); font-size: 15px; margin-bottom: 48px; max-width: 600px; }
+.section { margin-bottom: 56px; }
+.section > .caption { margin-bottom: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.card {
+  background: var(--ink-900);
+  border: 1px solid oklch(0.60 0.12 80 / 0.25);
+  border-top: 2px solid var(--brass-400);
+  border-radius: 4px;
+  padding: 24px;
+}
+.card h3 {
+  font-family: "Noto Serif TC", serif; font-weight: 700;
+  font-size: 18px; margin-bottom: 8px;
+}
+.card p { color: var(--paper-400); font-size: 14px; }
+.card .num {
+  font-family: "JetBrains Mono", monospace; font-weight: 700;
+  font-size: 32px; color: var(--brass-300); margin: 8px 0;
+}
+.btn {
+  display: inline-block; padding: 12px 28px;
+  font-family: "Noto Sans TC", sans-serif; font-weight: 700; font-size: 15px;
+  border-radius: 2px; cursor: pointer; border: 1px solid transparent;
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-primary { background: var(--brass-400); color: var(--ink-950); }
+.btn-primary:hover { background: var(--brass-300); }
+.btn-ghost {
+  background: transparent; color: var(--paper-200);
+  border-color: oklch(0.60 0.12 80 / 0.4);
+}
+.btn-ghost:hover { border-color: var(--brass-400); color: var(--brass-300); }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.badge-seal {
+  width: 88px; height: 88px; border-radius: 50%;
+  border: 2px solid var(--brass-400);
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Noto Serif TC", serif; font-weight: 900; font-size: 20px;
+  color: var(--brass-300); background: oklch(0.74 0.14 80 / 0.08);
+}
+.palette { display: flex; gap: 0; border-radius: 4px; overflow: hidden; margin-top: 16px; }
+.swatch { flex: 1; height: 72px; display: flex; align-items: flex-end; padding: 8px; }
+.swatch span {
+  font-family: "JetBrains Mono", monospace; font-size: 10px;
+  background: oklch(0 0 0 / 0.5); color: #fff; padding: 2px 6px; border-radius: 2px;
+}
+.type-sample { margin-bottom: 24px; }
+.type-sample .label {
+  font-family: "JetBrains Mono", monospace; font-size: 11px;
+  color: var(--paper-400); letter-spacing: .15em; margin-bottom: 4px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th {
+  font-family: "JetBrains Mono", monospace; font-size: 11px;
+  letter-spacing: .15em; text-transform: uppercase; color: var(--brass-400);
+  text-align: left; padding: 12px; border-bottom: 1px solid oklch(0.60 0.12 80 / 0.3);
+}
+td { padding: 12px; border-bottom: 1px solid oklch(1 0 0 / 0.06); }
+td.num { font-family: "JetBrains Mono", monospace; text-align: right; color: var(--brass-300); }
+.bar { height: 6px; background: oklch(1 0 0 / 0.08); border-radius: 2px; overflow: hidden; }
+.bar > div { height: 100%; background: var(--brass-400); border-radius: 2px; }
+.note {
+  border-left: 2px solid var(--brass-400); padding: 12px 16px;
+  background: oklch(0.74 0.14 80 / 0.06); color: var(--paper-200);
+  font-size: 14px; margin-top: 24px; border-radius: 0 4px 4px 0;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="caption">Dawn Education · v4 Concept</div>
+  <h1>深夜圖書館</h1>
+  <p class="sub">墨藍的夜、暖紙的字、黃銅的燈。這不是另一個 AI 生成的紫藍漸層儀表板，而是一間為深夜讀書人開的圖書館。襯線標題、等寬數字、直角卡片、黃銅細線——每個像素都有來頭。</p>
+
+  <div class="section">
+    <div class="caption">01 · Color</div>
+    <div class="palette">
+      <div class="swatch" style="background:oklch(0.16 0.03 260)"><span>ink-950</span></div>
+      <div class="swatch" style="background:oklch(0.20 0.04 260)"><span>ink-900</span></div>
+      <div class="swatch" style="background:oklch(0.96 0.02 90)"><span>paper-50</span></div>
+      <div class="swatch" style="background:oklch(0.74 0.14 80)"><span>brass-400</span></div>
+      <div class="swatch" style="background:oklch(0.68 0.10 200)"><span>teal-400</span></div>
+    </div>
+    <div class="note">主色只有三個：墨藍、暖紙、黃銅。青色只用在次要資訊，紅綠只用在對錯回饋。不會有第四個裝飾色。</div>
+  </div>
+
+  <div class="section">
+    <div class="caption">02 · Typography</div>
+    <div class="type-sample">
+      <div class="label">DISPLAY / Noto Serif TC 900</div>
+      <div style="font-family:'Noto Serif TC',serif;font-weight:900;font-size:32px;">費曼學習法</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">BODY / Noto Sans TC 400</div>
+      <div>用你自己的話把概念講清楚，講不清楚的地方就是你還沒學會的地方。</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">MONO / JetBrains Mono — 所有數字</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--brass-300)">87.5% · 1,240 · Lv.12</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="caption">03 · Cards</div>
+    <div class="grid">
+      <div class="card">
+        <div class="caption" style="margin-bottom:8px;">Feynman · 03</div>
+        <h3>費曼說服</h3>
+        <div class="num">87.5%</div>
+        <p>用自己的話說服 AI，完整度達標後存入個人課本。</p>
+        <div class="btn-row"><button class="btn btn-primary">開始說服</button></div>
+      </div>
+      <div class="card">
+        <div class="caption" style="margin-bottom:8px;">Battle · 12</div>
+        <h3>知識對戰</h3>
+        <div class="num">1,240</div>
+        <p>三題選擇題開戰，辯論攻防，贏得技能徽章。</p>
+        <div class="btn-row"><button class="btn btn-ghost">進入戰場</button></div>
+      </div>
+      <div class="card">
+        <div class="caption" style="margin-bottom:8px;">Review · 05</div>
+        <h3>今日複習</h3>
+        <div class="bar" style="margin:12px 0;"><div style="width:60%"></div></div>
+        <p>SM-2 間隔重複，今日到期 5 張，已完成 3 張。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="caption">04 · Data Table</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <tr><th>Topic</th><th>Mastery</th><th style="text-align:right;">Battles</th></tr>
+        <tr><td>牛頓第二運動定律</td><td><div class="bar"><div style="width:87%"></div></div></td><td class="num">12</td></tr>
+        <tr><td>光合作用</td><td><div class="bar"><div style="width:64%"></div></div></td><td class="num">8</td></tr>
+        <tr><td>二次函數</td><td><div class="bar"><div style="width:43%"></div></div></td><td class="num">5</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="caption">05 · Seal Badge</div>
+    <div style="display:flex;gap:24px;align-items:center;">
+      <div class="badge-seal">辯</div>
+      <div class="badge-seal">學</div>
+      <div class="badge-seal">思</div>
+      <p style="color:var(--paper-400);font-size:14px;max-width:400px;">徽章做成印章樣式，一個漢字一枚印。黃銅描邊，蓋在你的學習歷程上。</p>
+    </div>
+  </div>
+
+  <div class="btn-row" style="margin-top:48px;">
+    <button class="btn btn-primary" onclick="alert('風格確認後開始重建')">這個方向可以，開始重建</button>
+    <button class="btn btn-ghost" onclick="alert('請告訴我要調整什麼')">要調整</button>
+  </div>
+
+</div>
+</body>
+</html>

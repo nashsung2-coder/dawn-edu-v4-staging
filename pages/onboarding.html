@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新手指引 — 曙光教育</title><link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.ob-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; position:relative; z-index:1; }
+.ob-box { width:100%; max-width:640px; background:var(--ink-900); border:1px solid oklch(0.60 0.12 80 / 0.22); border-top:2px solid var(--brass-400); border-radius:3px; padding:36px 32px; }
+.ob-steps { display:flex; gap:8px; margin-bottom:24px; }
+.ob-steps i { flex:1; height:4px; background:oklch(1 0 0 / 0.1); border-radius:2px; }
+.ob-steps i.done { background:var(--brass-400); }
+.opt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin:20px 0; }
+.opt-card { background:var(--ink-800); border:1px solid oklch(1 0 0 / 0.1); border-radius:3px; padding:20px 12px; text-align:center; cursor:pointer; transition:border-color .2s; }
+.opt-card:hover { border-color:oklch(0.60 0.12 80 / 0.4); }
+.opt-card.sel { border-color:var(--brass-400); border-width:2px; }
+.opt-card .emoji { font-size:40px; margin-bottom:8px; }
+.opt-card .nm { font-weight:700; margin-bottom:4px; }
+.opt-card .ds { font-size:12px; color:var(--paper-400); }
+.q-opt { display:block; width:100%; text-align:left; background:var(--ink-800); border:1px solid oklch(1 0 0 / 0.1); border-radius:3px; padding:14px 16px; margin-bottom:10px; cursor:pointer; color:var(--paper-50); font-size:14px; }
+.q-opt:hover { border-color:oklch(0.60 0.12 80 / 0.4); }
+.q-opt.sel { border-color:var(--brass-400); border-width:2px; }
+</style>
+</head>
+<body>
+<div class="ob-wrap">
+  <div class="ob-box">
+    <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">WELCOME TO DAWN</div>
+    <h1 id="ob-title" style="font-family:var(--font-display);font-size:24px;margin-bottom:4px;">認識你自己</h1>
+    <p id="ob-sub" style="color:var(--paper-400);font-size:13px;margin-bottom:8px;">回答幾個問題，找到適合你的學習夥伴</p>
+    <div class="ob-steps" id="ob-steps"><i class="done"></i><i></i><i></i><i></i></div>
+    <div id="ob-body"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+      <button class="btn btn-ghost" id="ob-back" style="display:none;">上一步</button>
+      <button class="btn btn-primary" id="ob-next" disabled>下一步</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="../js/pages/onboarding.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商店 · 曙光教育</title><link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.shop-item { display: flex; flex-direction: column; }
+.shop-item .price {
+  font-family: var(--font-mono); font-weight: 700; font-size: 20px;
+  color: var(--brass-300); margin: 8px 0;
+}
+.shop-item .price small { font-size: 12px; color: var(--paper-400); font-weight: 400; }
+.shop-item p.desc { font-size: 13px; color: var(--paper-400); flex: 1; margin-bottom: 12px; }
+.balance-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; padding: 14px 18px;
+}
+.balance-bar .pts { font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--brass-300); }
+.inv-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid oklch(1 0 0 / 0.05); font-size: 13px; }
+.inv-row .qty { font-family: var(--font-mono); color: var(--brass-300); }
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="page-head">
+    <div class="en">Market</div>
+    <h1>商店</h1>
+  </div>
+  <div class="card balance-bar">
+    <span class="label">星砂餘額</span>
+    <span class="pts" id="m-balance">—</span>
+  </div>
+  <div id="m-view">
+    <div class="state-loading"><div class="skeleton" style="height:160px"></div></div>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <h2>我的背包</h2>
+    <div id="m-inv"><div class="skeleton" style="height:60px"></div></div>
+  </div>
+</div>
+<script type="module" src="../js/pages/market.js"></script>
+</body>
+</html>
