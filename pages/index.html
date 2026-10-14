@@ -7,6 +7,7 @@
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="../js/vendor/supabase.min.js"></script>
 <script>
 /* 清除舊版 v3 留下的 Service Worker */
 if ("serviceWorker" in navigator) {
@@ -206,15 +207,28 @@ if ("serviceWorker" in navigator) {
       });
     }).then(function(data) {
       if (data.user) {
-        /* 存 session */
+        /* 用 Supabase client 的 setSession 存 session（格式相容） */
         try {
-          localStorage.setItem("sb-bcdanvmuffxgtezopyib-auth-token", JSON.stringify({
+          var client = window.supabase.createClient(SUPABASE_URL, ANON_KEY);
+          client.auth.setSession({
             access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            user: data.user
-          }));
-        } catch (e) {}
-        window.location.href = "learn.html";
+            refresh_token: data.refresh_token
+          }).then(function() {
+            window.location.href = "learn.html";
+          }).catch(function() {
+            /* setSession 失敗時 fallback 手動存 */
+            try {
+              localStorage.setItem("sb-bcdanvmuffxgtezopyib-auth-token", JSON.stringify({
+                access_token: data.access_token,
+                refresh_token: data.refresh_token,
+                user: data.user
+              }));
+            } catch (e) {}
+            window.location.href = "learn.html";
+          });
+        } catch (e) {
+          window.location.href = "learn.html";
+        }
       } else if (mode === "signup") {
         setFb("註冊成功！請檢查信箱驗證後再登入", false);
         btnLogin.disabled = false;
