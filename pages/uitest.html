@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>UI Test</title></head>
+<body>
+<div id="result">載入中...</div>
+<script src="../js/vendor/supabase.min.js"></script>
+<script type="module">
+try {
+  const ui = await import("../core/ui.js?v=test123");
+  document.getElementById("result").textContent = "ui.js 載入成功！exports: " + Object.keys(ui).join(", ");
+} catch (e) {
+  document.getElementById("result").textContent = "載入失敗：" + e.message;
+}
+</script>
+</body></html>
