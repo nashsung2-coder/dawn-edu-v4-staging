@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>曙光教育 — 學習總覽</title><link rel="manifest" href="../manifest.json">
+<title>曙光教育 — 學習總覽</title>
+<link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -24,6 +25,27 @@
   </div>
 </div>
 <script src="../js/vendor/supabase.min.js"></script>
+<script>
+/* OAuth callback 兜底：URL 有 access_token 時立即存 session（不依賴 module） */
+(function() {
+  try {
+    if (window.location.hash && window.location.hash.indexOf("access_token=") !== -1) {
+      var params = new URLSearchParams(window.location.hash.substring(1));
+      var at = params.get("access_token"), rt = params.get("refresh_token");
+      if (at && rt && window.supabase) {
+        var client = window.supabase.createClient(
+          "https://bcdanvmuffxgtezopyib.supabase.co",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZGFudm11ZmZ4Z3Rlem9weWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3OTEzNTMsImV4cCI6MjEwNzM2NzM1M30.EZtkULSRB_qwVyDl86MOhGf_ihKAAMy7q3fwuKYX0JI"
+        );
+        client.auth.setSession({ access_token: at, refresh_token: rt }).then(function() {
+          window.history.replaceState(null, "", window.location.pathname);
+          window.location.reload();
+        });
+      }
+    }
+  } catch (e) {}
+})();
+</script>
 <script type="module" src="../js/pages/learn.js"></script>
 </body>
 </html>
