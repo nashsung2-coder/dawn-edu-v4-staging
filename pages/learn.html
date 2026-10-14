@@ -26,7 +26,15 @@
 </div>
 <script src="../js/vendor/supabase.min.js"></script>
 <script>
-/* OAuth callback 兜底：URL 有 access_token 時立即存 session（不依賴 module） */
+/* 全域錯誤顯示：任何 JS 錯誤直接顯示在頁面上 */
+window.addEventListener("error", function(e) {
+  var view = document.getElementById("learn-view");
+  if (view && !view.dataset.errShown) {
+    view.dataset.errShown = "1";
+    view.innerHTML = '<div class="state-empty"><p>錯誤：' + (e.message || "未知") + '</p><p style="font-size:12px;opacity:.7">' + (e.filename || "") + '</p><button class="btn btn-primary" onclick="location.reload()">重試</button></div>';
+  }
+}, true);
+/* OAuth callback 兜底 */
 (function() {
   try {
     if (window.location.hash && window.location.hash.indexOf("access_token=") !== -1) {
