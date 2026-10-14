@@ -5,7 +5,7 @@
 <script src="../js/vendor/supabase.min.js"></script>
 <script type="module">
 try {
-  const ui = await import("../core/ui.js?v=test123");
+  const ui = await import("../js/core/ui.js?v=test124");
   document.getElementById("result").textContent = "ui.js 載入成功！exports: " + Object.keys(ui).join(", ");
 } catch (e) {
   document.getElementById("result").textContent = "載入失敗：" + e.message;
