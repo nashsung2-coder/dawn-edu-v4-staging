@@ -1,5 +1,5 @@
-/* v4 核心：Supabase client */
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+/* v4 核心：Supabase client（用本地 UMD，不依賴 CDN） */
+const { createClient } = window.supabase;
 
 const SUPABASE_URL = "https://bcdanvmuffxgtezopyib.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjZGFudm11ZmZ4Z3Rlem9weWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3OTEzNTMsImV4cCI6MjEwNzM2NzM1M30.EZtkULSRB_qwVyDl86MOhGf_ihKAAMy7q3fwuKYX0JI";
