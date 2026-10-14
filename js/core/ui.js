@@ -20,7 +20,7 @@ const NAV_GROUPS = [
     ["pet.html", "\u9748\u7378", "nav-pet.webp"],
     ["settings.html", "\u8a2d\u5b9a", "nav-settings.webp"],
   ]},
-};
+];
 /* \u6241\u5e73\u7248\uff08\u76f8\u5bb9\u820a\u7a0b\u5f0f\u78bc\uff09 */
 const NAV = NAV_GROUPS.flatMap(g => g.items.map(([h, l, i]) => [h, l, i]));
 
