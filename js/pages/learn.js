@@ -2,10 +2,30 @@
 import { supabase, getProfile } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc, once, ensureProfile, ICO } from "../core/ui.js";
 
-await renderTopbar("learn.html");
-const user = await requireAuth();
-await ensureProfile(supabase, user);
+/* timeout 保護：避免無限卡住 */
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + " 超時（" + ms + "ms）")), ms)),
+  ]);
+}
+
 const view = document.getElementById("learn-view");
+function errView(msg) {
+  view.innerHTML = `<div class="state-empty">
+    <p>${esc(msg)}</p>
+    <button class="btn btn-primary" onclick="location.reload()">重試</button>
+    <button class="btn" onclick="localStorage.clear();location.href='index.html'" style="margin-top:8px">清除登入重試</button></div>`;
+}
+
+try {
+  await withTimeout(renderTopbar("learn.html"), 15000, "載入導覽列");
+  var user = await withTimeout(requireAuth(), 15000, "驗證登入");
+  await withTimeout(ensureProfile(supabase, user), 15000, "建立使用者資料");
+} catch (e) {
+  errView("載入失敗：" + e.message);
+  throw e;
+}
 
 /* 首次引導：只顯示一次 */
 once("dawn:v4:learn", () => `
@@ -19,11 +39,6 @@ once("dawn:v4:learn", () => `
   <button class="btn btn-primary" data-close>知道了</button>
 `);
 
-function errView(msg) {
-  view.innerHTML = `<div class="state-empty">
-    <p>${esc(msg)}</p>
-    <button class="btn btn-primary" onclick="location.reload()">重試</button></div>`;
-}
 
 try {
   const now = new Date().toISOString();
