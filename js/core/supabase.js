@@ -6,6 +6,23 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+/* 處理 OAuth callback：如果 URL 有 access_token，手動 setSession */
+(function handleOAuthCallback() {
+  try {
+    if (window.location.hash && window.location.hash.includes("access_token=")) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(() => {
+          /* 清除 URL fragment */
+          window.history.replaceState(null, "", window.location.pathname);
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+})();
+
 export async function getUser() {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
