@@ -68,6 +68,17 @@ export function youtubeId(url) {
 }
 
 /* 將 blocks 渲染為 HTML（檢視用） */
+/* 對戰按鈕事件委派（避免 inline onclick 的 XSS 風險） */
+if (typeof document !== "undefined" && !document._blkBattleBound) {
+  document._blkBattleBound = true;
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".blk-battle-go");
+    if (btn && btn.dataset.topic) {
+      location.href = "quiz.html?topic=" + encodeURIComponent(btn.dataset.topic);
+    }
+  });
+}
+
 export function renderBlocks(blocks, esc) {
   if (!Array.isArray(blocks) || !blocks.length) return "";
   return blocks.map(b => {
@@ -157,7 +168,7 @@ export function blocksText(blocks) {
           <div style="font-size:12px;font-weight:700;color:var(--brass-300);margin-bottom:8px;">⚔ 知識對戰 · ${diffLabel}</div>
           <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${esc(d.topic)}</div>
           ${d.description ? `<div style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">${esc(d.description)}</div>` : ""}
-          <button class="btn btn-primary btn-sm" onclick="location.href='quiz.html?topic='+encodeURIComponent('${esc(d.topic)}'.replace(/'/g, ""))">開始對戰</button>
+          <button class="btn btn-primary btn-sm blk-battle-go" data-topic="${esc(d.topic)}">開始對戰</button>
         </div>`;
       }
       case "feynman": return [d.concept, d.explanation].filter(Boolean).join("\n");
@@ -369,7 +380,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
           <div style="font-size:12px;font-weight:700;color:var(--brass-300);margin-bottom:8px;">⚔ 知識對戰 · ${diffLabel}</div>
           <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${esc(d.topic)}</div>
           ${d.description ? `<div style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">${esc(d.description)}</div>` : ""}
-          <button class="btn btn-primary btn-sm" onclick="location.href='quiz.html?topic='+encodeURIComponent('${esc(d.topic)}'.replace(/'/g, ""))">開始對戰</button>
+          <button class="btn btn-primary btn-sm blk-battle-go" data-topic="${esc(d.topic)}">開始對戰</button>
         </div>`;
       }
       case "feynman":
