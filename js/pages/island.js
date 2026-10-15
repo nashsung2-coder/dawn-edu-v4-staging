@@ -1,7 +1,7 @@
 /* 島嶼 v6：知識庫群島 — 每個知識分類長出一座專屬島嶼。
    費曼說服與知識對戰是知識庫的附加品：它們的產出化為知識節點，滋養群島。 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
 
 await renderTopbar("island.html");
 const user = await requireAuth();
@@ -89,6 +89,16 @@ async function load() {
                 ? `<div class="bar" style="margin:6px 0;"><div style="width:${prog}%"></div></div>
                    <div style="font-size:11px;color:var(--paper-400);">距 Lv.${lv + 1} 還差 ${nextAt - n} 個節點</div>`
                 : `<div style="font-size:12px;color:var(--brass-300);">已達最高等級</div>`}
+              ${(() => {
+                // 探索度：從 localStorage 讀取
+                let exp = 0;
+                try { exp = parseFloat(localStorage.getItem(`dawn_explore_${user.id}_${cat}`) || "0"); } catch {}
+                if (exp <= 0) return "";
+                return `<div style="margin-top:6px;">
+                  <div style="font-size:11px;color:var(--paper-400);margin-bottom:2px;">📖 探索度 ${exp.toFixed(0)}%</div>
+                  <div class="bar" style="height:4px;"><div style="width:${Math.min(100, exp)}%;background:linear-gradient(90deg,#60a5fa,#3b82f6);"></div></div>
+                </div>`;
+              })()}
             </div>
           </div></a>`;
         }).join("")}
