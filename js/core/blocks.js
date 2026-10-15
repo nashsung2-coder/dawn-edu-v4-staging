@@ -378,25 +378,29 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       };
       /* 程式碼執行 */
       const runBtn = el.querySelector("[data-act='run-preview']");
-      if (runBtn) runBtn.onclick = async e => {
+      if (runBtn) runBtn.onclick = e => {
         e.stopPropagation();
-        syncFromDOM();
+        try { syncFromDOM(); } catch {}
         const b = blocks.find(x => x.id === bid);
-        if (!b) return;
-        const lang = b.data.language || "text";
-        const code = b.data.code || "";
         const output = el.querySelector("[data-run-output]");
         const frame = el.querySelector("[data-run-frame]");
         const textOut = el.querySelector("[data-run-text]");
-        if (!output) return;
+        if (!b || !output) return;
+        const lang = b.data.language || "text";
+        const code = b.data.code || "";
         output.style.display = "";
-        if (textOut) { textOut.style.display = ""; textOut.textContent = "執行中…"; }
-        if (frame) frame.style.display = "none";
+        // HTML：直接用 iframe 渲染（同步，不會卡住）
+        if (lang === "html") {
+          if (textOut) textOut.style.display = "none";
+          if (frame) { frame.style.display = ""; frame.srcdoc = code; }
+          return;
+        }
+        // JS/Python：非同步執行
+        (async () => {
         try {
-          if (lang === "html") {
-            if (frame) { frame.style.display = ""; frame.srcdoc = code; }
-            if (textOut) textOut.style.display = "none";
-          } else if (lang === "javascript") {
+          if (textOut) { textOut.style.display = ""; textOut.textContent = "執行中…"; }
+          if (frame) frame.style.display = "none";
+          if (lang === "javascript") {
             // 在沙盒 iframe 執行，捕捉 console.log
             const logs = [];
             const wrapped = `<script>
@@ -438,8 +442,9 @@ sys.stderr = _sys_out
             }
           }
         } catch (err) {
-          if (textOut) textOut.textContent = "執行失敗: " + err.message;
+          if (textOut) { textOut.style.display = ""; textOut.textContent = "執行失敗: " + err.message; }
         }
+        })();
       };
       /* 程式碼即時預覽 */
       const codeInput = el.querySelector('[data-code-input]');
