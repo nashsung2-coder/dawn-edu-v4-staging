@@ -1,12 +1,17 @@
 /* v4 費曼說服：解釋 → AI 評估 → 80+ 存入課本 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed001";
 
 await renderTopbar("feynman.html");
 const user = await requireAuth();
 
 const topicEl = document.getElementById("fy-topic");
+/* 從知識庫提問引導跳轉：預填主題 */
+try {
+  const _q = new URLSearchParams(location.search).get("q");
+  if (_q) topicEl.value = _q;
+} catch {}
 const textEl = document.getElementById("fy-text");
 const resultEl = document.getElementById("fy-result");
 const judgeBtn = document.getElementById("fy-judge");

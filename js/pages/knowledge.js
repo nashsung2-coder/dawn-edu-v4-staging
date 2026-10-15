@@ -1,6 +1,7 @@
 /* 知識庫 v4：公開節點瀏覽 + 我的節點 + 搜尋 + 按讚 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js?v=fixed001";
+import { createEditor, renderBlocks, blocksText, newBlock } from "../core/blocks.js?v=fixed001";
 
 await renderTopbar("knowledge.html");
 const user = await requireAuth();
@@ -40,7 +41,14 @@ async function fetchNodes() {
 }
 
 function textOf(n) {
-  return [n.title, n.question, n.content, n.explanation, (n.concepts || []).join(" ")].filter(Boolean).join(" ");
+  let contentText = n.content || "";
+  try {
+    const parsed = JSON.parse(n.content || "");
+    if (Array.isArray(parsed) && parsed.length && parsed[0].type) {
+      contentText = blocksText(parsed);
+    }
+  } catch {}
+  return [n.title, n.question, contentText, n.explanation, (n.concepts || []).join(" ")].filter(Boolean).join(" ");
 }
 
 function bindCatTabs() {
@@ -75,12 +83,20 @@ function render() {
     const cat = `<span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);">${esc(n.category || "未分類")}</span>`;
     const up = n.upvotes ?? 0;
     const owner = n.owner_name ? ` · ${esc(n.owner_name)}` : "";
-    const body = n.content || n.explanation || n.answer || "";
+    let body = n.explanation || n.answer || "";
+    let bodyIsBlocks = false;
+    try {
+      const parsed = JSON.parse(n.content || "");
+      if (Array.isArray(parsed) && parsed.length && parsed[0].type) {
+        body = renderBlocks(parsed, esc);
+        bodyIsBlocks = true;
+      } else { body = n.content || body; }
+    } catch { body = n.content || body; }
     const isMine = n.user_id === user.id;
     return `<div class="card node" data-id="${n.id}">
       <div class="title">${esc(title)}</div>
       ${`<div class="tags">${cat}${tags}</div>`}
-      ${body ? `<div class="body">${md(body)}</div>` : ""}
+      ${body ? `<div class="body">${bodyIsBlocks ? body : md(body)}</div>` : ""}
       <div class="meta">
         <span class="up">▲ <span class="num-sm">${up}</span></span>
         <span>${owner}</span>
@@ -167,8 +183,14 @@ qEl.addEventListener("keydown", e => { if (e.key === "Enter") render(); });
 
 /* ===== 建立知識節點 ===== */
 const modal = document.getElementById("node-modal");
+let blockEditor = null;
 document.getElementById("btn-new").onclick = () => {
   modal.style.display = "flex";
+  if (!blockEditor) {
+    blockEditor = createEditor(document.getElementById("nm-blocks"), esc);
+  } else {
+    blockEditor.setBlocks([newBlock("paragraph")]);
+  }
 };
 document.getElementById("nm-cancel").onclick = () => {
   modal.style.display = "none";
@@ -180,9 +202,10 @@ modal.addEventListener("click", e => {
 document.getElementById("nm-save").onclick = async () => {
   const title = document.getElementById("nm-title").value.trim();
   const question = document.getElementById("nm-q").value.trim();
-  const answer = document.getElementById("nm-a").value.trim();
+  const blocks = blockEditor ? blockEditor.getBlocks() : [];
+  const answer = blocksText(blocks);
   if (!title || !question || !answer) {
-    toast("請填寫標題、問題和答案");
+    toast("請填寫標題、問題，並在內容區加入至少一個有文字的區塊");
     return;
   }
   const btn = document.getElementById("nm-save");
@@ -197,8 +220,8 @@ document.getElementById("nm-save").onclick = async () => {
       title,
       question,
       answer,
-      content: answer,
-      explanation: document.getElementById("nm-exp").value.trim() || null,
+      content: JSON.stringify(blocks),
+      explanation: null,
       category: document.getElementById("nm-cat").value.trim() || "未分類",
       concepts,
       is_public: document.getElementById("nm-public").checked,
@@ -209,7 +232,7 @@ document.getElementById("nm-save").onclick = async () => {
     toast("知識節點已建立！");
     modal.style.display = "none";
     /* 清空表單 */
-    ["nm-title", "nm-cat", "nm-q", "nm-a", "nm-exp", "nm-concepts"].forEach(id => {
+    ["nm-title", "nm-cat", "nm-q", "nm-concepts"].forEach(id => {
       document.getElementById(id).value = "";
     });
     document.getElementById("nm-public").checked = true;
@@ -227,3 +250,44 @@ document.getElementById("nm-save").onclick = async () => {
 };
 
 load();
+
+/* ===== 提問引導：以問題為入口的學習流程 ===== */
+(function initAskGuide() {
+  const askQ = document.getElementById("ask-q");
+  const askGo = document.getElementById("ask-go");
+  const askActions = document.getElementById("ask-actions");
+  const askKeyword = document.getElementById("ask-keyword");
+  if (!askQ || !askGo) return;
+
+  function startAsk(question) {
+    question = (question || "").trim();
+    if (!question) { toast("請先輸入一個問題"); return; }
+    /* 1. 用問題關鍵字搜尋知識庫 */
+    qEl.value = question;
+    render();
+    /* 2. 顯示學習行動 */
+    askKeyword.textContent = question.length > 20 ? question.slice(0, 20) + "…" : question;
+    askActions.style.display = "block";
+    /* 3. 捲動到結果區 */
+    document.getElementById("v").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  askGo.onclick = () => startAsk(askQ.value);
+  askQ.addEventListener("keydown", e => { if (e.key === "Enter") startAsk(askQ.value); });
+  document.querySelectorAll(".ask-example").forEach(btn => {
+    btn.onclick = () => { askQ.value = btn.dataset.q; startAsk(btn.dataset.q); };
+  });
+
+  /* 學習行動：帶著問題跳轉到對應工具 */
+  document.getElementById("ask-feynman").onclick = () => {
+    const q = askQ.value.trim();
+    location.href = "feynman.html" + (q ? "?q=" + encodeURIComponent(q) : "");
+  };
+  document.getElementById("ask-quiz").onclick = () => {
+    const q = askQ.value.trim();
+    location.href = "quiz.html" + (q ? "?topic=" + encodeURIComponent(q) : "");
+  };
+  document.getElementById("ask-review").onclick = () => {
+    location.href = "review.html";
+  };
+})();

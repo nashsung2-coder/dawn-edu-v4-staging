@@ -1,7 +1,7 @@
 /* v4 知識對戰：主題 → AI 出 3 題 → 逐題作答 → 計分存檔 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
 
 await renderTopbar("quiz.html");
 const user = await requireAuth();
@@ -72,6 +72,11 @@ function renderSetup() {
       qCount = Number(b.dataset.n);
     };
   });
+  /* 從知識庫提問引導跳轉：預填主題 */
+  try {
+    const _t = new URLSearchParams(location.search).get("topic");
+    if (_t) document.getElementById("qz-topic").value = _t;
+  } catch {}
   document.getElementById("qz-go").onclick = startBattle;
   document.getElementById("qz-topic").addEventListener("keydown", e => {
     if (e.key === "Enter") startBattle();
