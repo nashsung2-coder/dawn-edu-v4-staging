@@ -252,15 +252,39 @@ function showConflictDialog(remoteBlocks, localBlocks) {
 }
 
 
-/* ---------- AI 寫作建議 ---------- */
-$("btn-ai-polish").onclick = async () => {
+
+/* 簡易 Markdown 渲染：**粗體**、- 條列 */
+function renderAiMd(text) {
+  let html = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  // 【通順】等標籤高亮
+  html = html.replace(/(【通順】|【邏輯】|【糾錯】)/g, '<span style="color:var(--brass-300);font-weight:700;">$1</span>');
+  const lines = html.split("\n");
+  let out = "", inList = false;
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^[-*•]\s/.test(t)) {
+      if (!inList) { out += "<ul style='margin:8px 0;padding-left:20px;'>"; inList = true; }
+      out += `<li style="margin-bottom:6px;">${t.replace(/^[-*•]\s/, "")}</li>`;
+    } else {
+      if (inList) { out += "</ul>"; inList = false; }
+      out += t ? `<p style="margin:8px 0;">${t}</p>` : "";
+    }
+  }
+  if (inList) out += "</ul>";
+  return `<div style="font-size:14px;line-height:1.8;word-break:break-word;overflow-wrap:anywhere;">${out}</div>`;
+}
+
+/* ---------- AI 寫作建議（懸浮側邊面板） ---------- */
+async function runAiPolish() {
   const d = collectData();
   const text = blocksText(d.blocks || []);
   if (!text.trim()) { toast("先寫點內容再請 AI 建議"); return; }
 
-  const modal = $("ai-polish-modal");
+  const panel = $("ai-polish-panel");
   const content = $("ai-polish-content");
-  modal.style.display = "flex";
+  panel.style.display = "flex";
+  $("ai-polish-fab").style.display = "none";
   content.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">AI 正在閱讀你的內容…</p>`;
 
   try {
@@ -278,14 +302,27 @@ $("btn-ai-polish").onclick = async () => {
 - 如果內容已經很好，直接說「寫得很好」並簡單肯定`,
       `標題：${d.title || "無標題"}\n\n內容：\n${text}`
     );
-    content.innerHTML = `<div style="font-size:14px;line-height:1.8;white-space:pre-wrap;">${reply.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+    content.innerHTML = renderAiMd(reply);
   } catch (e) {
     content.innerHTML = `<p style="color:var(--signal-red);font-size:14px;">AI 建議失敗：${e.message}</p>`;
   }
+}
+$("btn-ai-polish").onclick = runAiPolish;
+$("ai-polish-refresh").onclick = runAiPolish;
+// 收合：面板隱藏，顯示懸浮按鈕
+$("ai-polish-min").onclick = () => {
+  $("ai-polish-panel").style.display = "none";
+  $("ai-polish-fab").style.display = "block";
 };
-$("ai-polish-close").onclick = () => $("ai-polish-modal").style.display = "none";
-$("ai-polish-modal").onclick = e => {
-  if (e.target.id === "ai-polish-modal") $("ai-polish-modal").style.display = "none";
+// 懸浮按鈕：重新展開
+$("ai-polish-fab").onclick = () => {
+  $("ai-polish-panel").style.display = "flex";
+  $("ai-polish-fab").style.display = "none";
+};
+// 關閉：完全關閉
+$("ai-polish-close").onclick = () => {
+  $("ai-polish-panel").style.display = "none";
+  $("ai-polish-fab").style.display = "none";
 };
 
 
