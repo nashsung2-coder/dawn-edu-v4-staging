@@ -40,7 +40,7 @@ if (!nodeId) {
         <h1 style="font-size:24px;margin-bottom:8px;line-height:1.4;">${htmlEsc(n.title)}</h1>
         ${question ? `<p style="font-size:15px;color:var(--brass-300);margin-bottom:20px;line-height:1.7;">${htmlEsc(question)}</p>` : ""}
         <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:16px 0;"></div>
-        <div class="blocks-content">${blocks.length ? renderBlocks(blocks) : `<p style="color:var(--paper-400);">${htmlEsc(n.content || "")}</p>`}</div>
+        <div class="blocks-content">${blocks.length ? renderBlocks(blocks, htmlEsc) : `<p style="color:var(--paper-400);">${htmlEsc(n.content || "")}</p>`}</div>
         <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:24px 0 16px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a href="quiz.html?topic=${encodeURIComponent(n.title)}&content=${encodeURIComponent(blocksText(blocks).slice(0, 2000))}" class="btn btn-primary btn-sm">開始驗證對戰</a>
