@@ -1,6 +1,7 @@
 /* v4 節點專用編輯器：Google Sites 風格 */
 /* 草稿 → 本地儲存（localStorage）；發布 → Supabase；版本 → 快照紀錄 */
 import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
+import { ask } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
 import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed002";
 
@@ -158,7 +159,10 @@ async function loadInitial() {
 function applyData(d) {
   titleInput.value = d.title || "";
   $("ed-question").value = d.question || "";
-  $("ed-category").value = d.category || "";
+  const catParts = (d.category || "").split("/");
+  $("ed-category").value = catParts[0] || "";
+  const subEl = $("ed-subcategory");
+  if (subEl) subEl.value = catParts.slice(1).join("/") || "";
   $("ed-concepts").value = (d.concepts || []).join(", ");
   $("ed-public").checked = d.isPublic !== false;
   const collabEl = $("ed-collab");
@@ -247,6 +251,112 @@ function showConflictDialog(remoteBlocks, localBlocks) {
   });
 }
 
+
+/* ---------- AI 寫作建議 ---------- */
+$("btn-ai-polish").onclick = async () => {
+  const d = collectData();
+  const text = blocksText(d.blocks || []);
+  if (!text.trim()) { toast("先寫點內容再請 AI 建議"); return; }
+
+  const modal = $("ai-polish-modal");
+  const content = $("ai-polish-content");
+  modal.style.display = "flex";
+  content.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">AI 正在閱讀你的內容…</p>`;
+
+  try {
+    const reply = await ask(
+      `你是繁體中文寫作導師。閱讀學生的知識節點內容，從三個面向給建議：
+1. 通順度：句子是否通順，有沒有語病或贅字
+2. 邏輯清晰度：論述是否有條理，段落銜接是否自然
+3. 事實糾錯：如果發現明顯的事實錯誤，直接指出並給正確資訊
+
+格式要求：
+- 用條列式，每點開頭標註【通順】【邏輯】或【糾錯】
+- 具體指出問題句子，並給修改建議
+- 語氣鼓勵但直接
+- 不超過 300 字
+- 如果內容已經很好，直接說「寫得很好」並簡單肯定`,
+      `標題：${d.title || "無標題"}\n\n內容：\n${text}`
+    );
+    content.innerHTML = `<div style="font-size:14px;line-height:1.8;white-space:pre-wrap;">${reply.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+  } catch (e) {
+    content.innerHTML = `<p style="color:var(--signal-red);font-size:14px;">AI 建議失敗：${e.message}</p>`;
+  }
+};
+$("ai-polish-close").onclick = () => $("ai-polish-modal").style.display = "none";
+$("ai-polish-modal").onclick = e => {
+  if (e.target.id === "ai-polish-modal") $("ai-polish-modal").style.display = "none";
+};
+
+
+/* ---------- 發布前 AI 審核 ---------- */
+async function aiPrePublishReview(d) {
+  const text = blocksText(d.blocks || []);
+  // 建立審核 modal
+  let reviewModal = document.getElementById("ai-review-modal");
+  if (!reviewModal) {
+    reviewModal = document.createElement("div");
+    reviewModal.id = "ai-review-modal";
+    reviewModal.className = "modal-overlay";
+    reviewModal.style.cssText = "display:none;align-items:center;justify-content:center;";
+    reviewModal.innerHTML = `
+      <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto;">
+        <h3 style="margin:0 0 16px;">AI 發布前審核</h3>
+        <div id="ai-review-content"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button class="btn btn-ghost" id="ai-review-edit">回去修改</button>
+          <button class="btn btn-primary" id="ai-review-confirm">確認發布</button>
+        </div>
+      </div>`;
+    document.body.appendChild(reviewModal);
+  }
+  const content = document.getElementById("ai-review-content");
+  reviewModal.style.display = "flex";
+  content.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">AI 正在審核你的內容…</p>`;
+
+  return new Promise(async (resolve) => {
+    document.getElementById("ai-review-edit").onclick = () => {
+      reviewModal.style.display = "none";
+      resolve(false);
+    };
+    document.getElementById("ai-review-confirm").onclick = () => {
+      reviewModal.style.display = "none";
+      resolve(true);
+    };
+    try {
+      const reply = await ask(
+        `你是知識庫內容審核員。用繁體中文審核學生的知識節點，判斷是否適合發布。
+檢查項目：
+1. 事實正確性：有無明顯錯誤
+2. 完整性：內容是否過於空泛，有無實質知識點
+3. 適當性：有無不當內容
+
+輸出格式：
+- 第一行必須是「通過」或「需修改」
+- 之後條列具體問題（如果通過，簡單肯定即可）
+- 不超過 200 字`,
+        `標題：${d.title || "無標題"}\n分類：${d.category || "未分類"}\n\n內容：\n${text}`
+      );
+      const passed = reply.trim().startsWith("通過");
+      content.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:20px;">${passed ? "✅" : "⚠️"}</span>
+          <span style="font-weight:700;font-size:15px;color:${passed ? "#6ee7b7" : "#fcd34d"};">${passed ? "審核通過" : "建議修改"}</span>
+        </div>
+        <div style="font-size:14px;line-height:1.8;white-space:pre-wrap;">${reply.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+      `;
+      // 如果沒通過，預設停在修改（用戶仍可強制發布）
+      if (!passed) {
+        document.getElementById("ai-review-confirm").textContent = "仍要發布";
+      } else {
+        document.getElementById("ai-review-confirm").textContent = "確認發布";
+      }
+    } catch (e) {
+      content.innerHTML = `<p style="font-size:14px;">AI 審核暫時無法使用，你可以直接發布。</p><p style="font-size:12px;color:var(--paper-400);">${e.message}</p>`;
+    }
+  });
+}
+
 /* ---------- 發布流程 ---------- */
 $("btn-publish").onclick = () => {
   try {
@@ -275,6 +385,9 @@ $("pub-cancel").onclick = () => $("publish-modal").style.display = "none";
 $("pub-confirm").onclick = async () => {
   $("publish-modal").style.display = "none";
   const d = collectData();
+  // AI 審核：發布前檢查內容品質
+  const reviewOk = await aiPrePublishReview(d);
+  if (!reviewOk) return; // 用戶選擇先修改
   // 衝突檢測：如果是編輯現有節點，檢查資料庫版本是否與載入時不同
   if (publishedNodeId) {
     try {

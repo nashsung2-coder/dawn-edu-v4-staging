@@ -147,13 +147,12 @@ function render() {
     }
   }
   if (q) list = list.filter(n => textOf(n).toLowerCase().includes(q));
+  // 分類樹基於當前模式的列表（不含分類篩選），計數才準確
+  const tree = buildCatTree(list);
   if (activeCat !== "全部") list = list.filter(n => matchCat(n.category, activeCat));
-
-  // 分類樹（父分類可展開子分類）
-  const tree = buildCatTree(cache);
   const catTabs = `<div class="cat-tabs" style="margin-bottom:16px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-      <button class="btn ${activeCat === "全部" ? "btn-primary" : "btn-ghost"}" data-kcat="全部" style="padding:6px 14px;font-size:13px;">全部（${cache.length}）</button>
+      <button class="btn ${activeCat === "全部" ? "btn-primary" : "btn-ghost"}" data-kcat="全部" style="padding:6px 14px;font-size:13px;">全部（${list.length}）</button>
       ${Object.entries(tree).map(([parent, info]) => `
         <button class="btn ${activeCat === parent || activeCat.startsWith(parent + "/") ? "btn-primary" : "btn-ghost"}" data-kcat="${esc(parent)}"
           style="padding:6px 14px;font-size:13px;">${esc(parent)}（${info.count}）</button>`).join("")}
