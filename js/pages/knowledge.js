@@ -1,7 +1,7 @@
 /* 知識庫 v4：公開節點瀏覽 + 我的節點 + 搜尋 + 按讚 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js?v=fixed001";
-import { createEditor, renderBlocks, blocksText, newBlock } from "../core/blocks.js?v=fixed001";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js?v=fixed002";
+import { createEditor, renderBlocks, blocksText, newBlock } from "../core/blocks.js?v=fixed002";
 
 await renderTopbar("knowledge.html");
 const user = await requireAuth();

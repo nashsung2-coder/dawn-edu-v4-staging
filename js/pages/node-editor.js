@@ -1,8 +1,8 @@
 /* v4 節點專用編輯器：Google Sites 風格 */
 /* 草稿 → 本地儲存（localStorage）；發布 → Supabase；版本 → 快照紀錄 */
-import { supabase, getProfile } from "../core/supabase.js?v=fixed001";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed001";
-import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed001";
+import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
+import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed002";
 
 const params = new URLSearchParams(location.search);
 const editId = params.get("id"); // 編輯現有節點時帶 id
