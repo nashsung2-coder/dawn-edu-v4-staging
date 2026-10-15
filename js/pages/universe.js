@@ -1,7 +1,7 @@
 /* v4 宇宙遊戲：星球征服 MVP */
 import { supabase } from "../core/supabase.js";
 import { chat } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, applyTimeBg, ICO } from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, applyTimeBg, ICO } from "../core/ui.js?v=fixed001";
 
 applyTimeBg();
 await renderTopbar("universe.html");

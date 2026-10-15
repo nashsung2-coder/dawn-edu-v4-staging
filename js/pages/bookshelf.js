@@ -1,6 +1,6 @@
 /* 個人書架 v4：textbook_entries 列表，點擊展開全文 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=fixed001";
 
 await renderTopbar("bookshelf.html");
 const user = await requireAuth();

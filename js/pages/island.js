@@ -1,7 +1,7 @@
 /* 島嶼 v6：知識庫群島 — 每個知識分類長出一座專屬島嶼。
    費曼說服與知識對戰是知識庫的附加品：它們的產出化為知識節點，滋養群島。 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed001";
 
 await renderTopbar("island.html");
 const user = await requireAuth();

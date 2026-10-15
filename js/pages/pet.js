@@ -1,6 +1,6 @@
 /* 靈獸頁：讀取/互動/孵化 */
 import { supabase, getUser } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
 
 await renderTopbar("pet.html");
 const user = await requireAuth();

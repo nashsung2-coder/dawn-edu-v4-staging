@@ -1,6 +1,6 @@
 /* 我的家：個人學習小窩 — 統計、最近動態、快捷入口 */
 import { supabase, getProfile } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=fixed001";
 
 await renderTopbar("home.html");
 const user = await requireAuth();

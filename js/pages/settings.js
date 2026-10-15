@@ -1,6 +1,6 @@
 /* v4 設定頁 */
 import { supabase, getProfile, signOut } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
 
 await renderTopbar("settings.html");
 const user = await requireAuth();
