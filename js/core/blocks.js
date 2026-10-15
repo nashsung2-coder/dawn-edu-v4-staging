@@ -26,6 +26,7 @@ export function newBlock(type, data = {}) {
     checklist: { items: [{ text: "", done: false }] },
     embed: { url: "", caption: "" },
     feynman: { concept: "", explanation: "", audience: "小學生" },
+    battle: { topic: "", description: "", difficulty: "adaptive" },
   };
   return { id: "b" + (++_uid) + "_" + Date.now().toString(36), type, data: { ...(defaults[type] || {}), ...data } };
 }
@@ -110,7 +111,18 @@ export function blocksText(blocks) {
       case "code": return d.code || "";
       case "checklist": return (d.items || []).map(i => i.text).join(" ");
       case "image": case "youtube": case "embed": return d.caption || "";
+      case "battle": {
+        if (!d.topic) return "";
+        const diffLabel = { adaptive: "自適應難度", easy: "簡單", normal: "普通", hard: "困難" }[d.difficulty] || "自適應難度";
+        return `<div class="blk-battle" style="border:1px solid oklch(0.6 0.2 250 / 0.3);border-radius:12px;padding:16px;margin:12px 0;background:oklch(0.6 0.2 250 / 0.05);text-align:center;">
+          <div style="font-size:12px;font-weight:700;color:var(--brass-300);margin-bottom:8px;">⚔ 知識對戰 · ${diffLabel}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${esc(d.topic)}</div>
+          ${d.description ? `<div style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">${esc(d.description)}</div>` : ""}
+          <button class="btn btn-primary btn-sm" onclick="location.href='quiz.html?topic='+encodeURIComponent('${esc(d.topic)}'.replace(/'/g, ""))">開始對戰</button>
+        </div>`;
+      }
       case "feynman": return [d.concept, d.explanation].filter(Boolean).join("\n");
+      case "battle": return [d.topic, d.description].filter(Boolean).join("\n");
       default: return "";
     }
   }).filter(Boolean).join("\n").slice(0, 500);
@@ -192,9 +204,18 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         break;
       }
         break;
-      case "code":
-        inner = `<div class="be-hint">程式碼</div><textarea class="be-textarea" data-k="code" style="font-family:var(--font-mono);font-size:13px;" placeholder="貼上程式碼…">${esc(d.code || "")}</textarea>`;
+      case "code": {
+        const _code = d.code || "";
+        // 簡單的語法高亮預覽（轉義後加上顏色）
+        const _highlighted = esc(_code)
+          .replace(/(&quot;.*?&quot;|&#39;.*?&#39;|"[^"]*"|'[^']*')/g, '<span style="color:#f0d080;">$1</span>')
+          .replace(/\b(const|let|var|function|return|if|else|for|while|import|export|from|async|await|class|new)\b/g, '<span style="color:#80c0ff;">$1</span>')
+          .replace(/(\/\/.*$)/gm, '<span style="color:#808080;">$1</span>');
+        inner = `<div class="be-hint">程式碼</div>
+          <textarea class="be-textarea" data-k="code" data-code-input style="font-family:var(--font-mono);font-size:13px;" placeholder="貼上程式碼…">${esc(_code)}</textarea>
+          ${_code ? `<div style="margin-top:8px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">即時預覽</div><pre style="background:oklch(0 0 0 / 0.3);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:13px;overflow-x:auto;margin:0;"><code>${_highlighted}</code></pre></div>` : ""}`;
         break;
+      }
       case "divider":
         inner = `<div class="be-hint">分隔線</div><hr style="border:none;border-top:1px solid oklch(0.60 0.12 80 / 0.25);">`;
         break;
@@ -205,9 +226,31 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         ).join("") + `<button class="btn btn-ghost btn-sm" data-act="add-item">＋ 新增項目</button>`;
         break;
       }
+      case "battle":
+        inner = `<div class="be-hint">知識對戰 — 在節點中嵌入一場對戰挑戰</div>
+          <input class="be-input" data-k="topic" placeholder="對戰主題（例：光合作用）" value="${esc(d.topic || "")}">
+          <textarea class="be-textarea" data-k="description" placeholder="挑戰說明（選填，例：測試你對光合作用的理解）" style="margin-top:6px;min-height:60px;">${esc(d.description || "")}</textarea>
+          <select data-k="difficulty" class="be-select" style="margin-top:6px;font-size:12px;padding:6px 8px;border-radius:6px;background:oklch(1 0 0 / 0.05);border:1px solid oklch(1 0 0 / 0.12);color:var(--paper-200);width:100%;">
+            <option value="adaptive" ${(d.difficulty||"adaptive")==="adaptive"?"selected":""}>自適應難度（推薦）</option>
+            <option value="easy" ${d.difficulty==="easy"?"selected":""}>固定：簡單</option>
+            <option value="normal" ${d.difficulty==="normal"?"selected":""}>固定：普通</option>
+            <option value="hard" ${d.difficulty==="hard"?"selected":""}>固定：困難</option>
+          </select>
+          <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">讀者點擊「開始對戰」會跳轉到對戰頁面，以此主題進行 AI 出題挑戰。</div>`;
+        break;
       case "embed":
         inner = `<div class="be-hint">嵌入網頁（iframe）</div><input class="be-input" data-k="url" placeholder="網址（https://…）" value="${esc(d.url || "")}"><input class="be-input" data-k="caption" placeholder="說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
         break;
+      case "battle": {
+        if (!d.topic) return "";
+        const diffLabel = { adaptive: "自適應難度", easy: "簡單", normal: "普通", hard: "困難" }[d.difficulty] || "自適應難度";
+        return `<div class="blk-battle" style="border:1px solid oklch(0.6 0.2 250 / 0.3);border-radius:12px;padding:16px;margin:12px 0;background:oklch(0.6 0.2 250 / 0.05);text-align:center;">
+          <div style="font-size:12px;font-weight:700;color:var(--brass-300);margin-bottom:8px;">⚔ 知識對戰 · ${diffLabel}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${esc(d.topic)}</div>
+          ${d.description ? `<div style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">${esc(d.description)}</div>` : ""}
+          <button class="btn btn-primary btn-sm" onclick="location.href='quiz.html?topic='+encodeURIComponent('${esc(d.topic)}'.replace(/'/g, ""))">開始對戰</button>
+        </div>`;
+      }
       case "feynman":
         inner = `<div class="be-hint">費曼解釋 — 用最簡單的話講清楚一個概念</div>
           <input class="be-input" data-k="concept" placeholder="要解釋的概念（例：光合作用）" value="${esc(d.concept || "")}">
@@ -282,6 +325,15 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         const i = blocks.findIndex(x => x.id === bid);
         if (i < blocks.length - 1) { [blocks[i+1], blocks[i]] = [blocks[i], blocks[i+1]]; render(); }
       };
+      /* 程式碼即時預覽 */
+      const codeInput = el.querySelector('[data-code-input]');
+      if (codeInput) {
+        let _ct = null;
+        codeInput.addEventListener("input", () => {
+          clearTimeout(_ct);
+          _ct = setTimeout(() => { syncFromDOM(); render(); }, 800);
+        });
+      }
       /* YouTube URL 即時預覽 */
       const ytInput = el.querySelector('input[data-k="url"]');
       if (ytInput && el.querySelector(".be-hint")?.textContent?.includes("YouTube")) {
