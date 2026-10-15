@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>節點編輯器 — 曙光教育</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.editor-layout { display: flex; gap: 0; min-height: calc(100vh - 60px); }
+.editor-main { flex: 1; min-width: 0; padding: 24px; max-width: 860px; margin: 0 auto; }
+.editor-topbar {
+  display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+  border-bottom: 1px solid oklch(1 0 0 / 0.08); position: sticky; top: 0;
+  background: var(--ink-900, #0f0f1e); z-index: 50;
+}
+.editor-title-input {
+  flex: 1; background: transparent; border: none; color: var(--paper-50);
+  font-size: 18px; font-weight: 700; font-family: var(--font-serif);
+  outline: none; min-width: 0;
+}
+.editor-title-input:focus { border-bottom: 1px solid var(--brass-400); }
+.status-badge {
+  font-size: 11px; padding: 4px 10px; border-radius: 99px; white-space: nowrap;
+  font-family: var(--font-mono); letter-spacing: 0.05em;
+}
+.status-draft { background: oklch(0.7 0.15 60 / 0.15); color: oklch(0.8 0.15 60); border: 1px solid oklch(0.7 0.15 60 / 0.3); }
+.status-published { background: oklch(0.7 0.15 140 / 0.15); color: oklch(0.75 0.15 140); border: 1px solid oklch(0.7 0.15 140 / 0.3); }
+.status-saving { background: oklch(1 0 0 / 0.05); color: var(--paper-400); border: 1px solid oklch(1 0 0 / 0.1); }
+.editor-sidebar {
+  width: 280px; flex-shrink: 0; border-left: 1px solid oklch(1 0 0 / 0.08);
+  background: oklch(1 0 0 / 0.02); display: flex; flex-direction: column;
+}
+.sidebar-tabs { display: flex; border-bottom: 1px solid oklch(1 0 0 / 0.08); }
+.sidebar-tab {
+  flex: 1; padding: 12px 8px; text-align: center; font-size: 13px; cursor: pointer;
+  color: var(--paper-400); border: none; background: none; font-family: inherit;
+  border-bottom: 2px solid transparent;
+}
+.sidebar-tab.active { color: var(--brass-300); border-bottom-color: var(--brass-400); }
+.sidebar-panel { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+.sidebar-panel.active { display: block; }
+.insert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.insert-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px; border: 1px solid oklch(1 0 0 / 0.1); border-radius: 10px;
+  cursor: pointer; background: oklch(1 0 0 / 0.02); transition: all 150ms;
+  color: var(--paper-300); font-size: 12px;
+}
+.insert-item:hover { border-color: var(--brass-400); background: oklch(0.74 0.14 80 / 0.08); color: var(--paper-50); }
+.insert-item .ico { font-size: 20px; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 12px; color: var(--paper-400); margin-bottom: 6px; }
+.field input, .field select, .field textarea {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid oklch(1 0 0 / 0.12); background: oklch(1 0 0 / 0.03);
+  color: var(--paper-50); font-size: 14px; font-family: inherit;
+}
+.version-item {
+  padding: 10px 12px; border: 1px solid oklch(1 0 0 / 0.08); border-radius: 8px;
+  margin-bottom: 8px; cursor: pointer; transition: all 150ms;
+}
+.version-item:hover { border-color: var(--brass-400); }
+.version-item .v-time { font-size: 12px; color: var(--paper-400); font-family: var(--font-mono); }
+.version-item .v-label { font-size: 13px; font-weight: 600; margin-top: 2px; }
+.version-item .v-actions { margin-top: 6px; display: flex; gap: 6px; }
+@media (max-width: 768px) {
+  .editor-sidebar { position: fixed; right: 0; top: 0; bottom: 0; z-index: 100;
+    transform: translateX(100%); transition: transform 200ms; background: var(--ink-900, #0f0f1e); }
+  .editor-sidebar.open { transform: translateX(0); }
+  .editor-main { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="editor-topbar">
+  <a href="knowledge.html" class="btn btn-ghost btn-sm">← 返回</a>
+  <input class="editor-title-input" id="ed-title" placeholder="節點標題">
+  <span class="status-badge status-draft" id="ed-status">草稿</span>
+  <button class="btn btn-ghost btn-sm" id="btn-sidebar" style="display:none;">☰</button>
+  <button class="btn btn-ghost btn-sm" id="btn-versions">版本紀錄</button>
+  <button class="btn btn-ghost btn-sm" id="btn-preview">預覽</button>
+  <button class="btn btn-primary btn-sm" id="btn-publish">發布</button>
+</div>
+<div class="editor-layout">
+  <div class="editor-main">
+    <div id="block-canvas"></div>
+    <button class="btn btn-ghost" id="btn-add-block" style="width:100%;margin-top:12px;">＋ 插入區塊</button>
+  </div>
+  <aside class="editor-sidebar" id="editor-sidebar">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" data-tab="insert">插入</button>
+      <button class="sidebar-tab" data-tab="settings">設定</button>
+      <button class="sidebar-tab" data-tab="versions">版本</button>
+    </div>
+    <div class="sidebar-panel active" id="panel-insert">
+      <div class="insert-grid" id="insert-grid"></div>
+    </div>
+    <div class="sidebar-panel" id="panel-settings">
+      <div class="field">
+        <label>問題（引導提問）</label>
+        <input id="ed-question" placeholder="例如：光合作用是怎麼進行的？">
+      </div>
+      <div class="field">
+        <label>分類</label>
+        <input id="ed-category" placeholder="例如：生物">
+      </div>
+      <div class="field">
+        <label>概念標籤（逗號分隔）</label>
+        <input id="ed-concepts" placeholder="例如：光合作用, 生物">
+      </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="ed-public" checked style="width:auto;">
+          公開分享（其他人可搜尋學習）
+        </label>
+      </div>
+    </div>
+    <div class="sidebar-panel" id="panel-versions">
+      <div id="version-list"><div class="state-empty"><p>尚無版本紀錄</p><p style="font-size:12px;">每次發布會自動建立版本快照</p></div></div>
+    </div>
+  </aside>
+</div>
+<!-- 發布對話框 -->
+<div class="modal-overlay" id="publish-modal" style="display:none;">
+  <div class="modal" style="max-width:440px;">
+    <h3>發布節點</h3>
+    <p style="font-size:13px;color:var(--paper-400);">發布後，其他人將可以看到這個知識節點。發布會自動建立版本快照。</p>
+    <div class="field">
+      <label>可見性</label>
+      <select id="pub-visibility">
+        <option value="public">公開 — 所有人可搜尋學習</option>
+        <option value="private">私人 — 僅自己可見</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-ghost" id="pub-cancel">取消</button>
+      <button class="btn btn-primary" id="pub-confirm">確認發布</button>
+    </div>
+  </div>
+</div>
+<!-- 預覽對話框 -->
+<div class="modal-overlay" id="preview-modal" style="display:none;">
+  <div class="modal" style="max-width:680px;max-height:80vh;overflow-y:auto;">
+    <h3 id="pv-title"></h3>
+    <div id="pv-body"></div>
+    <div style="text-align:right;margin-top:16px;">
+      <button class="btn btn-ghost" id="pv-close">關閉</button>
+    </div>
+  </div>
+</div>
+<script src="../js/vendor/supabase.min.js"></script>
+<script type="module" src="../js/pages/node-editor.js?v=fixed001"></script>
+</body>
+</html>

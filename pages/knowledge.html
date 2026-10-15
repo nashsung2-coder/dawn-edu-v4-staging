@@ -62,7 +62,7 @@
     <button class="btn btn-ghost on" id="tab-all">全部節點</button>
     <button class="btn btn-ghost" id="tab-mine">我的節點</button>
     <span style="flex:1"></span>
-    <button class="btn btn-primary" id="btn-new">＋ 建立節點</button>
+    <a class="btn btn-primary" href="node-editor.html">＋ 建立節點</a>
   </div>
   <div class="search-row">
     <input class="input" id="q" type="search" placeholder="搜尋標題或概念…" aria-label="搜尋知識庫">
@@ -71,26 +71,7 @@
   <div id="v"></div>
 </main>
 
-<!-- 建立節點 Modal -->
-<div id="node-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;padding:20px;">
-  <div class="card" style="width:100%;max-width:560px;max-height:90vh;overflow-y:auto;">
-    <h2 style="margin-bottom:16px;">建立知識節點</h2>
-    <div class="field"><label>標題 *</label><input class="input" id="nm-title" placeholder="例如：光合作用的原理"></div>
-    <div class="field"><label>分類</label><input class="input" id="nm-cat" placeholder="例如：生物、數學、歷史"></div>
-    <div class="field"><label>問題 *</label><textarea class="input" id="nm-q" rows="2" placeholder="用一個問題來組織這個知識點"></textarea></div>
-    <div class="field">
-      <label>內容 * <span style="font-weight:400;color:var(--paper-400);font-size:12px;">— 點擊 ＋ 插入區塊，像編輯網站一樣編排</span></label>
-      <div id="nm-blocks" style="border:1px solid oklch(0.60 0.12 80 / 0.2);border-radius:12px;padding:12px;min-height:120px;background:oklch(0.18 0.03 260);"></div>
-    </div>
-    <div class="field"><label>概念標籤（逗號分隔）</label><input class="input" id="nm-concepts" placeholder="例如：光合作用, 葉綠體, 能量轉換"></div>
-    <div class="field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="nm-public" checked style="width:18px;height:18px;"> 公開分享（其他人可搜尋學習）
-    </label></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-      <button class="btn btn-ghost" id="nm-cancel">取消</button>
-      <button class="btn btn-primary" id="nm-save">建立</button>
-    </div>
-  </div>
+
 </div>
 
 <script src="../js/vendor/supabase.min.js"></script>
