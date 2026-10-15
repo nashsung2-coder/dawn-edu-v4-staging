@@ -253,13 +253,14 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
               <option value="python" ${_lang==="python"?"selected":""}>Python</option>
               <option value="text" ${_lang==="text"?"selected":""}>純文字</option>
             </select>
-            ${_isHtml && _code ? `<button class="btn btn-ghost btn-sm" data-act="run-preview" style="font-size:12px;">▶ 執行預覽</button>` : ""}
+            ${_code && ["html","python","javascript"].includes(_lang) ? `<button class="btn btn-ghost btn-sm" data-act="run-preview" style="font-size:12px;">▶ 執行</button>` : ""}
           </div>
           <textarea class="be-textarea" data-k="code" data-code-input style="font-family:var(--font-mono);font-size:13px;" placeholder="貼上程式碼…">${esc(_code)}</textarea>
           ${_code ? `<div style="margin-top:8px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">語法預覽</div><pre style="background:oklch(0 0 0 / 0.3);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:13px;overflow-x:auto;margin:0;max-height:300px;overflow-y:auto;"><code>${_highlighted}</code></pre></div>` : ""}
           <div data-run-output style="margin-top:8px;display:none;">
             <div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">執行結果</div>
-            <iframe data-run-frame sandbox="allow-scripts" style="width:100%;min-height:320px;border:1px solid oklch(1 0 0 / 0.12);border-radius:8px;background:white;"></iframe>
+            <pre data-run-text style="display:none;background:#0a0a0a;color:#e0e0e0;border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:13px;white-space:pre-wrap;max-height:300px;overflow-y:auto;margin:0;"></pre>
+            <iframe data-run-frame sandbox="allow-scripts" style="display:none;width:100%;min-height:320px;border:1px solid oklch(1 0 0 / 0.12);border-radius:8px;background:white;"></iframe>
           </div>`;
         break;
       }
@@ -375,19 +376,69 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         const i = blocks.findIndex(x => x.id === bid);
         if (i < blocks.length - 1) { _pushHistory(); [blocks[i+1], blocks[i]] = [blocks[i], blocks[i+1]]; render(); }
       };
-      /* 程式碼執行預覽 */
+      /* 程式碼執行 */
       const runBtn = el.querySelector("[data-act='run-preview']");
-      if (runBtn) runBtn.onclick = e => {
+      if (runBtn) runBtn.onclick = async e => {
         e.stopPropagation();
         syncFromDOM();
         const b = blocks.find(x => x.id === bid);
         if (!b) return;
+        const lang = b.data.language || "text";
+        const code = b.data.code || "";
         const output = el.querySelector("[data-run-output]");
         const frame = el.querySelector("[data-run-frame]");
-        if (output && frame) {
-          output.style.display = "";
-          // 用 srcdoc 安全渲染 HTML
-          frame.srcdoc = b.data.code || "";
+        const textOut = el.querySelector("[data-run-text]");
+        if (!output) return;
+        output.style.display = "";
+        if (textOut) { textOut.style.display = ""; textOut.textContent = "執行中…"; }
+        if (frame) frame.style.display = "none";
+        try {
+          if (lang === "html") {
+            if (frame) { frame.style.display = ""; frame.srcdoc = code; }
+            if (textOut) textOut.style.display = "none";
+          } else if (lang === "javascript") {
+            // 在沙盒 iframe 執行，捕捉 console.log
+            const logs = [];
+            const wrapped = `<script>
+              (function(){
+                const logs = [];
+                ["log","error","warn","info"].forEach(k => {
+                  const orig = console[k];
+                  console[k] = (...a) => { logs.push(a.map(x => typeof x === "object" ? JSON.stringify(x) : String(x)).join(" ")); };
+                });
+                try { ${code} } catch(err) { logs.push("錯誤: " + err.message); }
+                document.body.innerHTML = "<pre id='out'></pre>";
+                document.getElementById("out").textContent = logs.join("\n") || "(無輸出)";
+              })();
+            <\/script>`;
+            if (frame) { frame.style.display = ""; frame.srcdoc = wrapped; }
+            if (textOut) textOut.style.display = "none";
+          } else if (lang === "python") {
+            // Pyodide 執行 Python
+            if (!window._pyodide) {
+              textOut.textContent = "載入 Python 環境中（首次約需 10 秒）…";
+              window._pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
+            }
+            const py = window._pyodide;
+            py.runPython(`
+import sys
+from io import StringIO
+_sys_out = StringIO()
+sys.stdout = _sys_out
+sys.stderr = _sys_out
+`);
+            try {
+              py.runPython(code);
+              const out = py.runPython("_sys_out.getvalue()");
+              textOut.textContent = out || "(無輸出)";
+            } catch (err) {
+              let out = "";
+              try { out = py.runPython("_sys_out.getvalue()"); } catch {}
+              textOut.textContent = (out ? out + "\n" : "") + "錯誤: " + err.message;
+            }
+          }
+        } catch (err) {
+          if (textOut) textOut.textContent = "執行失敗: " + err.message;
         }
       };
       /* 程式碼即時預覽 */
