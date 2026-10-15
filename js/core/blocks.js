@@ -11,6 +11,7 @@ export const BLOCK_TYPES = [
   { type: "divider", label: "分隔線", icon: "―" },
   { type: "checklist", label: "待辦清單", icon: "☑" },
   { type: "embed", label: "嵌入網頁", icon: "🔗" },
+  { type: "gdrive", label: "Google 雲端", icon: "☁" },
   { type: "feynman", label: "費曼解釋", icon: "💡" },
   { type: "battle", label: "知識對戰", icon: "⚔" },
 ];
@@ -22,6 +23,7 @@ export function newBlock(type, data = {}) {
     heading: { text: "", level: 2 },
     quote: { text: "", cite: "" },
     image: { url: "", caption: "" },
+    gdrive: { url: "", caption: "" },
     youtube: { url: "", caption: "" },
     code: { code: "", lang: "" },
     divider: {},
@@ -77,6 +79,19 @@ export function renderBlocks(blocks, esc) {
       }
       case "quote":
         return `<blockquote class="blk-quote" style="${textStyle(d)}">${esc(d.text || "")}${d.cite ? `<cite>— ${esc(d.cite)}</cite>` : ""}</blockquote>`;
+      case "gdrive": {
+        const gUrl2 = d.url || "";
+        let eUrl2 = "";
+        const df2 = gUrl2.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        const dd2 = gUrl2.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+        const ds2 = gUrl2.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+        const dp2 = gUrl2.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+        if (df2) eUrl2 = `https://drive.google.com/file/d/${df2[1]}/preview`;
+        else if (dd2) eUrl2 = `https://docs.google.com/document/d/${dd2[1]}/preview`;
+        else if (ds2) eUrl2 = `https://docs.google.com/spreadsheets/d/${ds2[1]}/preview`;
+        else if (dp2) eUrl2 = `https://docs.google.com/presentation/d/${dp2[1]}/embed`;
+        return eUrl2 ? `<figure class="blk-embed"><iframe src="${eUrl2}" style="width:100%;height:480px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:#fff;" loading="lazy"></iframe>${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}</figure>` : "";
+      }
       case "image":
         return d.url ? `<figure class="blk-img"><img src="${esc(d.url)}" alt="${esc(d.caption || "")}" loading="lazy">${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}</figure>` : "";
       case "youtube": {
@@ -95,6 +110,26 @@ export function renderBlocks(blocks, esc) {
       case "checklist": {
         const items = Array.isArray(d.items) ? d.items : [];
         return `<ul class="blk-check">${items.map(it => `<li class="${it.done ? "done" : ""}">${it.done ? "☑" : "☐"} ${esc(it.text || "")}</li>`).join("")}</ul>`;
+      }
+      case "gdrive": {
+        const gUrl = d.url || "";
+        let embedUrl = "";
+        let fileType = "";
+        // 解析各種 Google 連結
+        const driveFile = gUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        const docsDoc = gUrl.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+        const sheetsDoc = gUrl.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+        const slidesDoc = gUrl.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+        if (driveFile) { embedUrl = `https://drive.google.com/file/d/${driveFile[1]}/preview`; fileType = "雲端檔案"; }
+        else if (docsDoc) { embedUrl = `https://docs.google.com/document/d/${docsDoc[1]}/preview`; fileType = "Google 文件"; }
+        else if (sheetsDoc) { embedUrl = `https://docs.google.com/spreadsheets/d/${sheetsDoc[1]}/preview`; fileType = "Google 試算表"; }
+        else if (slidesDoc) { embedUrl = `https://docs.google.com/presentation/d/${slidesDoc[1]}/embed`; fileType = "Google 簡報"; }
+        inner = `<div class="be-hint">Google 雲端 ${fileType ? `· ${fileType}` : ""}</div>
+          <input class="be-input" data-k="url" placeholder="貼上 Google Drive / 文件 / 試算表 / 簡報的分享連結" value="${esc(gUrl)}">
+          ${embedUrl ? `<div style="margin-top:8px;"><div style="color:var(--brass-300);font-size:12px;margin-bottom:6px;">✓ 已識別為${fileType} — 即時預覽</div><iframe src="${embedUrl}" style="width:100%;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:#fff;"></iframe></div>`
+            : (gUrl ? `<div style="margin-top:8px;color:var(--signal-red);font-size:12px;">⚠ 無法識別連結，請確認是 Google 分享連結</div>` : "")}
+          <input class="be-input" data-k="caption" placeholder="說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
+        break;
       }
       case "embed":
         return d.url ? `<figure class="blk-embed"><div class="embed-wrap"><iframe src="${esc(d.url)}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe></div>${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}</figure>` : "";
@@ -223,9 +258,24 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       case "quote":
         inner = `<div class="be-hint">引言</div><textarea class="be-textarea" data-k="text" placeholder="引言內容…" style="${textStyle(d)}">${esc(d.text || "")}</textarea>` + styleControls(d) + `<input class="be-input" data-k="cite" placeholder="出處（選填）" value="${esc(d.cite || "")}" style="margin-top:6px;font-size:12px;">`;
         break;
-      case "image":
-        inner = `<div class="be-hint">圖片</div><input class="be-input" data-k="url" placeholder="圖片網址（https://…）" value="${esc(d.url || "")}">${d.url ? `<img src="${esc(d.url)}" style="max-width:100%;border-radius:8px;margin-top:8px;" onerror="this.style.display='none'">` : ""}<input class="be-input" data-k="caption" placeholder="圖片說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
+      case "image": {
+        const imgUrl = d.url || "";
+        // Google Drive 連結轉換為可嵌入格式
+        let displayUrl = imgUrl;
+        const driveMatch = imgUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (driveMatch) displayUrl = `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w1000`;
+        inner = `<div class="be-hint">圖片</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input class="be-input" data-k="url" placeholder="圖片網址，或貼上 Google Drive 分享連結" value="${esc(imgUrl)}" style="flex:1;">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;">
+              上傳圖片
+              <input type="file" accept="image/*" data-img-upload style="display:none;">
+            </label>
+          </div>
+          ${displayUrl ? `<img src="${esc(displayUrl)}" style="max-width:100%;border-radius:8px;" onerror="this.style.display='none'">` : `<div style="padding:20px;text-align:center;color:var(--paper-400);font-size:12px;border:1px dashed rgba(255,255,255,0.15);border-radius:8px;">貼上圖片網址、Google Drive 連結，或點擊「上傳圖片」</div>`}
+          <input class="be-input" data-k="caption" placeholder="圖片說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
         break;
+      }
       case "youtube": {
         const _vid = youtubeId(d.url);
         inner = `<div class="be-hint">YouTube 影片</div><input class="be-input" data-k="url" placeholder="貼上 YouTube 連結（watch / shorts / youtu.be 皆可）" value="${esc(d.url || "")}">`
@@ -288,6 +338,26 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
           </select>
           <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">讀者點擊「開始對戰」會跳轉到對戰頁面，以此主題進行 AI 出題挑戰。</div>`;
         break;
+      case "gdrive": {
+        const gUrl = d.url || "";
+        let embedUrl = "";
+        let fileType = "";
+        // 解析各種 Google 連結
+        const driveFile = gUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        const docsDoc = gUrl.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+        const sheetsDoc = gUrl.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+        const slidesDoc = gUrl.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+        if (driveFile) { embedUrl = `https://drive.google.com/file/d/${driveFile[1]}/preview`; fileType = "雲端檔案"; }
+        else if (docsDoc) { embedUrl = `https://docs.google.com/document/d/${docsDoc[1]}/preview`; fileType = "Google 文件"; }
+        else if (sheetsDoc) { embedUrl = `https://docs.google.com/spreadsheets/d/${sheetsDoc[1]}/preview`; fileType = "Google 試算表"; }
+        else if (slidesDoc) { embedUrl = `https://docs.google.com/presentation/d/${slidesDoc[1]}/embed`; fileType = "Google 簡報"; }
+        inner = `<div class="be-hint">Google 雲端 ${fileType ? `· ${fileType}` : ""}</div>
+          <input class="be-input" data-k="url" placeholder="貼上 Google Drive / 文件 / 試算表 / 簡報的分享連結" value="${esc(gUrl)}">
+          ${embedUrl ? `<div style="margin-top:8px;"><div style="color:var(--brass-300);font-size:12px;margin-bottom:6px;">✓ 已識別為${fileType} — 即時預覽</div><iframe src="${embedUrl}" style="width:100%;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:#fff;"></iframe></div>`
+            : (gUrl ? `<div style="margin-top:8px;color:var(--signal-red);font-size:12px;">⚠ 無法識別連結，請確認是 Google 分享連結</div>` : "")}
+          <input class="be-input" data-k="caption" placeholder="說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
+        break;
+      }
       case "embed":
         inner = `<div class="be-hint">嵌入網頁（iframe）</div><input class="be-input" data-k="url" placeholder="網址（https://…）" value="${esc(d.url || "")}"><input class="be-input" data-k="caption" placeholder="說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
         break;
@@ -321,6 +391,26 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
   }
 
   function syncFromDOM() {
+    // 圖片上傳：轉為 base64 存入
+    container.querySelectorAll("[data-img-upload]").forEach(input => {
+      input.onchange = () => {
+        const file = input.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) { alert("圖片太大，請選擇 2MB 以內的圖片"); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const el = input.closest(".be-block");
+          const urlInput = el.querySelector('[data-k="url"]');
+          if (urlInput) {
+            urlInput.value = reader.result;
+            urlInput.dispatchEvent(new Event("input", { bubbles: true }));
+            syncFromDOM();
+            render();
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+    });
     container.querySelectorAll(".be-block").forEach(el => {
       const b = blocks.find(x => x.id === el.dataset.bid);
       if (!b) return;
@@ -372,6 +462,26 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       btn.onclick = e => { e.stopPropagation(); showMenu(+btn.dataset.add); };
     });
 
+    // 圖片上傳：轉為 base64 存入
+    container.querySelectorAll("[data-img-upload]").forEach(input => {
+      input.onchange = () => {
+        const file = input.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) { alert("圖片太大，請選擇 2MB 以內的圖片"); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const el = input.closest(".be-block");
+          const urlInput = el.querySelector('[data-k="url"]');
+          if (urlInput) {
+            urlInput.value = reader.result;
+            urlInput.dispatchEvent(new Event("input", { bubbles: true }));
+            syncFromDOM();
+            render();
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+    });
     container.querySelectorAll(".be-block").forEach(el => {
       const bid = el.dataset.bid;
       el.querySelector("[data-act='del']").onclick = () => {
