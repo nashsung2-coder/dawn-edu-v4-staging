@@ -9,6 +9,7 @@ const NAV_GROUPS = [
     ["learn.html", "\u5b78\u7fd2\u7e3d\u89bd", "nav-learn.webp"],
     ["knowledge.html", "\u77e5\u8b58\u5eab", "nav-knowledge.webp"],
     ["feynman.html", "\u8cbb\u66fc\u8aaa\u670d", "nav-feynman.webp"],
+    ["guided-create.html", "\u5f15\u5c0e\u5efa\u7acb", "nav-sparkle.webp"],
     ["quiz.html", "\u77e5\u8b58\u5c0d\u6230", "nav-quiz.webp"],
     ["review.html", "\u8907\u7fd2", "nav-review.webp"],
     ["bookshelf.html", "\u66f8\u67b6", "nav-bookshelf.webp"],
