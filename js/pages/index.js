@@ -1,6 +1,6 @@
 /* v4 登入/註冊頁 */
 import { supabase, getUser, signInWithGoogle } from "../core/supabase.js";
-import { applyTimeBg, toast } from "../core/ui.js";
+import { applyTimeBg, toast } from "../core/ui.js?v=fixed001";
 
 applyTimeBg();
 
@@ -37,7 +37,7 @@ authSwitch.onclick = (e) => {
 
 /* 已登入直接跳學習頁 */
 getUser().then(u => {
-  if (u) window.location.href = "learn.html";
+  if (u) window.location.href = "dashboard.html";
 }).catch(() => {});
 
 /* Google 登入 */
@@ -93,7 +93,7 @@ document.getElementById("form-login").onsubmit = async (e) => {
         needOnboarding = true;
       }
       /* 新用戶先走新手指引 */
-      window.location.href = needOnboarding ? "onboarding.html" : "learn.html";
+      window.location.href = needOnboarding ? "onboarding.html" : "dashboard.html";
     }
   } catch (err) {
     let msg = "登入失敗，請稍後再試";
