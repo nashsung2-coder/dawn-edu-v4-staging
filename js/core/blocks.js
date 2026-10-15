@@ -29,6 +29,33 @@ export function newBlock(type, data = {}) {
   return { id: "b" + (++_uid) + "_" + Date.now().toString(36), type, data: { ...(defaults[type] || {}), ...data } };
 }
 
+
+/* 文字樣式控制（字體大小/顏色/背景） */
+function styleControls(d) {
+  const fs = d.fontSize || "";
+  const fc = d.color || "";
+  const bg = d.bg || "";
+  return `<div class="be-style-row" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+    <select data-k="fontSize" class="be-select" style="font-size:12px;padding:4px 6px;border-radius:6px;background:oklch(1 0 0 / 0.05);border:1px solid oklch(1 0 0 / 0.12);color:var(--paper-200);">
+      <option value="">預設大小</option>
+      <option value="12px" ${fs==="12px"?"selected":""}>小</option>
+      <option value="14px" ${fs==="14px"?"selected":""}>中</option>
+      <option value="18px" ${fs==="18px"?"selected":""}>大</option>
+      <option value="24px" ${fs==="24px"?"selected":""}>特大</option>
+    </select>
+    <input type="color" data-k="color" value="${fc||"#e8e4d8"}" title="文字顏色" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none;padding:0;">
+    <input type="color" data-k="bg" value="${bg||"#000000"}" title="背景色（選黑=透明）" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none;padding:0;">
+    ${bg && bg.toLowerCase() !== "#000000" ? `<button data-act="clearbg" title="清除背景" style="font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid oklch(1 0 0 / 0.15);background:none;color:var(--paper-400);cursor:pointer;">清除背景</button>` : ""}
+  </div>`;
+}
+function textStyle(d) {
+  let s = "";
+  if (d.fontSize) s += `font-size:${d.fontSize};`;
+  if (d.color) s += `color:${d.color};`;
+  if (d.bg && d.bg.toLowerCase() !== "#000000") s += `background:${d.bg};padding:4px 8px;border-radius:6px;`;
+  return s;
+}
+
 export function youtubeId(url) {
   const m = String(url || "").match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
@@ -42,10 +69,10 @@ export function renderBlocks(blocks, esc) {
     switch (b.type) {
       case "heading": {
         const lv = Math.min(3, Math.max(2, d.level || 2));
-        return `<h${lv} class="blk-h">${esc(d.text || "")}</h${lv}>`;
+        return `<h${lv} class="blk-h" style="${textStyle(d)}">${esc(d.text || "")}</h${lv}>`;
       }
       case "quote":
-        return `<blockquote class="blk-quote">${esc(d.text || "")}${d.cite ? `<cite>— ${esc(d.cite)}</cite>` : ""}</blockquote>`;
+        return `<blockquote class="blk-quote" style="${textStyle(d)}">${esc(d.text || "")}${d.cite ? `<cite>— ${esc(d.cite)}</cite>` : ""}</blockquote>`;
       case "image":
         return d.url ? `<figure class="blk-img"><img src="${esc(d.url)}" alt="${esc(d.caption || "")}" loading="lazy">${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}</figure>` : "";
       case "youtube": {
@@ -142,13 +169,13 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
     let inner = "";
     switch (b.type) {
       case "paragraph":
-        inner = `<div class="be-hint">段落</div><textarea class="be-textarea" data-k="text" placeholder="寫點什麼…">${esc(d.text || "")}</textarea>`;
+        inner = `<div class="be-hint">段落</div><textarea class="be-textarea" data-k="text" placeholder="寫點什麼…" style="${textStyle(d)}">${esc(d.text || "")}</textarea>` + styleControls(d);
         break;
       case "heading":
-        inner = `<div class="be-hint">標題</div><input class="be-input" data-k="text" style="font-size:18px;font-weight:700;" placeholder="標題文字" value="${esc(d.text || "")}">`;
+        inner = `<div class="be-hint">標題</div><input class="be-input" data-k="text" style="font-size:18px;font-weight:700;${textStyle(d)}" placeholder="標題文字" value="${esc(d.text || "")}">` + styleControls(d);
         break;
       case "quote":
-        inner = `<div class="be-hint">引言</div><textarea class="be-textarea" data-k="text" placeholder="引言內容…">${esc(d.text || "")}</textarea><input class="be-input" data-k="cite" placeholder="出處（選填）" value="${esc(d.cite || "")}" style="margin-top:6px;font-size:12px;">`;
+        inner = `<div class="be-hint">引言</div><textarea class="be-textarea" data-k="text" placeholder="引言內容…" style="${textStyle(d)}">${esc(d.text || "")}</textarea>` + styleControls(d) + `<input class="be-input" data-k="cite" placeholder="出處（選填）" value="${esc(d.cite || "")}" style="margin-top:6px;font-size:12px;">`;
         break;
       case "image":
         inner = `<div class="be-hint">圖片</div><input class="be-input" data-k="url" placeholder="圖片網址（https://…）" value="${esc(d.url || "")}">${d.url ? `<img src="${esc(d.url)}" style="max-width:100%;border-radius:8px;margin-top:8px;" onerror="this.style.display='none'">` : ""}<input class="be-input" data-k="caption" placeholder="圖片說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
@@ -255,6 +282,18 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
           _t = setTimeout(() => { syncFromDOM(); render(); }, 800);
         });
       }
+      /* 清除背景色 */
+      const clearBg = el.querySelector("[data-act='clearbg']");
+      if (clearBg) clearBg.onclick = e => {
+        e.stopPropagation();
+        syncFromDOM();
+        const b = blocks.find(x => x.id === bid);
+        if (b) { b.data.bg = "#000000"; render(); }
+      };
+      /* 樣式變更即時預覽 */
+      el.querySelectorAll('select[data-k], input[type="color"][data-k]').forEach(inp => {
+        inp.addEventListener("change", () => { syncFromDOM(); render(); });
+      });
       const addItem = el.querySelector("[data-act='add-item']");
       if (addItem) addItem.onclick = () => {
         syncFromDOM();
