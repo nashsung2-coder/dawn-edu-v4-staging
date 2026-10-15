@@ -267,7 +267,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         if (driveMatch) displayUrl = `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w1000`;
         inner = `<div class="be-hint">圖片</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input class="be-input" data-k="url" placeholder="圖片網址，或貼上 Google Drive 分享連結" value="${esc(imgUrl)}" style="flex:1;">
+            <input class="be-input" data-k="url" placeholder="圖片網址、Google Drive 連結，或直接 Ctrl+V 貼上圖片" value="${esc(imgUrl)}" style="flex:1;">
             <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;">
               上傳圖片
               <input type="file" accept="image/*" data-img-upload style="display:none;">
@@ -462,6 +462,42 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
   }
 
   function bind() {
+    // 貼上圖片：Ctrl+V 直接在編輯器任何位置貼上圖片
+    if (!container._pasteBound) {
+      container._pasteBound = true;
+      container.addEventListener("paste", e => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+          if (item.type.startsWith("image/")) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { alert("圖片太大，請貼上 2MB 以內的圖片"); return; }
+            const reader = new FileReader();
+            reader.onload = () => {
+              syncFromDOM();
+              _pushHistory();
+              // 貼在最後一個區塊後面，或焦點所在的區塊後面
+              const focused = document.activeElement?.closest?.(".be-block");
+              let insertAt = blocks.length;
+              if (focused) {
+                const idx = [...container.querySelectorAll(".be-block")].indexOf(focused);
+                if (idx >= 0) insertAt = idx + 1;
+              }
+              blocks.splice(insertAt, 0, newBlock("image", { url: reader.result }));
+              render();
+              setTimeout(() => {
+                const newEl = container.querySelectorAll(".be-block")[insertAt];
+                if (newEl) newEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 100);
+            };
+            reader.readAsDataURL(file);
+            return;
+          }
+        }
+      });
+    }
     container.querySelectorAll("[data-add]").forEach(btn => {
       btn.onclick = e => { e.stopPropagation(); showMenu(+btn.dataset.add); };
     });
