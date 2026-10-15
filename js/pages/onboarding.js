@@ -1,6 +1,6 @@
 /* 新手指引：心理測驗 → 選角色 → 選交通工具 → 選服裝 */
 import { supabase } from "../core/supabase.js";
-import { requireAuth, toast, esc, applyTimeBg } from "../core/ui.js";
+import { requireAuth, toast, esc, applyTimeBg } from "../core/ui.js?v=fixed002";
 
 applyTimeBg();
 const user = await requireAuth();
@@ -173,6 +173,14 @@ async function finish() {
     btnNext.textContent = "開始冒險！";
   }
 }
+
+/* 跳過引導 */
+document.getElementById("ob-skip").onclick = () => {
+  if (confirm("確定跳過新手引導嗎？之後可以在設定中重新開始。")) {
+    localStorage.setItem("dawn:v4:onboarded", "skipped");
+    window.location.href = "learn.html";
+  }
+};
 
 /* 已完成過就跳過 */
 if (localStorage.getItem("dawn:v4:onboarded")) {
