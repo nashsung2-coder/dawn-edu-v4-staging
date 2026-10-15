@@ -318,8 +318,14 @@ $("pub-confirm").onclick = async () => {
         data = r2.data; error = r2.error;
       }
       if (error) throw error;
+      if (!data || !data.id) throw new Error("資料庫未回傳節點 ID（可能被 RLS 阻擋）");
       nodeId = data.id;
       publishedNodeId = nodeId;
+      // 驗證：確認真的寫入了
+      const verify = await supabase.from("knowledge_nodes").select("id").eq("id", nodeId).single();
+      if (verify.error || !verify.data) {
+        throw new Error("寫入驗證失敗：" + (verify.error?.message || "查無此節點"));
+      }
     }
     // 建立版本快照
     saveVersion(nodeId, d);
