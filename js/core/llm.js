@@ -17,23 +17,37 @@ export const MODELS = {
 };
 
 export async function chat(messages, opts = {}) {
-  const res = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messages,
-      model: opts.model || MODELS.chat,
-      temperature: opts.temperature ?? 0.7,
-      max_tokens: opts.max_tokens || 2000,
-    }),
-    signal: AbortSignal.timeout(opts.timeout || 60000),
-  });
-  if (!res.ok) throw new Error(`Worker ${res.status}`);
-  const data = await res.json();
-  let content = data.choices?.[0]?.message?.content || "";
-  // DeepSeek R1 推理模型會在 <think> 標籤放思考過程，只取最終答案
-  content = content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  return content;
+  const maxRetries = opts.retries ?? 2;
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages,
+          model: opts.model || MODELS.chat,
+          temperature: opts.temperature ?? 0.7,
+          max_tokens: opts.max_tokens || 2000,
+        }),
+        signal: AbortSignal.timeout(opts.timeout || 60000),
+      });
+      if (!res.ok) throw new Error(`AI 服務暫時無法使用（${res.status}）`);
+      const data = await res.json();
+      let content = data.choices?.[0]?.message?.content || "";
+      // DeepSeek R1 推理模型會在 <think> 標籤放思考過程，只取最終答案
+      content = content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      if (!content) throw new Error("AI 回傳了空內容");
+      return content;
+    } catch (e) {
+      lastErr = e;
+      // 最後一次不重試；AbortError（超時）也重試
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 export async function ask(system, user, opts = {}) {
