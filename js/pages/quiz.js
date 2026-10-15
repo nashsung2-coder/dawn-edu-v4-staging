@@ -106,7 +106,7 @@ async function nextQuestion() {
       ? `以下是使用者要驗證的知識內容，請**嚴格根據此內容**出題，驗證他是否真正掌握：\n---\n${knowledgeContent.slice(0, 3000)}\n---\n`
       : `主題：${topic}\n`;
     const reply = await ask(
-      `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。只回 JSON，不要其他文字。格式：{"question":"題目","options":["A","B","C","D"],"answer_index":0,"explanation":"解析"}`,
+      `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。只回 JSON，不要其他文字。格式：{"question":"題目","options":["選項1純文字","選項2純文字","選項3純文字","選項4純文字"],"answer_index":0,"explanation":"解析"}。注意：options 裡不要加 A/B/C/D 前綴`,
       contextPrompt
     );
     const m = reply.match(/\{[\s\S]*\}/);
@@ -132,8 +132,11 @@ function renderQuestion() {
       </div>
       ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div style="height:100%;width:${(hardStreak / MASTERY_STREAK) * 100}%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transition:width .4s;"></div></div></div>` : ""}
       <h2 style="margin-bottom:16px;font-size:17px;">${esc(q.question)}</h2>
-      <div id="qz-opts">${q.options.map((o, i) =>
-        `<button class="opt-btn" data-i="${i}"><span class="opt-key">${keys[i]}</span>${esc(o)}</button>`).join("")}</div>
+      <div id="qz-opts">${q.options.map((o, i) => {
+        // 去除 AI 可能自帶的 "A:" "B." "C、" 等前綴，避免跟字母徽章重複
+        const clean = String(o).replace(/^[A-D][:\.、\s]+/, "").trim();
+        return `<button class="opt-btn" data-i="${i}"><span class="opt-key">${keys[i]}</span>${esc(clean)}</button>`;
+      }).join("")}</div>
       <div id="qz-explain" style="display:none;margin-top:16px;padding:12px;border-radius:8px;background:oklch(1 0 0 / 0.04);font-size:13px;line-height:1.7;"></div>
       <button class="btn btn-ghost" id="qz-stop" style="margin-top:16px;width:100%;">結束對戰</button>
     </div>`;

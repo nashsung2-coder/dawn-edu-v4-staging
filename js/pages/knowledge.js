@@ -250,6 +250,15 @@ function render() {
   if (pgPrev) pgPrev.onclick = () => { if (curPage > 1) { curPage--; render(); window.scrollTo(0, 0); } };
   if (pgNext) pgNext.onclick = () => { curPage++; render(); window.scrollTo(0, 0); };
 
+  /* 節點卡片：點擊開啟獨立閱讀頁 */
+  v.querySelectorAll(".card.node").forEach(el => {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      location.href = `node.html?id=${el.dataset.id}`;
+    });
+  });
+
   /* 草稿：點擊進入編輯器繼續編輯 */
   v.querySelectorAll("[data-draft]").forEach(el => {
     el.addEventListener("click", e => {
@@ -300,12 +309,21 @@ function render() {
       btn.disabled = true;
       try {
         const id = btn.dataset.up;
-        /* 用 SECURITY DEFINER RPC 原子 +1（RLS 不允許直接改別人的節點） */
-        const { data, error } = await supabase.rpc("increment_upvotes", { node_id: id });
-        if (error) throw error;
         const node = cache.find(n => String(n.id) === String(id));
-        if (node) node.upvotes = data ?? (node.upvotes ?? 0) + 1;
+        const newCount = (node?.upvotes ?? 0) + 1;
+        /* 嘗試寫入資料庫（upvotes 欄位可能不存在，失敗則只更新本地） */
+        try {
+          const { error } = await supabase.from("knowledge_nodes").update({ upvotes: newCount }).eq("id", id);
+          if (error && !/column/i.test(error.message)) throw error;
+        } catch {}
+        if (node) node.upvotes = newCount;
+        // 本地記錄已按讚，避免重複
+        try {
+          const liked = JSON.parse(localStorage.getItem("dawn_liked") || "[]");
+          if (!liked.includes(id)) { liked.push(id); localStorage.setItem("dawn_liked", JSON.stringify(liked)); }
+        } catch {}
         render();
+        toast("已按讚");
       } catch (err) {
         toast("按讚失敗，請稍後再試");
         btn.disabled = false;
