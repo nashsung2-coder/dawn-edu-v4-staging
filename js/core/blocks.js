@@ -2,18 +2,18 @@
 /* 支援的區塊類型：段落、標題、引言、圖片、YouTube、程式碼、分隔線、待辦、嵌入 */
 
 export const BLOCK_TYPES = [
-  { type: "paragraph", label: "段落文字", icon: "¶" },
-  { type: "heading", label: "標題", icon: "H" },
-  { type: "quote", label: "引言", icon: "❝" },
-  { type: "image", label: "圖片", icon: "🖼" },
-  { type: "youtube", label: "YouTube 影片", icon: "▶" },
-  { type: "code", label: "程式碼", icon: "</>" },
-  { type: "divider", label: "分隔線", icon: "―" },
-  { type: "checklist", label: "待辦清單", icon: "☑" },
-  { type: "embed", label: "嵌入網頁", icon: "🔗" },
-  { type: "gdrive", label: "Google 雲端", icon: "☁" },
-  { type: "feynman", label: "費曼解釋", icon: "💡" },
-  { type: "battle", label: "知識對戰", icon: "⚔" },
+  { type: "paragraph", label: "段落文字", icon: "¶", desc: "一般的文字段落" },
+  { type: "heading", label: "標題", icon: "H", desc: "大標題、小標題" },
+  { type: "quote", label: "引言", icon: "❝", desc: "引用名言或重點" },
+  { type: "image", label: "圖片", icon: "🖼", desc: "上傳或貼上圖片連結" },
+  { type: "youtube", label: "YouTube 影片", icon: "▶", desc: "嵌入 YouTube 影片" },
+  { type: "code", label: "程式碼", icon: "</>", desc: "可執行的程式碼" },
+  { type: "divider", label: "分隔線", icon: "―", desc: "分隔不同段落" },
+  { type: "checklist", label: "待辦清單", icon: "☑", desc: "可勾選的清單" },
+  { type: "embed", label: "嵌入網頁", icon: "🔗", desc: "嵌入外部網頁" },
+  { type: "gdrive", label: "Google 雲端", icon: "☁", desc: "Drive/文件/試算表" },
+  { type: "feynman", label: "費曼解釋", icon: "💡", desc: "用簡單的話講清楚概念" },
+  { type: "battle", label: "知識對戰", icon: "⚔", desc: "AI 出題驗證理解" },
 ];
 
 let _uid = 0;
@@ -210,8 +210,9 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
   .be-input, .be-textarea { width:100%; background:transparent; border:none; outline:none; color:var(--paper-100); font-size:14px; resize:vertical; }
   .be-textarea { min-height:60px; line-height:1.7; }
   .be-hint { font-size:11px; color:var(--paper-400); margin-bottom:4px; }
-  .be-add { display:flex; align-items:center; gap:8px; margin:6px 0; opacity:0; transition:opacity .15s; }
-  .be-add:hover, .be-canvas:hover .be-add { opacity:1; }
+  .be-add { display:flex; align-items:center; gap:8px; margin:10px 0; opacity:0.45; transition:opacity .2s; }
+  .be-add:hover { opacity:1; }
+  .be-add:hover .be-add-line { background: oklch(0.74 0.14 80 / 0.5); }
   .be-add-line { flex:1; height:1px; background: oklch(0.60 0.12 80 / 0.2); }
   .be-add-btn { width:28px; height:28px; border-radius:50%; border:1px dashed oklch(0.60 0.12 80 / 0.4); background:transparent; color:var(--brass-300); cursor:pointer; font-size:16px; line-height:1; }
   .be-add-btn:hover { background: oklch(0.74 0.14 80 / 0.12); }
@@ -438,8 +439,11 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
     // 插入位置 = 該按鈕在 DOM 中的順序
     const safePos = btnIndex >= 0 ? btnIndex : pos;
     const slot = container.querySelector(".be-menu-slot");
-    slot.innerHTML = `<div class="be-menu">${BLOCK_TYPES.map(t =>
-      `<button data-btype="${t.type}"><span class="bi">${t.icon}</span>${t.label}</button>`
+    slot.innerHTML = `<div class="be-menu" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:16px;background:oklch(0.20 0.04 260);border:1px solid oklch(0.60 0.12 80 / 0.25);border-radius:12px;margin:8px 0;">${BLOCK_TYPES.map(t =>
+      `<button data-btype="${t.type}" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:10px;border:1px solid oklch(0.60 0.12 80 / 0.15);background:transparent;color:var(--paper-200);cursor:pointer;text-align:left;transition:all .15s;" onmouseover="this.style.background='oklch(0.74 0.14 80 / 0.1)';this.style.borderColor='var(--brass-400)'" onmouseout="this.style.background='transparent';this.style.borderColor='oklch(0.60 0.12 80 / 0.15)'">
+        <span style="font-size:22px;line-height:1;">${t.icon}</span>
+        <span><span style="display:block;font-size:13px;font-weight:600;">${t.label}</span><span style="display:block;font-size:11px;color:var(--paper-400);margin-top:2px;">${t.desc || ""}</span></span>
+      </button>`
     ).join("")}</div>`;
     slot.querySelectorAll("[data-btype]").forEach(btn => {
       btn.onclick = () => {
