@@ -1,6 +1,6 @@
 /* v4 主控台：學習總覽 + 遊戲成就 + 家庭狀態 */
-import { supabase, getProfile } from "../core/supabase.js?v=fixed001";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed001";
+import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
 
 function withTimeout(promise, ms, label) {
   return Promise.race([
@@ -101,7 +101,26 @@ const homeHtml = `
     <a class="btn btn-ghost btn-sm" href="home.html">我的家 →</a>
   </div>
   <div class="stat-row">
-    <div class="stat"><div class="num">${pet ? esc(pet.name || "有") : "無"}</div><div class="lbl">靈獸</div></div>
+    <div class="stat" style="min-width:0;flex:1.4;">
+      ${pet ? `
+      <div style="font-size:14px;font-weight:700;color:#fcd34d;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(pet.name || "無名")} <span style="font-weight:400;font-size:11px;color:var(--paper-400);">Lv.${pet.level || 1}</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="font-size:11px;color:var(--paper-400);min-width:42px;">開心度</span>
+        <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+          <div style="height:100%;width:${Math.min(100, Math.max(0, pet.mood ?? 80))}%;border-radius:3px;background:linear-gradient(90deg,#f472b6,#ec4899);"></div>
+        </div>
+        <span style="font-size:11px;color:#f9a8d4;min-width:32px;text-align:right;">${Math.min(100, Math.max(0, Math.round(pet.mood ?? 80)))}%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;color:var(--paper-400);min-width:42px;">健康度</span>
+        <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+          <div style="height:100%;width:${Math.min(100, Math.max(0, pet.hunger ?? 100))}%;border-radius:3px;background:linear-gradient(90deg,#34d399,#10b981);"></div>
+        </div>
+        <span style="font-size:11px;color:#6ee7b7;min-width:32px;text-align:right;">${Math.min(100, Math.max(0, Math.round(pet.hunger ?? 100)))}%</span>
+      </div>
+      ` : `<div class="num">無</div>`}
+      <div class="lbl" style="margin-top:6px;">靈獸</div>
+    </div>
     <div class="stat"><div class="num">${(profile?.points ?? 0).toLocaleString()}</div><div class="lbl">星砂</div></div>
     <div class="stat"><div class="num">${nodeCount}</div><div class="lbl">知識節點</div></div>
   </div>
