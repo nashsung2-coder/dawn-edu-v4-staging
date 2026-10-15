@@ -341,3 +341,26 @@ td.n { font-family: var(--font-mono); text-align: right; color: var(--brass-300)
   box-shadow: 0 16px 48px oklch(0 0 0 / 0.5);
 }
 .modal h3 { margin: 0 0 12px; font-size: 17px; }
+
+/* ===== 深色主題自定義滾動條 ===== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 140, 80, 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(180, 140, 80, 0.3);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 140, 80, 0.5);
+}
+*::-webkit-scrollbar-button {
+  display: none;
+}
