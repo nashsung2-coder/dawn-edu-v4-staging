@@ -341,6 +341,12 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
 
   function showMenu(pos) {
     syncFromDOM();
+    // 用 DOM 順序重新計算正確的插入位置（避免索引錯亂）
+    const blockEls = [...container.querySelectorAll(".be-block")];
+    const addBtns = [...container.querySelectorAll("[data-add]")];
+    const btnIndex = addBtns.findIndex(b => +b.dataset.add === pos);
+    // 插入位置 = 該按鈕在 DOM 中的順序
+    const safePos = btnIndex >= 0 ? btnIndex : pos;
     const slot = container.querySelector(".be-menu-slot");
     slot.innerHTML = `<div class="be-menu">${BLOCK_TYPES.map(t =>
       `<button data-btype="${t.type}"><span class="bi">${t.icon}</span>${t.label}</button>`
@@ -349,8 +355,14 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       btn.onclick = () => {
         syncFromDOM();
         _pushHistory();
-        blocks.splice(pos, 0, newBlock(btn.dataset.btype));
+        const insertAt = Math.min(safePos, blocks.length);
+        blocks.splice(insertAt, 0, newBlock(btn.dataset.btype));
         render();
+        // 滾動到新插入的區塊
+        setTimeout(() => {
+          const newEl = container.querySelectorAll(".be-block")[insertAt];
+          if (newEl) newEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
       };
     });
   }
