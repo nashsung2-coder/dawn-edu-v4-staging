@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>發布診斷</title>
+<script type="module">
+import { supabase, getUser } from "./js/core/supabase.js?v=fixed002";
+const out = document.getElementById("out");
+function log(m) { out.innerHTML += m + "<br>"; console.log(m); }
+try {
+  const user = await getUser();
+  log("User ID: " + (user?.id || "未登入"));
+  log("Email: " + (user?.email || "無"));
+  
+  // 測試插入
+  log("<br>--- 測試插入 ---");
+  const { data, error } = await supabase.from("knowledge_nodes")
+    .insert({ user_id: user.id, title: "診斷測試", content: "test" })
+    .select("id").single();
+  if (error) {
+    log("插入錯誤: " + error.message);
+    log("錯誤碼: " + error.code);
+    log("詳細: " + JSON.stringify(error));
+  } else {
+    log("插入成功! ID: " + data.id);
+    // 驗證讀取
+    const v = await supabase.from("knowledge_nodes").select("id,title").eq("id", data.id).single();
+    if (v.error) log("讀取驗證失敗: " + v.error.message);
+    else log("讀取驗證成功: " + v.data.title);
+    // 清理
+    await supabase.from("knowledge_nodes").delete().eq("id", data.id);
+    log("測試資料已清理");
+  }
+} catch (e) {
+  log("異常: " + e.message);
+}
+</script>
+</head>
+<body>
+<h1>發布診斷</h1>
+<div id="out">載入中...</div>
+</body>
+</html>
