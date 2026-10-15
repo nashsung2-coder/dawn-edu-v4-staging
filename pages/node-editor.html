@@ -84,6 +84,7 @@
   <input class="editor-title-input" id="ed-title" placeholder="節點標題">
   <span class="status-badge status-draft" id="ed-status">草稿</span>
   <button class="btn btn-ghost btn-sm" id="btn-sidebar" style="display:none;">☰</button>
+  <button class="btn btn-ghost btn-sm" id="btn-save-draft">儲存草稿</button>
   <button class="btn btn-ghost btn-sm" id="btn-versions">版本紀錄</button>
   <button class="btn btn-ghost btn-sm" id="btn-preview">預覽</button>
   <button class="btn btn-primary btn-sm" id="btn-publish">發布</button>
@@ -120,6 +121,13 @@
           <input type="checkbox" id="ed-public" checked style="width:auto;">
           公開分享（其他人可搜尋學習）
         </label>
+      </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="ed-collab" style="width:auto;">
+          開放共同編輯（他人可修改此節點）
+        </label>
+        <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">開啟後，其他使用者可編輯此節點；若同時編輯產生衝突，會並列顯示雙方區塊由你決定保留或刪除。</div>
       </div>
     </div>
     <div class="sidebar-panel" id="panel-versions">
