@@ -364,3 +364,5 @@ td.n { font-family: var(--font-mono); text-align: right; color: var(--brass-300)
 *::-webkit-scrollbar-button {
   display: none;
 }
+
+@media (max-width:640px){.hide-mobile{display:none!important;}}
