@@ -174,11 +174,12 @@ const homeHtml = `
   </div>
 </div>`;
 
-view.innerHTML = learnHtml + gameHtml + homeHtml + `
+const recommendHtml = `
 <div class="dash-section-title"><span class="en">FOR YOU</span>為你推薦</div>
 <div class="card" id="ai-recommend-card">
   <p style="font-size:13px;color:var(--paper-400);">AI 正在分析你的學習軌跡…</p>
 </div>`;
+view.innerHTML = learnHtml + recommendHtml + gameHtml + homeHtml;
 
 // AI 推薦：根據學習活動推薦知識節點
 (async () => {
