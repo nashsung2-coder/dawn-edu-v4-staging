@@ -2,22 +2,22 @@
 import { getUser, getProfile, signOut } from "./supabase.js";
 
 const NAV_GROUPS = [
-  { label: "\u5b78\u7fd2", items: [
+  { label: "\u77e5\u8b58\u5eab", items: [
+    ["knowledge.html", "\u77e5\u8b58\u5eab", "nav-knowledge.webp"],
     ["learn.html", "\u5b78\u7fd2\u7e3d\u89bd", "nav-learn.webp"],
     ["feynman.html", "\u8cbb\u66fc\u8aaa\u670d", "nav-feynman.webp"],
     ["quiz.html", "\u77e5\u8b58\u5c0d\u6230", "nav-quiz.webp"],
     ["review.html", "\u8907\u7fd2", "nav-review.webp"],
-    ["knowledge.html", "\u77e5\u8b58\u5eab", "nav-knowledge.webp"],
     ["bookshelf.html", "\u66f8\u67b6", "nav-bookshelf.webp"],
   ]},
-  { label: "\u63a2\u7d22", items: [
+  { label: "\u904a\u6232", items: [
+    ["universe.html", "\u5b87\u5b99\u5f81\u670d", "nav-universe.webp"],
     ["island.html", "\u7fa4\u5cf6", "nav-island.webp"],
-    ["universe.html", "\u5b87\u5b99", "nav-universe.webp"],
+    ["pet.html", "\u9748\u7378", "nav-pet.webp"],
     ["market.html", "\u5546\u5e97", "nav-market.webp"],
   ]},
   { label: "\u6211\u7684", items: [
     ["home.html", "\u6211\u7684\u5bb6", "nav-home.webp"],
-    ["pet.html", "\u9748\u7378", "nav-pet.webp"],
     ["settings.html", "\u8a2d\u5b9a", "nav-settings.webp"],
   ]},
 ];
