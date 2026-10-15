@@ -86,6 +86,7 @@
   <button class="btn btn-ghost btn-sm" id="btn-sidebar" style="display:none;">☰</button>
   <button class="btn btn-ghost btn-sm" id="btn-save-draft">儲存草稿</button>
   <button class="btn btn-ghost btn-sm" id="btn-versions">版本紀錄</button>
+  <button class="btn btn-ghost btn-sm" id="btn-ai-polish">✨ AI 潤飾</button>
   <button class="btn btn-ghost btn-sm" id="btn-preview">預覽</button>
   <button class="btn btn-primary btn-sm" id="btn-publish">發布</button>
 </div>
@@ -171,5 +172,14 @@
 <script src="../js/vendor/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script type="module" src="../js/pages/node-editor.js?v=fixed002"></script>
+<div class="modal-overlay" id="ai-polish-modal" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto;">
+    <h3 style="margin:0 0 16px;">✨ AI 寫作建議</h3>
+    <div id="ai-polish-content"><p style="color:var(--paper-400);font-size:14px;">AI 正在閱讀你的內容…</p></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-ghost" id="ai-polish-close">關閉</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
