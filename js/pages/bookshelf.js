@@ -1,6 +1,6 @@
 /* 個人書架 v4：textbook_entries 列表，點擊展開全文 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, esc, ensureProfile, toast } from "../core/ui.js?v=fixed002";
 
 await renderTopbar("bookshelf.html");
 const user = await requireAuth();
@@ -52,12 +52,35 @@ function renderEntries() {
           ${e.user_voice_summary ? `<h4>我的話</h4><p>${esc(e.user_voice_summary)}</p>` : ""}
           ${e.ai_supplement ? `<h4>AI 補充</h4><p>${esc(e.ai_supplement)}</p>` : ""}
         </div>
-        <div class="date">${fmtDate(e.created_at)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="date">${fmtDate(e.created_at)}</div>
+          <button class="btn btn-ghost btn-sm" data-del="${e.id}" style="color:var(--signal-red);">刪除</button>
+        </div>
       </div>`;
     }).join("")}
   `).join("");
   v.querySelectorAll(".entry").forEach(el => {
-    el.addEventListener("click", () => el.classList.toggle("open"));
+    el.addEventListener("click", e => {
+      if (e.target.closest("[data-del]")) return;
+      el.classList.toggle("open");
+    });
+  });
+  v.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      e.stopPropagation();
+      if (!confirm("確定刪除這個條目嗎？")) return;
+      btn.disabled = true;
+      try {
+        const { error } = await supabase.from("textbook_entries")
+          .delete().eq("id", btn.dataset.del).eq("user_id", user.id);
+        if (error) throw error;
+        allEntries = allEntries.filter(x => String(x.id) !== String(btn.dataset.del));
+        renderEntries();
+      } catch (err) {
+        alert("刪除失敗：" + err.message);
+        btn.disabled = false;
+      }
+    });
   });
 }
 

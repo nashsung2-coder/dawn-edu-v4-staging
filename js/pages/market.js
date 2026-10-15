@@ -1,6 +1,6 @@
 /* 商店頁：商品列表 / 購買 / 背包 / 雷達圖詳情 */
 import { supabase, getUser, getProfile } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
 
 await renderTopbar("market.html");
 const user = await requireAuth();
@@ -193,6 +193,7 @@ async function loadInventory() {
 
 async function buy(itemId, price, name, btn) {
   if (balance < price) { toast("星砂不足"); return; }
+  if (!confirm(`確定花 ${price} 星砂購買「${name}」嗎？`)) return;
   btn.disabled = true;
   const origText = btn.textContent;
   btn.textContent = "購買中…";
