@@ -146,7 +146,10 @@ function render() {
   const q = qEl.value.trim().toLowerCase();
   let list = cache;
   let drafts = [];
-  if (mode === "mine") {
+  if (mode === "all") {
+    // 全部模式：只顯示公開的節點，或自己的節點
+    list = list.filter(n => (n.is_public === true || n.is_public === "true") || n.user_id === user.id);
+  } else {
     list = list.filter(n => n.user_id === user.id);
     drafts = loadDrafts();
     if (q) {
