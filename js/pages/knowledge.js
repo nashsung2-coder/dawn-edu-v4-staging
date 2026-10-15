@@ -228,17 +228,23 @@ function render() {
     const isMine = n.user_id === user.id;
     const editBtn = isMine ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : "";
     const battleBtn = `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>`;
-    return `<div class="card node" data-id="${n.id}">
-      <div class="title">${esc(title)}</div>
-      ${`<div class="tags">${cat}${tags}</div>`}
-      ${body ? `<div class="body">${bodyIsBlocks ? body : md(body)}</div>` : ""}
-      <div class="meta">
-        <span class="up">▲ <span class="num-sm">${up}</span></span>
-        <span>${owner}</span>
-        <button class="btn btn-ghost upbtn" style="padding:4px 12px;font-size:12px;" data-up="${n.id}">讚</button>
-        ${battleBtn}
-        ${editBtn}
-        ${isMine ? `<button class="btn btn-ghost" style="padding:4px 12px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
+    // 緊湊卡片：標題+分類一行，操作按鈕靠右，不顯示全文預覽
+    return `<div class="card node" data-id="${n.id}" style="padding:12px 16px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div class="title" style="font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(title)}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+            <span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);font-size:11px;padding:2px 8px;">${esc(nCategory)}</span>
+            <span style="font-size:12px;color:var(--paper-400);">▲ ${up}</span>
+            ${owner ? `<span style="font-size:12px;color:var(--paper-400);">${owner}</span>` : ""}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="btn btn-ghost upbtn" style="padding:4px 10px;font-size:12px;" data-up="${n.id}">讚</button>
+          ${battleBtn.replace('btn-sm', '').replace('style="', 'style="padding:4px 10px;font-size:12px;')}
+          ${editBtn.replace('btn-sm', '').replace('style="', 'style="padding:4px 10px;font-size:12px;')}
+          ${isMine ? `<button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
+        </div>
       </div>
     </div>`;
   }).join("") + pageHtml;
