@@ -253,6 +253,13 @@ $("btn-publish").onclick = () => {
     if (!titleInput.value.trim()) { toast("請先填寫標題"); titleInput.focus(); return; }
     const curBlocks = getCurrentBlocks();
     if (!blocksText(curBlocks).trim()) { toast("內容不能為空，請先加入區塊並輸入文字"); return; }
+    if (!$("ed-category").value.trim()) {
+      toast("請先填寫主分類再發布");
+      $("ed-category").focus();
+      const panelBtn = document.querySelector('[data-panel="panel-settings"]');
+      if (panelBtn) panelBtn.click();
+      return;
+    }
     $("pub-visibility").value = $("ed-public").checked ? "public" : "private";
     const modal = $("publish-modal");
     modal.style.display = "flex";
@@ -331,14 +338,14 @@ $("pub-confirm").onclick = async () => {
     doneOverlay.style.display = "flex";
     doneOverlay.style.alignItems = "center";
     doneOverlay.style.justifyContent = "center";
-    const isPublic = $("ed-public").checked;
+    const modalIsPublic = $("ed-public").checked;
     doneOverlay.innerHTML = `
       <div class="modal" style="max-width:420px;text-align:center;padding:40px 32px;border-radius:20px;background:linear-gradient(160deg,#1e2a4a 0%,#141d33 100%);border:1px solid rgba(255,255,255,0.08);box-shadow:0 24px 64px rgba(0,0,0,0.5);">
         <div style="width:72px;height:72px;margin:0 auto 20px;border-radius:50%;background:linear-gradient(135deg,#10b981 0%,#059669 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16,185,129,0.35);">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h3 style="font-size:22px;font-weight:700;color:#fff;margin:0 0 10px;letter-spacing:0.5px;">發布成功</h3>
-        <p style="font-size:14px;line-height:1.7;color:#9aa4c0;margin:0 0 28px;">你的知識節點已經${isPublic ? "公開" : "私人"}發布${isPublic ? "，其他人可以在知識庫看到它" : "，可在「我的節點」中找到它"}。</p>
+        <p style="font-size:14px;line-height:1.7;color:#9aa4c0;margin:0 0 28px;">你的知識節點已經${modalIsPublic ? "公開" : "私人"}發布${modalIsPublic ? "，其他人可以在知識庫看到它" : "，可在「我的節點」中找到它"}。</p>
         <div style="display:flex;gap:12px;justify-content:center;">
           <button id="done-stay" style="padding:12px 24px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#cbd5e1;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;">繼續編輯</button>
           <button id="done-view" style="padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.3);transition:all 0.2s;">前往知識庫 →</button>
