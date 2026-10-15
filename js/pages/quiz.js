@@ -70,7 +70,14 @@ function renderSetup() {
     const _t = new URLSearchParams(location.search).get("topic");
     if (_t) document.getElementById("qz-topic").value = _t;
     const _c = new URLSearchParams(location.search).get("content");
-    if (_c) { mode = "content"; renderSetup(); document.getElementById("qz-content").value = decodeURIComponent(_c); }
+    const _from = new URLSearchParams(location.search).get("from");
+    if (_from === "verify") {
+      // 從知識庫驗證跳轉：內容在 sessionStorage
+      try {
+        const sc = sessionStorage.getItem("verify_content");
+        if (sc) { mode = "content"; renderSetup(); document.getElementById("qz-content").value = sc; sessionStorage.removeItem("verify_content"); }
+      } catch {}
+    } else if (_c) { mode = "content"; renderSetup(); document.getElementById("qz-content").value = decodeURIComponent(_c); }
   } catch {}
   document.getElementById("qz-go").onclick = startBattle;
 }

@@ -78,7 +78,8 @@ window.verifyNode = function(id) {
       text = n.content;
     }
   } catch { text = n.content || ""; }
-  const params = new URLSearchParams({ topic: n.title || "", content: text.slice(0, 2000) });
+  try { sessionStorage.setItem("verify_content", text.slice(0, 5000)); } catch {}
+  const params = new URLSearchParams({ topic: n.title || "", from: "verify" });
   location.href = "quiz.html?" + params.toString();
 };
 
@@ -233,10 +234,10 @@ function render() {
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);font-size:11px;padding:2px 8px;flex-shrink:0;">${esc(nCategory)}</span>
         <div class="title" style="font-size:14px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(title)}</div>
-        <span style="font-size:12px;color:var(--paper-400);flex-shrink:0;">▲ ${up}</span>
+        <span data-upcount style="font-size:12px;color:var(--paper-400);flex-shrink:0;">▲ ${up}</span>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button class="btn btn-ghost upbtn" style="padding:3px 8px;font-size:12px;" data-up="${n.id}">讚</button>
-          <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>
+          <button class="btn btn-ghost hide-mobile" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>
           ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : ""}
           ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
         </div>
@@ -303,27 +304,50 @@ function render() {
       }
     });
   });
+  // 讀取已按讚記錄
+  let likedIds = [];
+  try { likedIds = JSON.parse(localStorage.getItem("dawn_liked") || "[]"); } catch {}
   v.querySelectorAll("[data-up]").forEach(btn => {
+    // 已按讚的按鈕顯示狀態
+    if (likedIds.includes(btn.dataset.up)) {
+      btn.style.color = "var(--brass-300)";
+      btn.style.borderColor = "var(--brass-400)";
+      btn.textContent = "已讚";
+    }
     btn.addEventListener("click", async e => {
       e.stopPropagation();
+      const id = btn.dataset.up;
+      // 已按讚則取消
+      let liked = [];
+      try { liked = JSON.parse(localStorage.getItem("dawn_liked") || "[]"); } catch {}
+      const node = cache.find(n => String(n.id) === String(id));
+      const isLiked = liked.includes(id);
+      const newCount = Math.max(0, (node?.upvotes ?? 0) + (isLiked ? -1 : 1));
       btn.disabled = true;
       try {
-        const id = btn.dataset.up;
-        const node = cache.find(n => String(n.id) === String(id));
-        const newCount = (node?.upvotes ?? 0) + 1;
         /* 嘗試寫入資料庫（upvotes 欄位可能不存在，失敗則只更新本地） */
         try {
           const { error } = await supabase.from("knowledge_nodes").update({ upvotes: newCount }).eq("id", id);
           if (error && !/column/i.test(error.message)) throw error;
         } catch {}
         if (node) node.upvotes = newCount;
-        // 本地記錄已按讚，避免重複
+        // 更新本地按讚記錄（支援取消）
         try {
-          const liked = JSON.parse(localStorage.getItem("dawn_liked") || "[]");
-          if (!liked.includes(id)) { liked.push(id); localStorage.setItem("dawn_liked", JSON.stringify(liked)); }
+          let liked2 = JSON.parse(localStorage.getItem("dawn_liked") || "[]");
+          if (isLiked) liked2 = liked2.filter(x => x !== id);
+          else if (!liked2.includes(id)) liked2.push(id);
+          localStorage.setItem("dawn_liked", JSON.stringify(liked2));
         } catch {}
-        render();
-        toast("已按讚");
+        // 只更新數字，不重 render（保留滾動位置）
+        const numEl = btn.parentElement?.parentElement?.querySelector("[data-upcount]");
+        if (numEl) numEl.textContent = `▲ ${newCount}`;
+        if (isLiked) {
+          btn.style.color = ""; btn.style.borderColor = ""; btn.textContent = "讚";
+        } else {
+          btn.style.color = "var(--brass-300)"; btn.style.borderColor = "var(--brass-400)"; btn.textContent = "已讚";
+        }
+        btn.disabled = false;
+        toast(isLiked ? "已取消讚" : "已按讚");
       } catch (err) {
         toast("按讚失敗，請稍後再試");
         btn.disabled = false;

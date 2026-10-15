@@ -138,6 +138,10 @@ async function answerSocratic(topic, questions) {
 }
 
 async function saveToTextbook() {
+  const btn = document.getElementById("fy-save");
+  if (!btn || btn.disabled) return; // 防重複點擊
+  btn.disabled = true;
+  btn.textContent = "存入中…";
   const topic = topicEl.value.trim();
   const cat = (document.getElementById("fy-cat")?.value || "").trim() || "未分類";
   try {
@@ -162,8 +166,17 @@ async function saveToTextbook() {
         is_public: false,
       });
     } catch (e) { console.warn("知識庫寫入失敗", e); }
-    toast("已存入個人課本＋知識庫（群島成長了）");
-    document.getElementById("fy-save")?.remove();
+    /* 寫入 battle_records：讓學習頁今日任務能偵測到完成 */
+    try {
+      await supabase.from("battle_records").insert({
+        user_id: user.id,
+        question: topic,
+        feynman_score: lastScore,
+        quiz_score: 0,
+      });
+    } catch (e) { console.warn("戰績寫入失敗", e); }
+    toast("已存入個人課本＋知識庫（預設不公開，可到知識庫改為公開）");
+    btn.textContent = "已存入 ✓";
   } catch (e) {
     toast("存入失敗：" + e.message);
   }

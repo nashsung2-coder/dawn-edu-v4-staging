@@ -1,6 +1,6 @@
 /* v4 學習總覽 */
-import { supabase, getProfile } from "../core/supabase.js?v=fixed001";
-import { renderTopbar, requireAuth, toast, esc, once, ensureProfile, ICO } from "../core/ui.js?v=fixed001";
+import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, once, ensureProfile, ICO } from "../core/ui.js?v=fixed002";
 
 /* timeout 保護：避免無限卡住 */
 function withTimeout(promise, ms, label) {
@@ -69,8 +69,15 @@ try {
 
   /* 今日任務 */
   const todayStr = new Date().toISOString().slice(0, 10);
+  // 檢查今天是否有複習記錄（避免沒到期就自動完成）
+  let reviewedToday = false;
+  try {
+    const { data: revLog } = await supabase.from("review_logs").select("id")
+      .eq("user_id", user.id).gte("created_at", todayStr).limit(1);
+    reviewedToday = (revLog || []).length > 0;
+  } catch {}
   const tasks = [
-    { id: "review", nm: "複習到期卡片", desc: "複習之前學過的卡片，加深記憶", done: dueCount === 0, link: "review.html", icon: "nav-review.webp" },
+    { id: "review", nm: dueCount > 0 ? `複習 ${dueCount} 張卡片` : "複習到期卡片", desc: dueCount > 0 ? "把今天到期的卡片清掉" : "今天沒有到期卡片，隨時可複習", done: reviewedToday || dueCount === 0, link: "review.html", icon: "nav-review.webp" },
     { id: "feynman", nm: "費曼說服 1 次", desc: "用自己的話解釋概念，AI 評估完整度", done: false, link: "feynman.html", icon: "nav-feynman.webp", check: "feynman" },
     { id: "quiz", nm: "知識對戰 1 場", desc: "AI 出題考你，答對得分賺星砂", done: false, link: "quiz.html", icon: "nav-quiz.webp", check: "quiz" },
   ];
@@ -89,23 +96,32 @@ try {
   const totalBattles = battles.length;
   const winRate = totalBattles ? Math.round(wins / totalBattles * 100) : 0;
 
-  /* 本週費曼次數 */
-  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
-  const weekFeynman = fScores.length; // 簡化：有分數即計次
+  /* 連續學習天數：從今天往前數有 battle_records 的天數 */
+  const activeDates = new Set(battles.map(b => (b.created_at || "").slice(0, 10)).filter(Boolean));
+  let streak = 0;
+  const d = new Date();
+  // 如果今天還沒學，從昨天開始數
+  if (!activeDates.has(d.toISOString().slice(0, 10))) d.setDate(d.getDate() - 1);
+  while (activeDates.has(d.toISOString().slice(0, 10))) { streak++; d.setDate(d.getDate() - 1); }
 
-  /* 主題掌握度：按 question 分組取費曼平均 */
+  /* 主題掌握度：費曼 60% + 對戰 40% 綜合 */
   const topicMap = {};
   battles.forEach(b => {
     const t = (b.question || "未命名").slice(0, 20);
-    if (!topicMap[t]) topicMap[t] = [];
-    topicMap[t].push(Number(b.feynman_score) || 0);
+    if (!topicMap[t]) topicMap[t] = { f: [], q: [] };
+    const fs = Number(b.feynman_score) || 0, qs = Number(b.quiz_score) || 0;
+    if (fs > 0) topicMap[t].f.push(fs);
+    if (qs > 0) topicMap[t].q.push(qs);
   });
   const topics = Object.entries(topicMap)
-    .map(([topic, scores]) => ({
-      topic,
-      mastery: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      count: scores.length,
-    }))
+    .map(([topic, s]) => {
+      const fAvg = s.f.length ? s.f.reduce((a, b) => a + b, 0) / s.f.length : 0;
+      const qAvg = s.q.length ? s.q.reduce((a, b) => a + b, 0) / s.q.length : 0;
+      // 有兩種分數就加權，否則用有的那種
+      const mastery = (s.f.length && s.q.length) ? Math.round(fAvg * 0.6 + qAvg * 0.4)
+        : Math.round(fAvg || qAvg);
+      return { topic, mastery, count: s.f.length + s.q.length };
+    })
     .sort((a, b) => b.mastery - a.mastery)
     .slice(0, 5);
 
@@ -126,7 +142,8 @@ try {
       <div style="flex:1;">
         <div style="font-weight:700;font-size:16px;">${esc(profile?.name || "旅人")} <span style="font-size:12px;color:var(--paper-400);font-weight:400;">· ${charNames[profile?.character] || "博學者"}</span></div>
         <div style="font-size:13px;color:var(--paper-400);margin-top:4px;">
-          <span class="mono" style="color:var(--brass-300);">${(profile?.points ?? 0).toLocaleString()}</span> 星砂
+          <span class="mono" style="color:var(--brass-300);">${(profile?.points ?? 0).toLocaleString()}</span> 星砂 ·
+          🔥 <span class="mono">${streak}</span> 連續天數
           <button id="ss-info" style="background:none;border:1px solid var(--brass-400);color:var(--brass-400);border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;margin-left:4px;" title="什麼是星砂？">?</button> ·
           今日任務 <span class="mono">${doneTasks}/3</span>
         </div>
@@ -152,8 +169,12 @@ try {
       </div>
     </div>`;
 
+  const badgeIcons = { "傳說": "🏆", "史詩": "💎", "稀有": "🥈", "普通": "🥉" };
   const badgesHtml = badges.length
-    ? badges.map(b => `<span class="seal" title="${esc(b.badge_name)}">${esc((b.badge_name || "?")[0])}</span>`).join("")
+    ? badges.map(b => {
+        const icon = badgeIcons[b.badge_rarity] || "🎖️";
+        return `<span class="seal" title="${esc(b.badge_name)} (${esc(b.badge_rarity || "")})" style="font-size:20px;">${icon}</span>`;
+      }).join("")
     : `<p class="label">還沒有徽章，去對戰贏一枚吧</p>`;
 
   view.innerHTML = `${headerBanner}<div class="grid">
