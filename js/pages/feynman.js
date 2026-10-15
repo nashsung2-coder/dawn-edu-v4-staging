@@ -1,7 +1,7 @@
 /* v4 費曼說服：解釋 → AI 評估 → 80+ 存入課本 */
 import { supabase, getUser } from "../core/supabase.js";
-import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed001";
+import { ask, MODELS } from "../core/llm.js";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed002";
 
 await renderTopbar("feynman.html");
 const user = await requireAuth();
@@ -40,6 +40,8 @@ judgeBtn.onclick = async () => {
     const reply = await ask(
       "你是嚴格的老師。用繁體中文評估學生的解釋。先給 0-100 的完整度分數（格式：分數：XX），再指出缺失與建議。簡潔，不超過 200 字。",
       `主題：${topic}\n\n學生的解釋：\n${text}`
+    ,
+      { model: MODELS.reason }
     );
     const m = reply.match(/分數[：:]\s*(\d+)/);
     lastScore = m ? Math.min(100, Math.max(0, Number(m[1]))) : null;
@@ -61,6 +63,8 @@ judgeBtn.onclick = async () => {
     } else {
       toast("還差一點，看看 AI 的建議再試一次");
     }
+    // 蘇格拉底追問：無論分數高低，都提供深度挑戰
+    await socraticChallenge(topic, text, lastScore, reply);
   } catch (e) {
     resultEl.innerHTML = `<p style="color:var(--signal-red);font-size:14px;">評估失敗：${esc(e.message)}，請重試。</p>`;
   } finally {
@@ -68,6 +72,68 @@ judgeBtn.onclick = async () => {
     judgeBtn.textContent = "說服 AI";
   }
 };
+
+
+/* ===== 蘇格拉底式追問：挑戰邏輯漏洞 ===== */
+let socraticHistory = [];
+async function socraticChallenge(topic, text, score, feedback) {
+  const challengeEl = document.createElement("div");
+  challengeEl.id = "socratic-box";
+  challengeEl.style.cssText = "margin-top:20px;padding:16px;border-radius:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);";
+  challengeEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在思考要怎麼挑戰你…</p>`;
+  resultEl.appendChild(challengeEl);
+  socraticHistory = [{ topic, text }];
+
+  try {
+    const questions = await ask(
+      `你是蘇格拉底式的導師。用繁體中文，針對學生的解釋提出 2-3 個尖銳的追問，挑戰他的邏輯漏洞、未經檢驗的假設、或過度簡化的地方。
+規則：
+- 問題要具體，針對他解釋中的具體內容，不要空泛
+- 語氣是好奇的挑戰，不是批評
+- 每個問題一行，前面加「Q1.」「Q2.」編號
+- 不要給答案，只提問
+- 不超過 150 字`,
+      `主題：${topic}\n\n學生的解釋：\n${text}\n\nAI 評估：${feedback}`,
+      { model: MODELS.reason }
+    );
+    socraticHistory.push({ questions });
+    challengeEl.innerHTML = `
+      <div style="font-size:14px;font-weight:700;color:#c4b5fd;margin-bottom:12px;">蘇格拉底的挑戰</div>
+      <div style="font-size:14px;line-height:1.8;color:var(--paper-200);white-space:pre-wrap;margin-bottom:16px;">${esc(questions)}</div>
+      <textarea id="socratic-answer" class="input" rows="4" placeholder="試著回答這些挑戰…" style="width:100%;margin-bottom:12px;"></textarea>
+      <button class="btn btn-primary btn-sm" id="socratic-submit">回應挑戰</button>
+      <div id="socratic-feedback" style="margin-top:12px;"></div>
+    `;
+    document.getElementById("socratic-submit").onclick = () => answerSocratic(topic, questions);
+  } catch (e) {
+    challengeEl.innerHTML = `<p style="font-size:13px;color:var(--signal-red);">挑戰生成失敗：${esc(e.message)}</p>`;
+  }
+}
+
+async function answerSocratic(topic, questions) {
+  const answerEl = document.getElementById("socratic-answer");
+  const feedbackEl = document.getElementById("socratic-feedback");
+  const answer = answerEl.value.trim();
+  if (answer.length < 10) { toast("多寫一點，讓蘇格拉底看到你的思考"); return; }
+
+  feedbackEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在審視你的回答…</p>`;
+  try {
+    const reply = await ask(
+      `你是蘇格拉底式的導師。用繁體中文評估學生對挑戰問題的回答。
+- 如果回答有說服力，肯定他的思考，並指出他進步的地方
+- 如果還有漏洞，繼續追問 1-2 個更深的問題
+- 如果回答完全迴避問題，直接指出
+簡潔，不超過 180 字。`,
+      `主題：${topic}\n\n挑戰問題：\n${questions}\n\n學生的回答：\n${answer}`,
+      { model: MODELS.reason }
+    );
+    socraticHistory.push({ answer, reply });
+    feedbackEl.innerHTML = `<div style="font-size:14px;line-height:1.8;color:var(--paper-200);white-space:pre-wrap;">${esc(reply)}</div>`;
+    toast("蘇格拉底回應了");
+  } catch (e) {
+    feedbackEl.innerHTML = `<p style="font-size:13px;color:var(--signal-red);">評估失敗：${esc(e.message)}</p>`;
+  }
+}
 
 async function saveToTextbook() {
   const topic = topicEl.value.trim();
