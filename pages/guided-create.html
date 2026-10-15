@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<meta property="og:site_name" content="曙光教育">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0e1f">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>引導式建立 — 曙光教育</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.gc-steps { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.gc-steps span {
+  font-size: 12px; padding: 6px 14px; border-radius: 20px;
+  color: var(--paper-400); background: oklch(1 0 0 / 0.04);
+  border: 1px solid transparent;
+}
+.gc-steps span.on {
+  color: var(--brass-300); border-color: var(--brass-400);
+  background: oklch(0.74 0.14 80 / 0.1); font-weight: 700;
+}
+.gc-steps span.done { color: var(--paper-200); }
+.gc-card {
+  background: oklch(0.18 0.03 260); border: 1px solid oklch(0.60 0.12 80 / 0.15);
+  border-radius: 16px; padding: 24px; margin-bottom: 16px;
+}
+.gc-q {
+  background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);
+  border-radius: 12px; padding: 16px; margin-bottom: 12px;
+}
+.gc-q .q-label { font-size: 12px; color: #c4b5fd; font-weight: 700; margin-bottom: 8px; }
+.gc-q .q-text { font-size: 15px; line-height: 1.7; color: var(--paper-100); }
+.gc-actions { display: flex; gap: 10px; margin-top: 20px; }
+.suggest-item {
+  display: flex; gap: 12px; padding: 12px; border-radius: 10px;
+  background: oklch(1 0 0 / 0.03); margin-bottom: 8px; align-items: flex-start;
+}
+.suggest-item .s-icon { font-size: 20px; flex-shrink: 0; }
+.suggest-item .s-title { font-size: 14px; font-weight: 700; color: var(--paper-100); }
+.suggest-item .s-desc { font-size: 13px; color: var(--paper-400); margin-top: 4px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="topbar"></div>
+<main class="container" style="max-width:760px;padding:24px 16px 80px;">
+  <h1 style="font-size:24px;margin-bottom:8px;">引導式倉庫建立</h1>
+  <p style="font-size:14px;color:var(--paper-400);margin-bottom:20px;">
+    AI 用蘇格拉底提問幫你探索主題，再用費曼學習法深化理解，最後生成完整的知識倉庫。
+  </p>
+
+  <div class="gc-steps" id="gc-steps">
+    <span data-s="1" class="on">1. 主題</span>
+    <span data-s="2">2. 蘇格拉底探索</span>
+    <span data-s="3">3. 費曼解釋</span>
+    <span data-s="4">4. 資料建議</span>
+    <span data-s="5">5. 生成倉庫</span>
+  </div>
+
+  <div id="gc-body"></div>
+</main>
+<script type="module" src="../js/pages/guided-create.js?v=fixed001"></script>
+</body>
+</html>
