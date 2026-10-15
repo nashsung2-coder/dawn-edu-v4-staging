@@ -84,8 +84,10 @@ export function renderBlocks(blocks, esc) {
           + `${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}`
           + `<div style="text-align:center;margin-top:6px;"><a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener" style="font-size:12px;color:var(--brass-300);">在 YouTube 上觀看 ↗</a></div></figure>`;
       }
-      case "code":
-        return `<pre class="blk-code"><code>${esc(d.code || "")}</code></pre>`;
+      case "code": {
+        const _langLabel = { html: "HTML", css: "CSS", javascript: "JavaScript", python: "Python", text: "純文字", auto: "" }[d.lang] || "";
+        return `<div class="blk-code-wrap" style="margin:12px 0;">${_langLabel ? `<div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">${_langLabel}</div>` : ""}<pre class="blk-code"><code>${esc(d.code || "")}</code></pre></div>`;
+      }
       case "divider":
         return `<hr class="blk-div">`;
       case "checklist": {
@@ -133,6 +135,32 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
   let blocks = Array.isArray(initialBlocks) && initialBlocks.length
     ? initialBlocks
     : [newBlock("paragraph")];
+  /* 快捷鍵：歷史記錄（結構性撤銷/重做） */
+  let _history = [];
+  let _hIndex = -1;
+  const _snap = () => JSON.stringify(blocks);
+  function _pushHistory() {
+    _history = _history.slice(0, _hIndex + 1);
+    _history.push(_snap());
+    if (_history.length > 50) _history.shift();
+    _hIndex = _history.length - 1;
+  }
+  function _restore(json) {
+    try {
+      blocks = JSON.parse(json);
+      render();
+      _notify();
+    } catch {}
+  }
+  function undo() {
+    if (_hIndex > 0) { _hIndex--; _restore(_history[_hIndex]); return true; }
+    return false;
+  }
+  function redo() {
+    if (_hIndex < _history.length - 1) { _hIndex++; _restore(_history[_hIndex]); return true; }
+    return false;
+  }
+  _pushHistory(); // 初始狀態
 
   const css = `
   .be-canvas { display:flex; flex-direction:column; gap:4px; }
@@ -206,14 +234,31 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         break;
       case "code": {
         const _code = d.code || "";
+        const _lang = d.lang || "auto";
         // 簡單的語法高亮預覽（轉義後加上顏色）
         const _highlighted = esc(_code)
           .replace(/(&quot;.*?&quot;|&#39;.*?&#39;|"[^"]*"|'[^']*')/g, '<span style="color:#f0d080;">$1</span>')
           .replace(/\b(const|let|var|function|return|if|else|for|while|import|export|from|async|await|class|new)\b/g, '<span style="color:#80c0ff;">$1</span>')
           .replace(/(\/\/.*$)/gm, '<span style="color:#808080;">$1</span>');
+        const _isHtml = _lang === "html" || (_lang === "auto" && /<(!DOCTYPE|html|head|body|div|p|h1|style|script)/i.test(_code));
         inner = `<div class="be-hint">程式碼</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;">
+            <select data-k="lang" class="be-select" style="font-size:12px;padding:4px 8px;border-radius:6px;background:oklch(1 0 0 / 0.05);border:1px solid oklch(1 0 0 / 0.12);color:var(--paper-200);">
+              <option value="auto" ${_lang==="auto"?"selected":""}>自動偵測</option>
+              <option value="html" ${_lang==="html"?"selected":""}>HTML</option>
+              <option value="css" ${_lang==="css"?"selected":""}>CSS</option>
+              <option value="javascript" ${_lang==="javascript"?"selected":""}>JavaScript</option>
+              <option value="python" ${_lang==="python"?"selected":""}>Python</option>
+              <option value="text" ${_lang==="text"?"selected":""}>純文字</option>
+            </select>
+            ${_isHtml && _code ? `<button class="btn btn-ghost btn-sm" data-act="run-preview" style="font-size:12px;">▶ 執行預覽</button>` : ""}
+          </div>
           <textarea class="be-textarea" data-k="code" data-code-input style="font-family:var(--font-mono);font-size:13px;" placeholder="貼上程式碼…">${esc(_code)}</textarea>
-          ${_code ? `<div style="margin-top:8px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">即時預覽</div><pre style="background:oklch(0 0 0 / 0.3);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:13px;overflow-x:auto;margin:0;"><code>${_highlighted}</code></pre></div>` : ""}`;
+          ${_code ? `<div style="margin-top:8px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">語法預覽</div><pre style="background:oklch(0 0 0 / 0.3);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:13px;overflow-x:auto;margin:0;max-height:300px;overflow-y:auto;"><code>${_highlighted}</code></pre></div>` : ""}
+          <div data-run-output style="margin-top:8px;display:none;">
+            <div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">執行結果</div>
+            <iframe data-run-frame sandbox="allow-scripts" style="width:100%;min-height:320px;border:1px solid oklch(1 0 0 / 0.12);border-radius:8px;background:white;"></iframe>
+          </div>`;
         break;
       }
       case "divider":
@@ -297,6 +342,8 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
     ).join("")}</div>`;
     slot.querySelectorAll("[data-btype]").forEach(btn => {
       btn.onclick = () => {
+        syncFromDOM();
+        _pushHistory();
         blocks.splice(pos, 0, newBlock(btn.dataset.btype));
         render();
       };
@@ -311,6 +358,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       const bid = el.dataset.bid;
       el.querySelector("[data-act='del']").onclick = () => {
         syncFromDOM();
+        _pushHistory();
         blocks = blocks.filter(x => x.id !== bid);
         if (!blocks.length) blocks = [newBlock("paragraph")];
         render();
@@ -318,12 +366,27 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       el.querySelector("[data-act='up']").onclick = () => {
         syncFromDOM();
         const i = blocks.findIndex(x => x.id === bid);
-        if (i > 0) { [blocks[i-1], blocks[i]] = [blocks[i], blocks[i-1]]; render(); }
+        if (i > 0) { _pushHistory(); [blocks[i-1], blocks[i]] = [blocks[i], blocks[i-1]]; render(); }
       };
       el.querySelector("[data-act='down']").onclick = () => {
         syncFromDOM();
         const i = blocks.findIndex(x => x.id === bid);
-        if (i < blocks.length - 1) { [blocks[i+1], blocks[i]] = [blocks[i], blocks[i+1]]; render(); }
+        if (i < blocks.length - 1) { _pushHistory(); [blocks[i+1], blocks[i]] = [blocks[i], blocks[i+1]]; render(); }
+      };
+      /* 程式碼執行預覽 */
+      const runBtn = el.querySelector("[data-act='run-preview']");
+      if (runBtn) runBtn.onclick = e => {
+        e.stopPropagation();
+        syncFromDOM();
+        const b = blocks.find(x => x.id === bid);
+        if (!b) return;
+        const output = el.querySelector("[data-run-output]");
+        const frame = el.querySelector("[data-run-frame]");
+        if (output && frame) {
+          output.style.display = "";
+          // 用 srcdoc 安全渲染 HTML
+          frame.srcdoc = b.data.code || "";
+        }
       };
       /* 程式碼即時預覽 */
       const codeInput = el.querySelector('[data-code-input]');
@@ -369,8 +432,29 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
   const _notify = () => { if (opts.onChange) { try { syncFromDOM(); opts.onChange(blocks); } catch {} } };
   const _origRender = render;
   render = () => { _origRender(); _notify(); };
+  /* 全域快捷鍵：Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y（非輸入框時才攔截） */
+  if (!container._kbBound) {
+    container._kbBound = true;
+    container.setAttribute("tabindex", "-1");
+    container.addEventListener("keydown", e => {
+      const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !inField) {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (k === "y" && !inField) {
+        e.preventDefault();
+        redo();
+      }
+    });
+  }
+
   return {
     getBlocks() { syncFromDOM(); return blocks; },
-    setBlocks(nb) { blocks = nb && nb.length ? nb : [newBlock("paragraph")]; render(); },
+    setBlocks(nb) { blocks = nb && nb.length ? nb : [newBlock("paragraph")]; _pushHistory(); render(); },
+    undo, redo,
   };
 }
