@@ -283,6 +283,14 @@ async function finishBattle(battle, log) {
       questions_answered: battle.questions.length,
       questions_correct: battle.correct,
     });
+    // 同步到 battle_records：學習頁戰績統計
+    const totalQ = battle.questions.length || 1;
+    await supabase.from("battle_records").insert({
+      user_id: user.id,
+      question: `宇宙征服：${p.name || "未知星球"}`,
+      quiz_score: Math.round((battle.correct / totalQ) * 100),
+      feynman_score: 0,
+    });
   } catch (_) {}
 
   document.getElementById("battle-question").innerHTML = "";
