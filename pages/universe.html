@@ -28,6 +28,15 @@
 .battle-log .hit { color:var(--brass-300); }
 .battle-log .miss { color:var(--signal-red); }
 .diff-stars { color:var(--brass-400); letter-spacing:2px; }
+.uni-stats { display:flex; gap:16px; align-items:center; padding:12px 16px; background:oklch(0.16 0.03 260); border:1px solid oklch(0.60 0.12 80 / 0.15); border-radius:12px; margin-bottom:16px; flex-wrap:wrap; }
+.stat { display:flex; flex-direction:column; align-items:center; min-width:60px; }
+.stat-v { font-size:20px; font-weight:700; font-family:var(--font-mono); }
+.stat-l { font-size:11px; color:var(--paper-400); }
+.q-opt:disabled { cursor:default; }
+@media (max-width:640px) {
+  .uni-panel { position:fixed; top:auto; bottom:0; left:0; right:0; width:100%; max-width:100%; max-height:75vh; overflow-y:auto; border-radius:16px 16px 0 0; }
+  #star-map { height:calc(100vh - 320px); min-height:300px; }
+}
 </style>
 </head>
 <body>
@@ -38,6 +47,7 @@
     <p>用知識征服星球。答對題目造成傷害，血量歸零即佔領。</p>
     <p style="font-size:13px;color:var(--brass-300);margin-top:8px;"><img class="inline-ico" src="../assets/icons/icon-bulb.webp" alt="" loading="lazy"> 點擊任意星球查看詳情，發起征服戰</p>
   </div>
+  <div class="uni-stats" id="uni-stats"></div>
   <div class="uni-wrap">
     <svg id="star-map" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
     <div class="uni-panel" id="uni-panel"></div>
