@@ -293,30 +293,16 @@ $("pub-confirm").onclick = async () => {
     });
     let nodeId = publishedNodeId;
     if (nodeId) {
-      // 更新現有節點（先試完整欄位，失敗降級）
-      let { error } = await supabase.from("knowledge_nodes").update({
-        title: d.title, question: d.question, answer: blocksText(d.blocks),
-        content, category: d.category, concepts: d.concepts, is_public: isPublic,
+      // 更新現有節點（只用實際存在的欄位）
+      const { error } = await supabase.from("knowledge_nodes").update({
+        title: d.title, content, category: d.category || "未分類", is_public: isPublic,
       }).eq("id", nodeId);
-      if (error && /column|schema cache/i.test(error.message)) {
-        const r2 = await supabase.from("knowledge_nodes").update({ title: d.title, content, category: d.category || "未分類", is_public: isPublic }).eq("id", nodeId);
-        error = r2.error;
-      }
       if (error) throw error;
     } else {
-      // 新建
-      const full = {
-        user_id: user.id, title: d.title, question: d.question,
-        answer: blocksText(d.blocks), content, explanation: null,
-        category: d.category || "未分類", concepts: d.concepts,
-        is_public: isPublic, owner_name: user.email?.split("@")[0] || "旅人", source: "manual",
-      };
-      let { data, error } = await supabase.from("knowledge_nodes").insert(full).select("id").single();
-      if (error && /column|schema cache/i.test(error.message)) {
-        const r2 = await supabase.from("knowledge_nodes")
-          .insert({ user_id: user.id, title: d.title, content, category: d.category || "未分類", is_public: isPublic }).select("id").single();
-        data = r2.data; error = r2.error;
-      }
+      // 新建（只用實際存在的欄位）
+      const { data, error } = await supabase.from("knowledge_nodes")
+        .insert({ user_id: user.id, title: d.title, content, category: d.category || "未分類", is_public: isPublic })
+        .select("id").single();
       if (error) throw error;
       if (!data || !data.id) throw new Error("資料庫未回傳節點 ID（可能被 RLS 阻擋）");
       nodeId = data.id;
