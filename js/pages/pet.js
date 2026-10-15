@@ -1,6 +1,6 @@
 /* 靈獸頁：讀取/互動/孵化 */
 import { supabase, getUser } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
 
 await renderTopbar("pet.html");
 const user = await requireAuth();
@@ -70,6 +70,19 @@ async function hatch() {
 }
 
 function renderPet(pet) {
+  // 時間衰減：每小時飢餓 -2、心情 -1（上次互動時間起算）
+  try {
+    const lastKey = `dawn:v4:pet:last:${pet.id}`;
+    const last = Number(localStorage.getItem(lastKey) || Date.now());
+    const hours = (Date.now() - last) / 3600000;
+    if (hours >= 1) {
+      pet.hunger = Math.max(0, (pet.hunger ?? 100) - Math.floor(hours * 2));
+      pet.mood = Math.max(0, (pet.mood ?? 80) - Math.floor(hours * 1));
+      localStorage.setItem(lastKey, String(Date.now()));
+      // 異步寫回資料庫
+      supabase.from("pets").update({ hunger: pet.hunger, mood: pet.mood }).eq("id", pet.id).then(() => {});
+    }
+  } catch {}
   const need = expNeeded(pet.level);
   const expPct = Math.min(100, Math.round((pet.exp / need) * 100));
   const moodPct = Math.min(100, Math.max(0, pet.mood));
@@ -90,6 +103,11 @@ function renderPet(pet) {
         <span class="label">心情</span>
         <div class="bar"><div style="width:${moodPct}%"></div></div>
         <span class="val">${moodText(pet.mood)}</span>
+      </div>
+      <div class="stat-row">
+        <span class="label">飽食度</span>
+        <div class="bar"><div style="width:${Math.min(100, Math.max(0, pet.hunger ?? 100))}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);"></div></div>
+        <span class="val">${(pet.hunger ?? 100) >= 50 ? "吃飽了" : (pet.hunger ?? 100) >= 20 ? "有點餓" : "好餓！"}</span>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" id="p-feed">餵食</button>
@@ -136,9 +154,11 @@ async function interact(pet, delta, label) {
     return;
   }
   try {
-    let { exp, level, mood } = pet;
+    let { exp, level, mood, hunger } = pet;
     exp += delta.exp;
     mood = Math.min(100, mood + delta.mood);
+    hunger = Math.min(100, (hunger ?? 100) + 15); // 餵食/陪玩恢復飽食度
+    try { localStorage.setItem(`dawn:v4:pet:last:${pet.id}`, String(Date.now())); } catch {}
     // 升級
     while (exp >= expNeeded(level)) {
       exp -= expNeeded(level);
@@ -146,7 +166,7 @@ async function interact(pet, delta, label) {
     }
     const leveledUp = level > pet.level;
     const { error } = await supabase.from("pets")
-      .update({ exp, level, mood }).eq("id", pet.id);
+      .update({ exp, level, mood, hunger }).eq("id", pet.id);
     if (error) throw error;
     localStorage.setItem(key, String(count + 1));
     const left = 5 - count - 1;
