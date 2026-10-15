@@ -2,7 +2,7 @@
 /* 草稿 → 本地儲存（localStorage）；發布 → Supabase；版本 → 快照紀錄 */
 import { supabase, getProfile } from "../core/supabase.js?v=fixed001";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed001";
-import { BLOCK_TYPES, newBlock, renderBlockEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed001";
+import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed001";
 
 const params = new URLSearchParams(location.search);
 const editId = params.get("id"); // 編輯現有節點時帶 id
@@ -57,22 +57,22 @@ $("btn-add-block").onclick = () => {
 
 /* ---------- 區塊編輯 ---------- */
 function addBlock(type) {
-  blocks.push(newBlock(type));
+  blocks = [...getCurrentBlocks(), newBlock(type)];
   renderCanvas();
   markDirty();
 }
+let editor = null;
 function renderCanvas() {
-  renderBlockEditor($("block-canvas"), blocks, {
-    onChange: () => markDirty(),
-    onDelete: id => { blocks = blocks.filter(b => b.id !== id); renderCanvas(); markDirty(); },
-    onMove: (id, dir) => {
-      const i = blocks.findIndex(b => b.id === id);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= blocks.length) return;
-      [blocks[i], blocks[j]] = [blocks[j], blocks[i]];
-      renderCanvas(); markDirty();
-    },
-  });
+  if (!editor) {
+    editor = createEditor($("block-canvas"), esc, blocks, {
+      onChange: (newBlocks) => { blocks = newBlocks; markDirty(); },
+    });
+  } else {
+    editor.setBlocks(blocks);
+  }
+}
+function getCurrentBlocks() {
+  return editor ? editor.getBlocks() : blocks;
 }
 
 /* ---------- 草稿自動儲存（本地） ---------- */
@@ -83,7 +83,7 @@ function collectData() {
     category: $("ed-category").value.trim(),
     concepts: $("ed-concepts").value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
     isPublic: $("ed-public").checked,
-    blocks,
+    blocks: getCurrentBlocks(),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -156,13 +156,13 @@ function applyData(d) {
   $("ed-concepts").value = (d.concepts || []).join(", ");
   $("ed-public").checked = d.isPublic !== false;
   blocks = d.blocks || [newBlock("paragraph")];
-  renderCanvas();
+  if (editor) { editor.setBlocks(blocks); } else { renderCanvas(); }
 }
 
 /* ---------- 預覽 ---------- */
 $("btn-preview").onclick = () => {
   $("pv-title").textContent = titleInput.value.trim() || "未命名節點";
-  $("pv-body").innerHTML = renderBlocks(blocks, esc);
+  $("pv-body").innerHTML = renderBlocks(getCurrentBlocks(), esc);
   $("preview-modal").style.display = "";
 };
 $("pv-close").onclick = () => $("preview-modal").style.display = "none";
@@ -170,7 +170,7 @@ $("pv-close").onclick = () => $("preview-modal").style.display = "none";
 /* ---------- 發布流程 ---------- */
 $("btn-publish").onclick = () => {
   if (!titleInput.value.trim()) { toast("請先填寫標題"); titleInput.focus(); return; }
-  if (!blocksText(blocks).trim()) { toast("內容不能為空"); return; }
+  if (!blocksText(getCurrentBlocks()).trim()) { toast("內容不能為空"); return; }
   $("pub-visibility").value = $("ed-public").checked ? "public" : "private";
   $("publish-modal").style.display = "";
 };
