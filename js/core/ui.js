@@ -141,14 +141,31 @@ export async function renderTopbar(current) {
       name = p.name || "";
     } catch (e) {}
   }
-  const nav = NAV.map(([href, label, icon]) =>
-    `<a href="${href}" class="${href === current ? "active" : ""}">${icon ? navIcon(icon, "nav-ico sm") : ""}${label}</a>`).join("");
-  const mnavHtml = NAV_GROUPS.map(g => `
-    <div class="mnav-group">
-      <div class="mnav-label">${g.label}</div>
+  const nav = NAV_GROUPS.map(g => {
+    const hasActive = g.items.some(([href]) => href === current);
+    if (g.items.length === 1) {
+      const [href, label, icon] = g.items[0];
+      return `<a href="${href}" class="nav-link ${href === current ? "active" : ""}">${icon ? navIcon(icon, "nav-ico sm") : ""}${label}</a>`;
+    }
+    return `<div class="nav-drop ${hasActive ? "active-group" : ""}">
+      <button class="nav-link nav-drop-btn">${g.label}<span class="drop-arrow">▾</span></button>
+      <div class="nav-drop-menu">
+        ${g.items.map(([href, label, icon]) =>
+          `<a href="${href}" class="${href === current ? "active" : ""}">${icon ? navIcon(icon, "nav-ico sm") : ""}${label}</a>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+  const mnavHtml = NAV_GROUPS.map(g => {
+    const hasActive = g.items.some(([href]) => href === current);
+    return `
+    <div class="mnav-group ${hasActive ? "" : "collapsed"}">
+      <button class="mnav-label">${g.label}<span class="drop-arrow">▾</span></button>
+      <div class="mnav-items">
       ${g.items.map(([href, label, icon]) =>
         `<a href="${href}" class="${href === current ? "active" : ""}">${navIcon(icon)}${label}</a>`).join("")}
-    </div>`).join("");
+      </div>
+    </div>`;
+  }).join("");
   document.body.insertAdjacentHTML("afterbegin", `
     <header class="topbar">
       <a class="brand" href="learn.html">\u66d9\u5149<span>\u6559\u80b2</span></a>
@@ -164,6 +181,19 @@ export async function renderTopbar(current) {
     <nav class="mobile-nav" id="mobile-nav">${mnavHtml}</nav>`);
   const lo = document.getElementById("tb-logout");
   if (lo) lo.onclick = signOut;
+  /* \u4e0b\u62c9\u9078\u55ae\u4e92\u52d5 */
+  document.querySelectorAll(".nav-drop-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const drop = btn.closest(".nav-drop");
+      const wasOpen = drop.classList.contains("open");
+      document.querySelectorAll(".nav-drop.open").forEach(d => d.classList.remove("open"));
+      if (!wasOpen) drop.classList.add("open");
+    });
+  });
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".nav-drop.open").forEach(d => d.classList.remove("open"));
+  });
   /* \u6f22\u5821\u9078\u55ae */
   const toggle = document.getElementById("nav-toggle");
   const mnav = document.getElementById("mobile-nav");
@@ -171,6 +201,21 @@ export async function renderTopbar(current) {
     toggle.onclick = () => mnav.classList.toggle("open");
     mnav.querySelectorAll("a").forEach(a => {
       a.onclick = () => mnav.classList.remove("open");
+    });
+    mnav.querySelectorAll(".mnav-label").forEach(lbl => {
+      lbl.onclick = e => {
+        e.stopPropagation();
+        const grp = lbl.closest(".mnav-group");
+        grp.classList.toggle("collapsed");
+        const items = grp.querySelector(".mnav-items");
+        if (!grp.classList.contains("collapsed")) {
+          items.style.maxHeight = items.scrollHeight + "px";
+        }
+      };
+    });
+    /* 展開當前群組 */
+    mnav.querySelectorAll(".mnav-group:not(.collapsed) .mnav-items").forEach(items => {
+      items.style.maxHeight = items.scrollHeight + "px";
     });
   }
 }
