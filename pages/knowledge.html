@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>知識庫 — 曙光教育</title><link rel="manifest" href="../manifest.json">
+<title>知識庫 — 曙光教育</title>
+<link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -31,6 +32,32 @@
     <div class="en">Knowledge</div>
     <h1>知識庫</h1>
   </div>
+
+  <!-- 提問引導：學習入口 -->
+  <div class="card" id="ask-hero" style="margin-bottom:20px;background:linear-gradient(135deg, oklch(0.24 0.05 260), oklch(0.20 0.04 280));border:1px solid oklch(0.60 0.12 80 / 0.25);">
+    <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">ASK TO LEARN</div>
+    <h2 style="margin-bottom:12px;">你想學什麼？</h2>
+    <p style="color:var(--paper-300);font-size:14px;margin-bottom:16px;">問一個問題，知識庫會帶你找到答案，再用費曼、對戰、複習把它變成你的。</p>
+    <div class="search-row" style="margin-bottom:12px;">
+      <input class="input" id="ask-q" type="search" placeholder="例如：為什麼天空是藍色的？" aria-label="問一個問題開始學習">
+      <button class="btn btn-primary" id="ask-go">開始學習</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--paper-400);align-self:center;">不知道問什麼？試試：</span>
+      <button class="btn btn-ghost btn-sm ask-example" data-q="光合作用是怎麼進行的？">光合作用是怎麼進行的？</button>
+      <button class="btn btn-ghost btn-sm ask-example" data-q="牛頓第二定律在說什麼？">牛頓第二定律在說什麼？</button>
+      <button class="btn btn-ghost btn-sm ask-example" data-q="勾股定理為什麼成立？">勾股定理為什麼成立？</button>
+    </div>
+    <div id="ask-actions" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid oklch(0.60 0.12 80 / 0.15);">
+      <div style="font-size:13px;color:var(--paper-300);margin-bottom:10px;">已為你搜尋「<span id="ask-keyword" style="color:var(--brass-300);"></span>」相關節點，選擇下一步：</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" id="ask-feynman">用費曼說服深入</button>
+        <button class="btn btn-primary btn-sm" id="ask-quiz">出題對戰檢驗</button>
+        <button class="btn btn-ghost btn-sm" id="ask-review">去複習相關卡片</button>
+      </div>
+    </div>
+  </div>
+
   <div class="tabs">
     <button class="btn btn-ghost on" id="tab-all">全部節點</button>
     <button class="btn btn-ghost" id="tab-mine">我的節點</button>
@@ -51,8 +78,10 @@
     <div class="field"><label>標題 *</label><input class="input" id="nm-title" placeholder="例如：光合作用的原理"></div>
     <div class="field"><label>分類</label><input class="input" id="nm-cat" placeholder="例如：生物、數學、歷史"></div>
     <div class="field"><label>問題 *</label><textarea class="input" id="nm-q" rows="2" placeholder="用一個問題來組織這個知識點"></textarea></div>
-    <div class="field"><label>答案 *</label><textarea class="input" id="nm-a" rows="3" placeholder="簡潔的答案"></textarea></div>
-    <div class="field"><label>詳解（支援 markdown）</label><textarea class="input" id="nm-exp" rows="4" placeholder="深入解釋、例子、圖解說明…"></textarea></div>
+    <div class="field">
+      <label>內容 * <span style="font-weight:400;color:var(--paper-400);font-size:12px;">— 點擊 ＋ 插入區塊，像編輯網站一樣編排</span></label>
+      <div id="nm-blocks" style="border:1px solid oklch(0.60 0.12 80 / 0.2);border-radius:12px;padding:12px;min-height:120px;background:oklch(0.18 0.03 260);"></div>
+    </div>
     <div class="field"><label>概念標籤（逗號分隔）</label><input class="input" id="nm-concepts" placeholder="例如：光合作用, 葉綠體, 能量轉換"></div>
     <div class="field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
       <input type="checkbox" id="nm-public" checked style="width:18px;height:18px;"> 公開分享（其他人可搜尋學習）
