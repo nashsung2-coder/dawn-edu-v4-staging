@@ -78,11 +78,6 @@ function render() {
   }
 
   v.innerHTML = catTabs + list.map(n => {
-    const title = n.title || nQuestion || "未命名節點";
-    const tags = nConcepts.map(c => `<span class="tag">${esc(c)}</span>`).join("");
-    const cat = `<span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);">${esc(nCategory)}</span>`;
-    const up = n.upvotes ?? 0;
-    const owner = n.owner_name ? ` · ${esc(n.owner_name)}` : "";
     let body = n.explanation || n.answer || "";
     let bodyIsBlocks = false;
     let nodeMeta = {};
@@ -100,6 +95,11 @@ function render() {
     const nQuestion = n.question || nodeMeta.question || "";
     const nCategory = n.category || nodeMeta.category || "未分類";
     const nConcepts = n.concepts || nodeMeta.concepts || [];
+    const title = n.title || nQuestion || "未命名節點";
+    const tags = nConcepts.map(c => `<span class="tag">${esc(c)}</span>`).join("");
+    const cat = `<span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);">${esc(nCategory)}</span>`;
+    const up = n.upvotes ?? 0;
+    const owner = n.owner_name ? ` · ${esc(n.owner_name)}` : "";
     const isMine = n.user_id === user.id;
     return `<div class="card node" data-id="${n.id}">
       <div class="title">${esc(title)}</div>
