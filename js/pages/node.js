@@ -43,10 +43,27 @@ if (!nodeId) {
         <div class="blocks-content">${blocks.length ? renderBlocks(blocks, htmlEsc) : `<p style="color:var(--paper-400);">${htmlEsc(n.content || "")}</p>`}</div>
         <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:24px 0 16px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <a href="quiz.html?topic=${encodeURIComponent(n.title)}&content=${encodeURIComponent(blocksText(blocks).slice(0, 2000))}" class="btn btn-primary btn-sm">開始驗證對戰</a>
+          <button class="btn btn-primary btn-sm" id="node-verify">開始驗證對戰</button>
           ${String(n.user_id) === String(user.id) ? `<a href="node-editor.html?id=${n.id}" class="btn btn-ghost btn-sm">編輯</a>` : ""}
         </div>
       </article>`;
+    // 驗證對戰：用 sessionStorage 傳內容
+    document.getElementById("node-verify").onclick = () => {
+      try { sessionStorage.setItem("verify_content", blocksText(blocks).slice(0, 5000)); } catch {}
+      location.href = "quiz.html?topic=" + encodeURIComponent(n.title) + "&from=verify";
+    };
+    // 探索度 +8%：讀完一頁
+    try {
+      const key = `dawn_explore_${user.id}_${n.category || "未分類"}`;
+      const cur = parseFloat(localStorage.getItem(key) || "0");
+      const updated = Math.min(100, cur + 8);
+      localStorage.setItem(key, String(updated));
+      // 顯示探索度
+      const expEl = document.createElement("div");
+      expEl.style.cssText = "margin-top:16px;padding:12px;border-radius:10px;background:oklch(0.74 0.14 80/0.08);font-size:13px;";
+      expEl.innerHTML = `📖 「${htmlEsc(n.category || "未分類")}」探索度 <strong style="color:var(--brass-300);">${updated.toFixed(0)}%</strong>（+8%）`;
+      view.querySelector("article").appendChild(expEl);
+    } catch {}
   } catch (e) {
     view.innerHTML = `<div class="state-empty"><p>${htmlEsc(e.message)}</p><a href="knowledge.html" class="btn btn-primary">返回知識庫</a></div>`;
   }

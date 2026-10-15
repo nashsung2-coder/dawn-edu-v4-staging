@@ -127,8 +127,17 @@ function setStatus(kind, text) {
   statusEl.className = `status-badge status-${kind}`;
   statusEl.textContent = text;
 }
+// 字數統計：顯示在標題旁
+function updateWordCount() {
+  const d = collectData();
+  const text = (d.title + " " + d.question + " " + (d.blocks || []).map(b => b.data?.text || b.data?.code || "").join(" ")).replace(/\s+/g, "");
+  const wcEl = document.getElementById("ed-wordcount");
+  if (wcEl) wcEl.textContent = `${text.length} 字`;
+}
+setInterval(updateWordCount, 2000);
 // 標題/設定欄位變更也觸發自動儲存
-[titleInput, $("ed-question"), $("ed-category"), $("ed-concepts"), $("ed-public")].forEach(el => {
+[titleInput, $("ed-question"), $("ed-category"), $("ed-subcategory"), $("ed-concepts"), $("ed-public"), $("ed-collab")].forEach(el => {
+  if (!el) return;
   el.addEventListener("input", markDirty);
   el.addEventListener("change", markDirty);
 });
@@ -576,7 +585,10 @@ function renderVersionList() {
 
 /* 離開前提醒未儲存 */
 window.addEventListener("beforeunload", e => {
-  if (isDirty) { e.preventDefault(); e.returnValue = ""; }
+  if (isDirty) {
+    // 強制立即儲存，避免 debounce 期間關閉丟失
+    try { localStorage.setItem(draftKey(), JSON.stringify(collectData())); } catch {}
+  }
 });
 
 await loadInitial();
