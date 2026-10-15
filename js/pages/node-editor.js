@@ -170,9 +170,17 @@ $("btn-save-draft").onclick = () => {
 
 /* ---------- 預覽 ---------- */
 $("btn-preview").onclick = () => {
-  $("pv-title").textContent = titleInput.value.trim() || "未命名節點";
-  $("pv-body").innerHTML = renderBlocks(getCurrentBlocks(), esc);
-  $("preview-modal").style.display = "";
+  try {
+    $("pv-title").textContent = titleInput.value.trim() || "未命名節點";
+    $("pv-body").innerHTML = renderBlocks(getCurrentBlocks(), esc) || "<p style='color:var(--paper-400);'>（尚無內容）</p>";
+    const m = $("preview-modal");
+    m.style.display = "flex";
+    m.style.alignItems = "center";
+    m.style.justifyContent = "center";
+  } catch (e) {
+    console.error("預覽錯誤:", e);
+    toast("預覽失敗：" + e.message);
+  }
 };
 $("pv-close").onclick = () => $("preview-modal").style.display = "none";
 
