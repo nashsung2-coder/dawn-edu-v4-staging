@@ -57,10 +57,43 @@ function bindCatTabs() {
   });
 }
 
+/* 從 localStorage 載入未發布草稿 */
+function loadDrafts() {
+  const drafts = [];
+  const prefix = `dawn_draft_${user.id}_`;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      try {
+        const d = JSON.parse(localStorage.getItem(key));
+        const nodeId = key.slice(prefix.length);
+        drafts.push({
+          _draftKey: key,
+          _nodeId: nodeId === "new" ? null : nodeId,
+          title: d.title || "未命名草稿",
+          question: d.question || "",
+          category: d.category || "未分類",
+          blocks: d.blocks || [],
+          updatedAt: d.updatedAt,
+        });
+      } catch {}
+    }
+  }
+  return drafts.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+}
+
 function render() {
   const q = qEl.value.trim().toLowerCase();
   let list = cache;
-  if (mode === "mine") list = list.filter(n => n.user_id === user.id);
+  let drafts = [];
+  if (mode === "mine") {
+    list = list.filter(n => n.user_id === user.id);
+    drafts = loadDrafts();
+    if (q) {
+      drafts = drafts.filter(d =>
+        (d.title + " " + d.question + " " + (d.blocks || []).map(b => b.data?.text || b.data?.code || "").join(" ")).toLowerCase().includes(q));
+    }
+  }
   if (q) list = list.filter(n => textOf(n).toLowerCase().includes(q));
   if (activeCat !== "全部") list = list.filter(n => (n.category || "未分類") === activeCat);
 
@@ -69,7 +102,22 @@ function render() {
     `<button class="btn ${c === activeCat ? "btn-primary" : "btn-ghost"}" data-kcat="${esc(c)}"
       style="padding:6px 14px;font-size:13px;">${esc(c)}</button>`).join("")}</div>`;
 
-  if (!list.length) {
+  const draftHtml = drafts.length ? `<div style="margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--brass-300);">未發布草稿（${drafts.length}）</div>
+    ${drafts.map(d => `
+    <div class="card" style="border-style:dashed;margin-bottom:8px;cursor:pointer;" data-draft="${esc(d._draftKey)}">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="status-badge status-draft">草稿</span>
+        <div style="font-size:14px;font-weight:600;">${esc(d.title)}</div>
+        <span style="flex:1"></span>
+        <span style="font-size:11px;color:var(--paper-400);">${d.updatedAt ? new Date(d.updatedAt).toLocaleString("zh-TW", {month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}) : ""}</span>
+        <button class="btn btn-ghost btn-sm" data-draft-del="${esc(d._draftKey)}">刪除</button>
+      </div>
+      ${d.question ? `<div style="font-size:12px;color:var(--paper-400);margin-top:4px;">${esc(d.question)}</div>` : ""}
+    </div>`).join("")}
+  </div>` : "";
+
+  if (!list.length && !drafts.length) {
     v.innerHTML = catTabs + `<div class="state-empty">
       <p>${q ? "沒有符合的節點" : (mode === "mine" ? "你還沒有建立知識節點" : "知識庫是空的")}</p>
     </div>`;
@@ -77,7 +125,7 @@ function render() {
     return;
   }
 
-  v.innerHTML = catTabs + list.map(n => {
+  v.innerHTML = catTabs + draftHtml + list.map(n => {
     let body = n.explanation || n.answer || "";
     let bodyIsBlocks = false;
     let nodeMeta = {};
@@ -117,6 +165,26 @@ function render() {
   }).join("");
 
   bindCatTabs();
+
+  /* 草稿：點擊進入編輯器繼續編輯 */
+  v.querySelectorAll("[data-draft]").forEach(el => {
+    el.addEventListener("click", e => {
+      if (e.target.closest("[data-draft-del]")) return;
+      const key = el.dataset.draft;
+      const prefix = `dawn_draft_${user.id}_`;
+      const nodeId = key.slice(prefix.length);
+      location.href = nodeId === "new" ? "node-editor.html" : `node-editor.html?id=${nodeId}`;
+    });
+  });
+  v.querySelectorAll("[data-draft-del]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      if (confirm("確定刪除這份草稿？")) {
+        localStorage.removeItem(btn.dataset.draftDel);
+        render();
+      }
+    });
+  });
 
   v.querySelectorAll(".node").forEach(el => {
     el.addEventListener("click", e => {
