@@ -96,7 +96,7 @@ async function socraticChallenge(topic, text, score, feedback) {
 - 不要給答案，只提問
 - 不超過 150 字`,
       `主題：${topic}\n\n學生的解釋：\n${text}\n\nAI 評估：${feedback}`,
-      { model: MODELS.chat }
+      { model: MODELS.socratic }
     );
     socraticHistory.push({ questions });
     challengeEl.innerHTML = `
@@ -127,7 +127,7 @@ async function answerSocratic(topic, questions) {
 - 如果回答完全迴避問題，直接指出
 簡潔，不超過 180 字。`,
       `主題：${topic}\n\n挑戰問題：\n${questions}\n\n學生的回答：\n${answer}`,
-      { model: MODELS.chat }
+      { model: MODELS.socratic }
     );
     socraticHistory.push({ answer, reply });
     feedbackEl.innerHTML = `<div style="font-size:14px;line-height:1.8;color:var(--paper-200);white-space:pre-wrap;">${esc(reply)}</div>`;
