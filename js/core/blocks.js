@@ -11,6 +11,8 @@ export const BLOCK_TYPES = [
   { type: "divider", label: "分隔線", icon: "―" },
   { type: "checklist", label: "待辦清單", icon: "☑" },
   { type: "embed", label: "嵌入網頁", icon: "🔗" },
+  { type: "feynman", label: "費曼解釋", icon: "💡" },
+  { type: "battle", label: "知識對戰", icon: "⚔" },
 ];
 
 let _uid = 0;
