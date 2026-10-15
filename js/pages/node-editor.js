@@ -299,7 +299,7 @@ $("pub-confirm").onclick = async () => {
         content, category: d.category, concepts: d.concepts, is_public: isPublic,
       }).eq("id", nodeId);
       if (error && /column|schema cache/i.test(error.message)) {
-        const r2 = await supabase.from("knowledge_nodes").update({ title: d.title, content }).eq("id", nodeId);
+        const r2 = await supabase.from("knowledge_nodes").update({ title: d.title, content, category: d.category || "未分類", is_public: isPublic }).eq("id", nodeId);
         error = r2.error;
       }
       if (error) throw error;
@@ -314,7 +314,7 @@ $("pub-confirm").onclick = async () => {
       let { data, error } = await supabase.from("knowledge_nodes").insert(full).select("id").single();
       if (error && /column|schema cache/i.test(error.message)) {
         const r2 = await supabase.from("knowledge_nodes")
-          .insert({ user_id: user.id, title: d.title, content }).select("id").single();
+          .insert({ user_id: user.id, title: d.title, content, category: d.category || "未分類", is_public: isPublic }).select("id").single();
         data = r2.data; error = r2.error;
       }
       if (error) throw error;
