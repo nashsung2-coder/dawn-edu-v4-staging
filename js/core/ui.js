@@ -63,17 +63,28 @@ export function applyTimeBg() {
   el.style.backgroundImage = `url("${BG_MAP[timeSlot()]}")`;
 }
 
+const _toastQueue = [];
+let _toastShowing = false;
 export function toast(msg, ms = 2500) {
+  _toastQueue.push({ msg, ms });
+  if (!_toastShowing) _showNextToast();
+}
+function _showNextToast() {
+  const item = _toastQueue.shift();
+  if (!item) { _toastShowing = false; return; }
+  _toastShowing = true;
   let el = document.querySelector(".toast");
   if (!el) {
     el = document.createElement("div");
     el.className = "toast";
     document.body.appendChild(el);
   }
-  el.textContent = msg;
+  el.textContent = item.msg;
   el.classList.add("show");
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove("show"), ms);
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(_showNextToast, 300); // 間隔再顯示下一則
+  }, item.ms);
 }
 
 export function esc(s) {
