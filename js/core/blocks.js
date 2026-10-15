@@ -25,6 +25,7 @@ export function newBlock(type, data = {}) {
     divider: {},
     checklist: { items: [{ text: "", done: false }] },
     embed: { url: "", caption: "" },
+    feynman: { concept: "", explanation: "", audience: "小學生" },
   };
   return { id: "b" + (++_uid) + "_" + Date.now().toString(36), type, data: { ...(defaults[type] || {}), ...data } };
 }
@@ -109,6 +110,7 @@ export function blocksText(blocks) {
       case "code": return d.code || "";
       case "checklist": return (d.items || []).map(i => i.text).join(" ");
       case "image": case "youtube": case "embed": return d.caption || "";
+      case "feynman": return [d.concept, d.explanation].filter(Boolean).join("\n");
       default: return "";
     }
   }).filter(Boolean).join("\n").slice(0, 500);
@@ -205,6 +207,13 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       }
       case "embed":
         inner = `<div class="be-hint">嵌入網頁（iframe）</div><input class="be-input" data-k="url" placeholder="網址（https://…）" value="${esc(d.url || "")}"><input class="be-input" data-k="caption" placeholder="說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
+        break;
+      case "feynman":
+        inner = `<div class="be-hint">費曼解釋 — 用最簡單的話講清楚一個概念</div>
+          <input class="be-input" data-k="concept" placeholder="要解釋的概念（例：光合作用）" value="${esc(d.concept || "")}">
+          <input class="be-input" data-k="audience" placeholder="解釋對象（預設：小學生）" value="${esc(d.audience || "小學生")}" style="margin-top:6px;font-size:12px;">
+          <textarea class="be-textarea" data-k="explanation" placeholder="用你自己的話解釋…想像對方完全不懂，從零講起" style="margin-top:6px;min-height:100px;">${esc(d.explanation || "")}</textarea>
+          <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">💡 費曼技巧：教別人的過程就是最好的學習。寫完後可到「費曼說服」讓 AI 驗證你的理解。</div>`;
         break;
     }
     return `<div class="be-block" data-bid="${b.id}">${ctrl}${inner}</div>`;
