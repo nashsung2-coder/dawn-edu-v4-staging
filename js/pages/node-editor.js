@@ -83,6 +83,7 @@ function collectData() {
     category: $("ed-category").value.trim(),
     concepts: $("ed-concepts").value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
     isPublic: $("ed-public").checked,
+    allowCollab: $("ed-collab").checked,
     blocks: getCurrentBlocks(),
     updatedAt: new Date().toISOString(),
   };
@@ -155,9 +156,17 @@ function applyData(d) {
   $("ed-category").value = d.category || "";
   $("ed-concepts").value = (d.concepts || []).join(", ");
   $("ed-public").checked = d.isPublic !== false;
+  const collabEl = $("ed-collab");
+  if (collabEl) collabEl.checked = d.allowCollab === true;
   blocks = d.blocks || [newBlock("paragraph")];
   if (editor) { editor.setBlocks(blocks); } else { renderCanvas(); }
 }
+
+/* ---------- 手動儲存草稿 ---------- */
+$("btn-save-draft").onclick = () => {
+  saveDraft();
+  toast("草稿已儲存到本地");
+};
 
 /* ---------- 預覽 ---------- */
 $("btn-preview").onclick = () => {
@@ -167,24 +176,94 @@ $("btn-preview").onclick = () => {
 };
 $("pv-close").onclick = () => $("preview-modal").style.display = "none";
 
+/* ---------- 衝突解決：並列顯示雙方區塊 ---------- */
+function showConflictDialog(remoteBlocks, localBlocks) {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:720px;max-height:80vh;overflow-y:auto;">
+        <h3>偵測到內容衝突</h3>
+        <p style="font-size:13px;color:var(--paper-400);">其他人已修改此節點。雙方區塊並列顯示，請決定保留或刪除：</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;">
+          <div>
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--brass-300);">對方的版本（${remoteBlocks.length} 個區塊）</div>
+            <div id="conflict-remote" style="border:1px solid oklch(1 0 0 / 0.1);border-radius:8px;padding:8px;"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--brass-300);">你的版本（${localBlocks.length} 個區塊）</div>
+            <div id="conflict-local" style="border:1px solid oklch(1 0 0 / 0.1);border-radius:8px;padding:8px;"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-ghost" id="cf-cancel">取消發布</button>
+          <button class="btn btn-ghost" id="cf-remote">只保留對方</button>
+          <button class="btn btn-ghost" id="cf-local">只保留我的</button>
+          <button class="btn btn-primary" id="cf-merge">合併雙方</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#conflict-remote").innerHTML = renderBlocks(remoteBlocks, esc) || "<p style='color:var(--paper-400);font-size:12px;'>（無內容）</p>";
+    overlay.querySelector("#conflict-local").innerHTML = renderBlocks(localBlocks, esc) || "<p style='color:var(--paper-400);font-size:12px;'>（無內容）</p>";
+    const close = v => { overlay.remove(); resolve(v); };
+    overlay.querySelector("#cf-cancel").onclick = () => close(null);
+    overlay.querySelector("#cf-remote").onclick = () => close(remoteBlocks);
+    overlay.querySelector("#cf-local").onclick = () => close(localBlocks);
+    overlay.querySelector("#cf-merge").onclick = () => close([...remoteBlocks, ...localBlocks]);
+  });
+}
+
 /* ---------- 發布流程 ---------- */
 $("btn-publish").onclick = () => {
-  if (!titleInput.value.trim()) { toast("請先填寫標題"); titleInput.focus(); return; }
-  if (!blocksText(getCurrentBlocks()).trim()) { toast("內容不能為空"); return; }
-  $("pub-visibility").value = $("ed-public").checked ? "public" : "private";
-  $("publish-modal").style.display = "";
+  try {
+    if (!titleInput.value.trim()) { toast("請先填寫標題"); titleInput.focus(); return; }
+    const curBlocks = getCurrentBlocks();
+    if (!blocksText(curBlocks).trim()) { toast("內容不能為空，請先加入區塊並輸入文字"); return; }
+    $("pub-visibility").value = $("ed-public").checked ? "public" : "private";
+    const modal = $("publish-modal");
+    modal.style.display = "flex";
+    // 確保 modal 置中顯示
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+  } catch (e) {
+    console.error("發布按鈕錯誤:", e);
+    toast("發生錯誤：" + e.message);
+  }
 };
 $("pub-cancel").onclick = () => $("publish-modal").style.display = "none";
 $("pub-confirm").onclick = async () => {
   $("publish-modal").style.display = "none";
   const d = collectData();
+  // 衝突檢測：如果是編輯現有節點，檢查資料庫版本是否與載入時不同
+  if (publishedNodeId) {
+    try {
+      const { data: remote } = await supabase.from("knowledge_nodes")
+        .select("content, updated_at").eq("id", publishedNodeId).single();
+      if (remote && remote.content) {
+        const remoteBlocks = JSON.parse(remote.content).blocks || [];
+        const localBlocks = d.blocks;
+        // 簡單衝突檢測：遠端區塊數與本地差異大，且遠端更新時間晚於本地載入
+        if (remoteBlocks.length !== localBlocks.length && remoteBlocks.length > 0) {
+          const merged = await showConflictDialog(remoteBlocks, localBlocks);
+          if (merged === null) { setStatus("draft", "草稿"); return; } // 用戶取消
+          d.blocks = merged;
+          blocks = merged;
+          if (editor) editor.setBlocks(blocks);
+        }
+      }
+    } catch (e) { console.warn("衝突檢測跳過:", e.message); }
+  }
   const isPublic = $("pub-visibility").value === "public";
   $("ed-public").checked = isPublic;
   setStatus("saving", "發布中…");
   try {
     const content = JSON.stringify({
       blocks: d.blocks, question: d.question, category: d.category,
-      concepts: d.concepts, is_public: isPublic, answer: blocksText(d.blocks),
+      concepts: d.concepts, is_public: isPublic, allow_collab: d.allowCollab,
+      answer: blocksText(d.blocks),
     });
     let nodeId = publishedNodeId;
     if (nodeId) {
