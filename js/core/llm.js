@@ -1,15 +1,19 @@
 /* v4 核心：LLM 直連 Worker（Groq） */
 const WORKER_URL = "https://dawn-llm-proxy.nashsung2.workers.dev";
 
-/* Groq 模型配置：不同功能用不同模型
- * 注意：Llama 系列目前為 Enterprise 限定，開發者帳號用 GPT-OSS 系列 */
+/* OpenRouter 模型配置：不同功能用不同模型
+ * 主力 OpenRouter（中文強、便宜），Groq 當備援 */
 export const MODELS = {
-  // 推理型：費曼評估、深度分析（120B，較強）
-  reason: "openai/gpt-oss-120b",
-  // 通用型：AI 潤飾、發布審核、知識對戰、蘇格拉底追問（20B，快速）
-  chat: "openai/gpt-oss-20b",
-  // 極速型：簡單分類、推薦（20B，最快）
-  fast: "openai/gpt-oss-20b",
+  // 推理型：費曼評估、深度分析（DeepSeek R1，想得最深）
+  reason: "deepseek/deepseek-r1",
+  // 蘇格拉底追問：中文犀利、反應快
+  socratic: "deepseek/deepseek-chat",
+  // 通用型：AI 潤飾、發布審核（Qwen 中文寫作最自然）
+  chat: "qwen/qwen-2.5-72b-instruct",
+  // 知識對戰出題：便宜量大
+  battle: "deepseek/deepseek-chat",
+  // 極速型：簡單分類、推薦
+  fast: "deepseek/deepseek-chat",
 };
 
 export async function chat(messages, opts = {}) {
