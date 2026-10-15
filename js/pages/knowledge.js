@@ -44,11 +44,11 @@ function textOf(n) {
   let contentText = n.content || "";
   try {
     const parsed = JSON.parse(n.content || "");
-    if (Array.isArray(parsed) && parsed.length && parsed[0].type) {
-      contentText = blocksText(parsed);
-    }
+    if (parsed && parsed.blocks) contentText = blocksText(parsed.blocks);
+    else if (Array.isArray(parsed) && parsed.length && parsed[0].type) contentText = blocksText(parsed);
   } catch {}
-  return [n.title, n.question, contentText, n.explanation, (n.concepts || []).join(" ")].filter(Boolean).join(" ");
+  const q = n.question || (() => { try { return JSON.parse(n.content || "").question || ""; } catch { return ""; } })();
+  return [n.title, q, contentText, n.explanation, (n.concepts || []).join(" ")].filter(Boolean).join(" ");
 }
 
 function bindCatTabs() {
@@ -78,20 +78,28 @@ function render() {
   }
 
   v.innerHTML = catTabs + list.map(n => {
-    const title = n.title || n.question || "未命名節點";
-    const tags = (n.concepts || []).map(c => `<span class="tag">${esc(c)}</span>`).join("");
-    const cat = `<span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);">${esc(n.category || "未分類")}</span>`;
+    const title = n.title || nQuestion || "未命名節點";
+    const tags = nConcepts.map(c => `<span class="tag">${esc(c)}</span>`).join("");
+    const cat = `<span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);">${esc(nCategory)}</span>`;
     const up = n.upvotes ?? 0;
     const owner = n.owner_name ? ` · ${esc(n.owner_name)}` : "";
     let body = n.explanation || n.answer || "";
     let bodyIsBlocks = false;
+    let nodeMeta = {};
     try {
       const parsed = JSON.parse(n.content || "");
-      if (Array.isArray(parsed) && parsed.length && parsed[0].type) {
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && parsed.blocks) {
+        nodeMeta = parsed; /* 精簡格式：{blocks, question, category, ...} */
+        body = renderBlocks(parsed.blocks, esc);
+        bodyIsBlocks = true;
+      } else if (Array.isArray(parsed) && parsed.length && parsed[0].type) {
         body = renderBlocks(parsed, esc);
         bodyIsBlocks = true;
       } else { body = n.content || body; }
     } catch { body = n.content || body; }
+    const nQuestion = n.question || nodeMeta.question || "";
+    const nCategory = n.category || nodeMeta.category || "未分類";
+    const nConcepts = n.concepts || nodeMeta.concepts || [];
     const isMine = n.user_id === user.id;
     return `<div class="card node" data-id="${n.id}">
       <div class="title">${esc(title)}</div>
@@ -215,19 +223,35 @@ document.getElementById("nm-save").onclick = async () => {
     await ensureProfile(supabase, user);
     const concepts = document.getElementById("nm-concepts").value
       .split(/[,，]/).map(s => s.trim()).filter(Boolean);
-    const { error } = await supabase.from("knowledge_nodes").insert({
+    const category = document.getElementById("nm-cat").value.trim() || "未分類";
+    const isPublic = document.getElementById("nm-public").checked;
+    const ownerName = user.email?.split("@")[0] || "旅人";
+    /* 完整 payload（含 blocks JSON） */
+    const fullPayload = {
       user_id: user.id,
       title,
       question,
       answer,
-      content: JSON.stringify(blocks),
+      content: JSON.stringify({ blocks, question, category, concepts, is_public: isPublic }),
       explanation: null,
-      category: document.getElementById("nm-cat").value.trim() || "未分類",
+      category,
       concepts,
-      is_public: document.getElementById("nm-public").checked,
-      owner_name: user.email?.split("@")[0] || "旅人",
+      is_public: isPublic,
+      owner_name: ownerName,
       source: "manual",
-    });
+    };
+    /* 精簡 payload（僅保證存在的欄位） */
+    const miniPayload = {
+      user_id: user.id,
+      title,
+      content: JSON.stringify({ blocks, question, category, concepts, is_public: isPublic, answer }),
+    };
+    let { error } = await supabase.from("knowledge_nodes").insert(fullPayload);
+    if (error && /column|schema cache/i.test(error.message)) {
+      /* 資料表欄位不全時降級為精簡寫入 */
+      const r2 = await supabase.from("knowledge_nodes").insert(miniPayload);
+      error = r2.error;
+    }
     if (error) throw error;
     toast("知識節點已建立！");
     modal.style.display = "none";
