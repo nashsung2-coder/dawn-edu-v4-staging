@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>主控台 — 曙光教育</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.dash-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
+.dash-section-title { display:flex; align-items:center; gap:8px; margin:24px 0 12px; font-size:15px; font-weight:700; }
+.dash-section-title .en { font-family:var(--font-mono); font-size:10px; letter-spacing:.2em; color:var(--brass-400); }
+.stat-row { display:flex; gap:12px; flex-wrap:wrap; }
+.stat { flex:1; min-width:100px; text-align:center; padding:12px 8px; background:oklch(1 0 0 / 0.03); border-radius:10px; }
+.stat .num { font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--brass-300); }
+.stat .lbl { font-size:12px; color:var(--paper-400); margin-top:4px; }
+.task-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid oklch(1 0 0 / 0.05); }
+.task-item:last-child { border:none; }
+.task-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--brass-400); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.task-check.done { background:var(--brass-400); color:#000; }
+.quick-links { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+.quick-links .btn { flex-direction:column; gap:4px; padding:12px 8px; height:auto; }
+.bar { height:8px; background:oklch(1 0 0 / 0.08); border-radius:99px; overflow:hidden; }
+.bar > div { height:100%; background:linear-gradient(90deg, var(--brass-400), var(--brass-300)); border-radius:99px; }
+</style>
+</head>
+<body>
+<main class="main">
+  <div class="page-head">
+    <div class="en">DASHBOARD</div>
+    <h1>主控台</h1>
+  </div>
+  <div id="dash-view">
+    <div class="skeleton" style="height:120px;margin-bottom:16px"></div>
+    <div class="skeleton" style="height:200px;margin-bottom:16px"></div>
+    <div class="skeleton" style="height:160px"></div>
+  </div>
+</main>
+<script src="../js/vendor/supabase.min.js"></script>
+<script type="module" src="../js/pages/dashboard.js?v=fixed001"></script>
+</body>
+</html>
