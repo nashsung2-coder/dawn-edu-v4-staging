@@ -85,7 +85,7 @@ export function blocksText(blocks) {
 }
 
 /* 建立編輯器實例，掛載到 container 元素 */
-export function createEditor(container, esc, initialBlocks) {
+export function createEditor(container, esc, initialBlocks, opts = {}) {
   let blocks = Array.isArray(initialBlocks) && initialBlocks.length
     ? initialBlocks
     : [newBlock("paragraph")];
@@ -247,6 +247,9 @@ export function createEditor(container, esc, initialBlocks) {
 
   render();
 
+  const _notify = () => { if (opts.onChange) { try { syncFromDOM(); opts.onChange(blocks); } catch {} } };
+  const _origRender = render;
+  render = () => { _origRender(); _notify(); };
   return {
     getBlocks() { syncFromDOM(); return blocks; },
     setBlocks(nb) { blocks = nb && nb.length ? nb : [newBlock("paragraph")]; render(); },
