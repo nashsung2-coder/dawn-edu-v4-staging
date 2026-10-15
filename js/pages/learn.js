@@ -21,6 +21,8 @@ function errView(msg) {
 try {
   await withTimeout(renderTopbar("learn.html"), 15000, "載入導覽列");
   var user = await withTimeout(requireAuth(), 15000, "驗證登入");
+  // OAuth 登入後 auth state 可能還沒穩定，短暫等待
+  await new Promise(r => setTimeout(r, 500));
   await withTimeout(ensureProfile(supabase, user), 15000, "建立使用者資料");
 } catch (e) {
   errView("載入失敗：" + e.message);
