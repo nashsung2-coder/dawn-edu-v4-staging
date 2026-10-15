@@ -580,3 +580,174 @@ window.addEventListener("beforeunload", e => {
 });
 
 await loadInitial();
+
+/* ===== AI 建庫小幫手 ===== */
+let abTab = "socratic";
+let abSocraticQA = [];
+
+function openBuilder() {
+  $("ai-builder-panel").style.display = "flex";
+  renderBuilderTab();
+}
+$("btn-ai-builder").onclick = openBuilder;
+$("ai-builder-close").onclick = () => $("ai-builder-panel").style.display = "none";
+document.querySelectorAll(".ab-tab").forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll(".ab-tab").forEach(x => x.classList.remove("on"));
+    t.classList.add("on");
+    abTab = t.dataset.abtab;
+    renderBuilderTab();
+  };
+});
+
+function renderBuilderTab() {
+  const c = $("ai-builder-content");
+  if (abTab === "socratic") renderAbSocratic(c);
+  else if (abTab === "feynman") renderAbFeynman(c);
+  else if (abTab === "suggest") renderAbSuggest(c);
+}
+
+function getTopic() {
+  const d = collectData();
+  return d.title || d.question || "";
+}
+
+/* --- 蘇格拉底探索 --- */
+async function renderAbSocratic(c) {
+  const topic = getTopic();
+  if (!topic) {
+    c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">先在上方輸入標題或主題，AI 才能為你設計探索問題。</p>`;
+    return;
+  }
+  if (!abSocraticQA.length || abSocraticQA._topic !== topic) {
+    c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在為「${esc(topic)}」準備問題…</p>`;
+    try {
+      const reply = await ask(
+        `你是蘇格拉底式的導師。用繁體中文，為「${topic}」設計 3 個引導探索問題。由淺入深，每行一個，格式「Q1. 問題」。不超過 120 字。`,
+        `主題：${topic}`,
+        { model: MODELS.socratic }
+      );
+      abSocraticQA = reply.split("\n").map(l => l.replace(/^Q\d+[.、]\s*/, "").trim()).filter(Boolean).slice(0, 3).map(q => ({ q, a: "" }));
+      abSocraticQA._topic = topic;
+    } catch {
+      abSocraticQA = [{ q: `你對「${topic}」最了解什麼？`, a: "" }];
+      abSocraticQA._topic = topic;
+    }
+  }
+  c.innerHTML = `
+    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">回答後可一鍵插入編輯器。</p>
+    ${abSocraticQA.map((qa, i) => `
+      <div class="gc-q" style="margin-bottom:10px;">
+        <div class="q-label">問題 ${i + 1}</div>
+        <div class="q-text" style="font-size:14px;">${esc(qa.q)}</div>
+        <textarea class="input" id="ab-a${i}" rows="2" placeholder="你的回答…" style="width:100%;margin-top:8px;">${esc(qa.a || "")}</textarea>
+      </div>`).join("")}
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-ghost btn-sm" id="ab-regen">換一組</button>
+      <button class="btn btn-primary btn-sm" id="ab-insert-qa">插入問答 →</button>
+    </div>`;
+  $("ab-regen").onclick = () => { abSocraticQA = []; renderBuilderTab(); };
+  $("ab-insert-qa").onclick = () => {
+    abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
+    const answered = abSocraticQA.filter(qa => qa.a);
+    if (!answered.length) { toast("先回答至少一個問題"); return; }
+    const blocks = answered.flatMap(qa => [
+      { type: "heading", data: { text: qa.q, level: 3 } },
+      { type: "paragraph", data: { text: qa.a } },
+    ]);
+    insertBlocksToEditor(blocks);
+    toast("已插入編輯器");
+  };
+}
+
+/* --- 費曼精煉 --- */
+function renderAbFeynman(c) {
+  c.innerHTML = `
+    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">
+      貼上你的解釋草稿，AI 幫你精煉成更簡單、更完整的版本，可一鍵插入。
+    </p>
+    <textarea class="input" id="ab-feynman-in" rows="6" placeholder="貼上你的解釋…" style="width:100%;margin-bottom:12px;"></textarea>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn btn-primary btn-sm" id="ab-refine">AI 精煉</button>
+    </div>
+    <div id="ab-feynman-out"></div>`;
+  $("ab-refine").onclick = async () => {
+    const text = document.getElementById("ab-feynman-in").value.trim();
+    if (text.length < 10) { toast("先貼上你的解釋"); return; }
+    const out = document.getElementById("ab-feynman-out");
+    out.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">精煉中…</p>`;
+    try {
+      const topic = getTopic();
+      const reply = await ask(
+        `你是費曼學習法導師。用繁體中文，把學生的解釋改寫得更簡單、更完整、更有條理。保留學生的原意和語氣，補充缺失的關鍵細節。用段落呈現，不超過 300 字。`,
+        `主題：${topic}\n\n學生的解釋：\n${text}`,
+        { model: MODELS.chat }
+      );
+      out.innerHTML = `
+        <div style="background:oklch(1 0 0/0.03);border-radius:10px;padding:12px;margin-bottom:12px;">
+          <div style="font-size:14px;line-height:1.8;">${esc(reply)}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="ab-insert-refined">插入精煉版 →</button>`;
+      document.getElementById("ab-insert-refined").onclick = () => {
+        insertBlocksToEditor([{ type: "paragraph", data: { text: reply } }]);
+        toast("已插入編輯器");
+      };
+    } catch (e) {
+      out.innerHTML = `<p style="color:var(--signal-red);font-size:13px;">失敗：${esc(e.message)}</p>`;
+    }
+  };
+}
+
+/* --- 資料建議 --- */
+async function renderAbSuggest(c) {
+  const topic = getTopic();
+  if (!topic) {
+    c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">先在上方輸入標題或主題。</p>`;
+    return;
+  }
+  c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">AI 正在分析「${esc(topic)}」的資料方向…</p>`;
+  try {
+    const d = collectData();
+    const text = (d.blocks || []).map(b => b.data?.text || "").join("\n").slice(0, 1000);
+    const reply = await ask(
+      `你是學習規劃師。用繁體中文，針對「${topic}」推薦 4 個值得查找的資料方向。每行格式：「圖示|標題|一句話說明」。要多元：理論、歷史、應用、實驗。不超過 180 字。`,
+      `主題：${topic}\n\n目前內容：\n${text}`,
+      { model: MODELS.chat }
+    );
+    const items = reply.split("\n").map(l => l.trim()).filter(Boolean).slice(0, 4).map(line => {
+      const p = line.split("|").map(s => s.trim());
+      return { icon: p[0] || "📖", title: p[1] || line, desc: p[2] || "" };
+    });
+    c.innerHTML = `
+      <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">勾選想加入的，插入為待辦清單。</p>
+      ${items.map((s, i) => `
+        <label class="suggest-item" style="cursor:pointer;">
+          <input type="checkbox" id="ab-s${i}" checked style="margin-top:4px;">
+          <span class="s-icon">${esc(s.icon)}</span>
+          <span><span class="s-title" style="font-size:13px;">${esc(s.title)}</span>
+          <span class="s-desc">${esc(s.desc)}</span></span>
+        </label>`).join("")}
+      <button class="btn btn-primary btn-sm" id="ab-insert-sug" style="margin-top:12px;">插入待辦清單 →</button>`;
+    document.getElementById("ab-insert-sug").onclick = () => {
+      const checked = items.filter((_, i) => document.getElementById(`ab-s${i}`).checked);
+      if (!checked.length) { toast("至少選一個"); return; }
+      insertBlocksToEditor([{
+        type: "checklist",
+        data: { items: checked.map(s => ({ text: `${s.icon} ${s.title}：${s.desc}`, checked: false })) }
+      }]);
+      toast("已插入編輯器");
+    };
+  } catch (e) {
+    c.innerHTML = `<p style="color:var(--signal-red);font-size:13px;">失敗：${esc(e.message)}</p>`;
+  }
+}
+
+/* 插入區塊到編輯器尾端 */
+function insertBlocksToEditor(newBlocks) {
+  if (typeof editor !== "undefined" && editor && editor.getBlocks) {
+    const cur = editor.getBlocks();
+    editor.setBlocks([...cur, ...newBlocks]);
+  } else {
+    toast("編輯器還沒準備好，稍後再試");
+  }
+}
