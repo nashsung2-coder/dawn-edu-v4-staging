@@ -1,6 +1,6 @@
 /* v4 設定頁 */
 import { supabase, getProfile, signOut } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
 
 await renderTopbar("settings.html");
 const user = await requireAuth();
@@ -127,7 +127,9 @@ try {
   };
 
   /* 登出 */
-  document.getElementById("s-logout").onclick = signOut;
+  document.getElementById("s-logout").onclick = () => {
+    if (confirm("確定要登出嗎？")) signOut();
+  };
 
 } catch (e) {
   console.error(e);
