@@ -33,20 +33,10 @@ async function fetchNodes() {
   // supabase-js 查詢錯誤放在 result.error，不會 throw，必須明確檢查
   try {
     const { data, error } = await supabase.from("knowledge_nodes")
-      .select("*").order("created_at", { ascending: false }).limit(200);
+      .select("id,user_id,title,content,category,is_public,created_at")
+      .order("created_at", { ascending: false }).limit(200);
     if (error) {
       console.error("載入節點失敗:", error.message);
-      // 如果是欄位不存在，嘗試只選基本欄位
-      if (/column/i.test(error.message)) {
-        const r2 = await supabase.from("knowledge_nodes")
-          .select("id,user_id,title,content,created_at")
-          .order("created_at", { ascending: false }).limit(200);
-        if (r2.error) {
-          console.error("降級查詢也失敗:", r2.error.message);
-          return [];
-        }
-        return r2.data || [];
-      }
       return [];
     }
     return data || [];
