@@ -27,33 +27,30 @@ function skeleton() {
 }
 
 async function fetchNodes() {
-  // 載入：所有公開節點 + 自己的所有節點（含私人）
+  // 注意：is_public 欄位可能不存在，不做服務端篩選，全取後客戶端處理
+  // supabase-js 查詢錯誤放在 result.error，不會 throw，必須明確檢查
   try {
-    const [pubRes, mineRes] = await Promise.all([
-      supabase.from("knowledge_nodes").select("*").eq("is_public", true)
-        .order("created_at", { ascending: false }).limit(100),
-      supabase.from("knowledge_nodes").select("*").eq("user_id", user.id)
-        .order("created_at", { ascending: false }).limit(100),
-    ]);
-    const seen = new Set();
-    const merged = [];
-    for (const n of [...(mineRes.data || []), ...(pubRes.data || [])]) {
-      if (!seen.has(n.id)) { seen.add(n.id); merged.push(n); }
-    }
-    // 按建立時間排序
-    merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    return merged;
-  } catch (e) {
-    // 降級：全取再客戶端過濾
-    try {
-      const { data, error } = await supabase.from("knowledge_nodes")
-        .select("*").order("created_at", { ascending: false }).limit(100);
-      if (error) throw error;
-      return (data || []).filter(n => n.is_public !== false || n.user_id === user.id);
-    } catch (e2) {
-      console.error("載入節點失敗:", e2);
+    const { data, error } = await supabase.from("knowledge_nodes")
+      .select("*").order("created_at", { ascending: false }).limit(200);
+    if (error) {
+      console.error("載入節點失敗:", error.message);
+      // 如果是欄位不存在，嘗試只選基本欄位
+      if (/column/i.test(error.message)) {
+        const r2 = await supabase.from("knowledge_nodes")
+          .select("id,user_id,title,content,created_at")
+          .order("created_at", { ascending: false }).limit(200);
+        if (r2.error) {
+          console.error("降級查詢也失敗:", r2.error.message);
+          return [];
+        }
+        return r2.data || [];
+      }
       return [];
     }
+    return data || [];
+  } catch (e) {
+    console.error("載入節點異常:", e.message);
+    return [];
   }
 }
 
