@@ -33,7 +33,7 @@ async function fetchNodes() {
   // supabase-js 查詢錯誤放在 result.error，不會 throw，必須明確檢查
   try {
     const { data, error } = await supabase.from("knowledge_nodes")
-      .select("id,user_id,title,content,category,is_public,created_at").limit(200);
+      .select("id,title,is_public").limit(5);
     if (error) {
       console.error("載入節點失敗:", error.message);
       return [];
