@@ -180,6 +180,8 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
   .be-add-line { flex:1; height:1px; background: oklch(0.60 0.12 80 / 0.2); }
   .be-add-btn { width:28px; height:28px; border-radius:50%; border:1px dashed oklch(0.60 0.12 80 / 0.4); background:transparent; color:var(--brass-300); cursor:pointer; font-size:16px; line-height:1; }
   .be-add-btn:hover { background: oklch(0.74 0.14 80 / 0.12); }
+  .be-add-end { opacity:1 !important; margin:16px 0 8px; }
+  .be-add-end .be-add-btn { width:auto; padding:8px 20px; border-radius:20px; }
   .be-menu { display:flex; flex-wrap:wrap; gap:6px; padding:10px; background: oklch(0.20 0.04 260); border:1px solid oklch(0.60 0.12 80 / 0.25); border-radius:10px; margin:4px 0; }
   .be-menu button { display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; border:1px solid oklch(0.60 0.12 80 / 0.2); background:transparent; color:var(--paper-200); cursor:pointer; font-size:13px; }
   .be-menu button:hover { background: oklch(0.74 0.14 80 / 0.12); border-color: var(--brass-400); }
@@ -314,7 +316,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
     container.innerHTML = `<div class="be-canvas">` + blocks.map((b, i) => {
       const menuAnchor = `<div class="be-add" data-pos="${i}"><div class="be-add-line"></div><button class="be-add-btn" data-add="${i}">＋</button><div class="be-add-line"></div></div>`;
       return menuAnchor + blockEditorHTML(b);
-    }).join("") + `<div class="be-add" data-pos="${blocks.length}"><div class="be-add-line"></div><button class="be-add-btn" data-add="${blocks.length}">＋</button><div class="be-add-line"></div></div></div><div class="be-menu-slot"></div>`;
+    }).join("") + `<div class="be-add be-add-end" data-pos="${blocks.length}"><div class="be-add-line"></div><button class="be-add-btn" data-add="${blocks.length}">＋ 加入區塊</button><div class="be-add-line"></div></div></div><div class="be-menu-slot"></div>`;
     bind();
   }
 
@@ -357,6 +359,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
     container.querySelectorAll("[data-add]").forEach(btn => {
       btn.onclick = e => { e.stopPropagation(); showMenu(+btn.dataset.add); };
     });
+
     container.querySelectorAll(".be-block").forEach(el => {
       const bid = el.dataset.bid;
       el.querySelector("[data-act='del']").onclick = () => {
