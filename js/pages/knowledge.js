@@ -101,6 +101,7 @@ function render() {
     const up = n.upvotes ?? 0;
     const owner = n.owner_name ? ` · ${esc(n.owner_name)}` : "";
     const isMine = n.user_id === user.id;
+    const editBtn = isMine ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : "";
     return `<div class="card node" data-id="${n.id}">
       <div class="title">${esc(title)}</div>
       ${`<div class="tags">${cat}${tags}</div>`}
@@ -109,6 +110,7 @@ function render() {
         <span class="up">▲ <span class="num-sm">${up}</span></span>
         <span>${owner}</span>
         <button class="btn btn-ghost upbtn" style="padding:4px 12px;font-size:12px;" data-up="${n.id}">讚</button>
+        ${editBtn}
         ${isMine ? `<button class="btn btn-ghost" style="padding:4px 12px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
       </div>
     </div>`;
@@ -189,91 +191,6 @@ document.getElementById("tab-mine").onclick = e => {
 document.getElementById("go").onclick = render;
 qEl.addEventListener("keydown", e => { if (e.key === "Enter") render(); });
 
-/* ===== 建立知識節點 ===== */
-const modal = document.getElementById("node-modal");
-let blockEditor = null;
-document.getElementById("btn-new").onclick = () => {
-  modal.style.display = "flex";
-  if (!blockEditor) {
-    blockEditor = createEditor(document.getElementById("nm-blocks"), esc);
-  } else {
-    blockEditor.setBlocks([newBlock("paragraph")]);
-  }
-};
-document.getElementById("nm-cancel").onclick = () => {
-  modal.style.display = "none";
-};
-modal.addEventListener("click", e => {
-  if (e.target === modal) modal.style.display = "none";
-});
-
-document.getElementById("nm-save").onclick = async () => {
-  const title = document.getElementById("nm-title").value.trim();
-  const question = document.getElementById("nm-q").value.trim();
-  const blocks = blockEditor ? blockEditor.getBlocks() : [];
-  const answer = blocksText(blocks);
-  if (!title || !question || !answer) {
-    toast("請填寫標題、問題，並在內容區加入至少一個有文字的區塊");
-    return;
-  }
-  const btn = document.getElementById("nm-save");
-  btn.disabled = true;
-  btn.textContent = "建立中…";
-  try {
-    await ensureProfile(supabase, user);
-    const concepts = document.getElementById("nm-concepts").value
-      .split(/[,，]/).map(s => s.trim()).filter(Boolean);
-    const category = document.getElementById("nm-cat").value.trim() || "未分類";
-    const isPublic = document.getElementById("nm-public").checked;
-    const ownerName = user.email?.split("@")[0] || "旅人";
-    /* 完整 payload（含 blocks JSON） */
-    const fullPayload = {
-      user_id: user.id,
-      title,
-      question,
-      answer,
-      content: JSON.stringify({ blocks, question, category, concepts, is_public: isPublic }),
-      explanation: null,
-      category,
-      concepts,
-      is_public: isPublic,
-      owner_name: ownerName,
-      source: "manual",
-    };
-    /* 精簡 payload（僅保證存在的欄位） */
-    const miniPayload = {
-      user_id: user.id,
-      title,
-      content: JSON.stringify({ blocks, question, category, concepts, is_public: isPublic, answer }),
-    };
-    let { error } = await supabase.from("knowledge_nodes").insert(fullPayload);
-    if (error && /column|schema cache/i.test(error.message)) {
-      /* 資料表欄位不全時降級為精簡寫入 */
-      const r2 = await supabase.from("knowledge_nodes").insert(miniPayload);
-      error = r2.error;
-    }
-    if (error) throw error;
-    toast("知識節點已建立！");
-    modal.style.display = "none";
-    /* 清空表單 */
-    ["nm-title", "nm-cat", "nm-q", "nm-concepts"].forEach(id => {
-      document.getElementById(id).value = "";
-    });
-    document.getElementById("nm-public").checked = true;
-    /* 切到我的節點並重載 */
-    mode = "mine";
-    document.getElementById("tab-mine").classList.add("on");
-    document.getElementById("tab-all").classList.remove("on");
-    await load();
-  } catch (e) {
-    toast("建立失敗：" + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "建立";
-  }
-};
-
-load();
 
 /* ===== 提問引導：以問題為入口的學習流程 ===== */
 (function initAskGuide() {
