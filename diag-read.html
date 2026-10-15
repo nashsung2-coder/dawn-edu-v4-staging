@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>讀取測試</title>
+<script src="./js/vendor/supabase.min.js"></script>
+<script type="module">
+import { supabase, getUser } from "./js/core/supabase.js?v=fixed002";
+const out = document.getElementById("out");
+function log(m) { out.innerHTML += m + "<br>"; }
+try {
+  const user = await getUser();
+  log("User: " + (user?.email || "未登入"));
+  const { data, error } = await supabase.from("knowledge_nodes").select("id,title,is_public").limit(5);
+  if (error) {
+    log("錯誤: " + error.message);
+    log("代碼: " + error.code);
+  } else {
+    log("成功! 筆數: " + (data?.length || 0));
+    (data || []).forEach(n => log("- " + n.title + " (public:" + n.is_public + ")"));
+  }
+} catch (e) {
+  log("異常: " + e.message);
+  log("堆疊: " + e.stack);
+}
+</script>
+</head>
+<body>
+<h1>讀取測試</h1>
+<div id="out">載入中...</div>
+</body>
+</html>
