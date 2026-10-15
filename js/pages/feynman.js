@@ -82,6 +82,8 @@ async function socraticChallenge(topic, text, score, feedback) {
   challengeEl.style.cssText = "margin-top:20px;padding:16px;border-radius:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);";
   challengeEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在思考要怎麼挑戰你…</p>`;
   resultEl.appendChild(challengeEl);
+  // 自動滾動到蘇格拉底區塊
+  setTimeout(() => challengeEl.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
   socraticHistory = [{ topic, text }];
 
   try {
@@ -94,7 +96,7 @@ async function socraticChallenge(topic, text, score, feedback) {
 - 不要給答案，只提問
 - 不超過 150 字`,
       `主題：${topic}\n\n學生的解釋：\n${text}\n\nAI 評估：${feedback}`,
-      { model: MODELS.reason }
+      { model: MODELS.chat }
     );
     socraticHistory.push({ questions });
     challengeEl.innerHTML = `
@@ -125,7 +127,7 @@ async function answerSocratic(topic, questions) {
 - 如果回答完全迴避問題，直接指出
 簡潔，不超過 180 字。`,
       `主題：${topic}\n\n挑戰問題：\n${questions}\n\n學生的回答：\n${answer}`,
-      { model: MODELS.reason }
+      { model: MODELS.chat }
     );
     socraticHistory.push({ answer, reply });
     feedbackEl.innerHTML = `<div style="font-size:14px;line-height:1.8;color:var(--paper-200);white-space:pre-wrap;">${esc(reply)}</div>`;
