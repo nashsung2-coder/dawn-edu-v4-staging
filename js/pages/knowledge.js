@@ -11,6 +11,8 @@ const v = document.getElementById("v");
 const qEl = document.getElementById("q");
 let mode = "all"; // all | mine
 let activeCat = "全部";
+let curPage = 1;
+const PAGE_SIZE = 12;
 // 從群島跳轉：?cat=xxx 預選分類
 try {
   const _sp = new URLSearchParams(location.search);
@@ -67,7 +69,7 @@ function textOf(n) {
 
 function bindCatTabs() {
   v.querySelectorAll("[data-kcat]").forEach(btn => {
-    btn.onclick = () => { activeCat = btn.dataset.kcat; render(); };
+    btn.onclick = () => { activeCat = btn.dataset.kcat; curPage = 1; render(); };
   });
 }
 
@@ -116,6 +118,30 @@ function loadDrafts() {
   return drafts.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
 }
 
+/* 分類樹：支援 "父/子" 格式 */
+function buildCatTree(nodes) {
+  const tree = {};
+  for (const n of nodes) {
+    const cat = n.category || "未分類";
+    const parts = cat.split("/").map(s => s.trim()).filter(Boolean);
+    if (parts.length === 1) {
+      tree[parts[0]] = tree[parts[0]] || { children: new Set(), count: 0 };
+      tree[parts[0]].count++;
+    } else {
+      const parent = parts[0], child = parts.slice(1).join("/");
+      tree[parent] = tree[parent] || { children: new Set(), count: 0 };
+      tree[parent].children.add(child);
+      tree[parent].count++;
+    }
+  }
+  return tree;
+}
+function matchCat(nodeCat, active) {
+  if (active === "全部") return true;
+  const nc = nodeCat || "未分類";
+  return nc === active || nc.startsWith(active + "/");
+}
+
 function render() {
   const q = qEl.value.trim().toLowerCase();
   let list = cache;
@@ -129,12 +155,38 @@ function render() {
     }
   }
   if (q) list = list.filter(n => textOf(n).toLowerCase().includes(q));
-  if (activeCat !== "全部") list = list.filter(n => (n.category || "未分類") === activeCat);
+  if (activeCat !== "全部") list = list.filter(n => matchCat(n.category, activeCat));
 
-  const cats = ["全部", ...new Set(cache.map(n => n.category || "未分類"))];
-  const catTabs = `<div class="cat-tabs" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">${cats.map(c =>
-    `<button class="btn ${c === activeCat ? "btn-primary" : "btn-ghost"}" data-kcat="${esc(c)}"
-      style="padding:6px 14px;font-size:13px;">${esc(c)}</button>`).join("")}</div>`;
+  // 分類樹（父分類可展開子分類）
+  const tree = buildCatTree(cache);
+  const catTabs = `<div class="cat-tabs" style="margin-bottom:16px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+      <button class="btn ${activeCat === "全部" ? "btn-primary" : "btn-ghost"}" data-kcat="全部" style="padding:6px 14px;font-size:13px;">全部（${cache.length}）</button>
+      ${Object.entries(tree).map(([parent, info]) => `
+        <button class="btn ${activeCat === parent || activeCat.startsWith(parent + "/") ? "btn-primary" : "btn-ghost"}" data-kcat="${esc(parent)}"
+          style="padding:6px 14px;font-size:13px;">${esc(parent)}（${info.count}）</button>`).join("")}
+    </div>
+    ${(() => {
+      const activeParent = Object.keys(tree).find(p => activeCat === p || activeCat.startsWith(p + "/"));
+      if (!activeParent || !tree[activeParent].children.size) return "";
+      return `<div style="display:flex;gap:6px;flex-wrap:wrap;padding-left:12px;border-left:2px solid oklch(0.75 0.15 80 / 0.3);">
+        ${[...tree[activeParent].children].map(child => {
+          const full = activeParent + "/" + child;
+          return `<button class="btn ${activeCat === full ? "btn-primary" : "btn-ghost"}" data-kcat="${esc(full)}" style="padding:4px 10px;font-size:12px;">${esc(child)}</button>`;
+        }).join("")}
+      </div>`;
+    })()}
+  </div>`;
+
+  // 分頁
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  if (curPage > totalPages) curPage = totalPages;
+  const pageList = list.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
+  const pageHtml = totalPages > 1 ? `<div style="display:flex;gap:8px;justify-content:center;align-items:center;margin-top:20px;">
+    <button class="btn btn-ghost btn-sm" id="pg-prev" ${curPage <= 1 ? "disabled" : ""}>‹ 上一頁</button>
+    <span style="font-size:13px;color:var(--paper-400);">${curPage} / ${totalPages}</span>
+    <button class="btn btn-ghost btn-sm" id="pg-next" ${curPage >= totalPages ? "disabled" : ""}>下一頁 ›</button>
+  </div>` : "";
 
   const draftHtml = drafts.length ? `<div style="margin-bottom:16px;">
     <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--brass-300);">未發布草稿（${drafts.length}）</div>
@@ -159,7 +211,7 @@ function render() {
     return;
   }
 
-  v.innerHTML = catTabs + draftHtml + list.map(n => {
+  v.innerHTML = catTabs + draftHtml + pageList.map(n => {
     let body = n.explanation || n.answer || "";
     let bodyIsBlocks = false;
     let nodeMeta = {};
@@ -198,9 +250,13 @@ function render() {
         ${isMine ? `<button class="btn btn-ghost" style="padding:4px 12px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
       </div>
     </div>`;
-  }).join("");
+  }).join("") + pageHtml;
 
   bindCatTabs();
+  const pgPrev = document.getElementById("pg-prev");
+  const pgNext = document.getElementById("pg-next");
+  if (pgPrev) pgPrev.onclick = () => { if (curPage > 1) { curPage--; render(); window.scrollTo(0, 0); } };
+  if (pgNext) pgNext.onclick = () => { curPage++; render(); window.scrollTo(0, 0); };
 
   /* 草稿：點擊進入編輯器繼續編輯 */
   v.querySelectorAll("[data-draft]").forEach(el => {
@@ -282,12 +338,14 @@ async function load() {
 
 document.getElementById("tab-all").onclick = e => {
   mode = "all";
+  curPage = 1; activeCat = "全部";
   e.target.classList.add("on");
   document.getElementById("tab-mine").classList.remove("on");
   render();
 };
 document.getElementById("tab-mine").onclick = e => {
   mode = "mine";
+  curPage = 1; activeCat = "全部";
   e.target.classList.add("on");
   document.getElementById("tab-all").classList.remove("on");
   render();
