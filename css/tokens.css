@@ -60,13 +60,31 @@ body::before {
   text-decoration: none; color: var(--paper-50);
 }
 .brand span { color: var(--brass-400); }
-.nav { display: flex; gap: 2px; }
-.nav a {
+.nav { display: flex; gap: 2px; align-items: center; }
+.nav a, .nav-link {
   color: var(--paper-400); text-decoration: none; font-size: 13px;
   padding: 8px 13px; border-radius: 2px; transition: all 120ms var(--ease-out);
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
 }
-.nav a:hover { color: var(--paper-50); background: oklch(1 0 0 / 0.05); }
-.nav a.active { color: var(--brass-300); background: oklch(0.74 0.14 80 / 0.1); }
+.nav a:hover, .nav-link:hover { color: var(--paper-50); background: oklch(1 0 0 / 0.05); }
+.nav a.active, .nav-link.active { color: var(--brass-300); background: oklch(0.74 0.14 80 / 0.1); }
+/* 下拉式分組 */
+.nav-drop { position: relative; }
+.nav-drop-btn .drop-arrow { font-size: 10px; opacity: 0.6; transition: transform 150ms; }
+.nav-drop.open .nav-drop-btn .drop-arrow { transform: rotate(180deg); }
+.nav-drop.open .nav-drop-btn { color: var(--paper-50); background: oklch(1 0 0 / 0.05); }
+.nav-drop.active-group > .nav-drop-btn { color: var(--brass-300); }
+.nav-drop-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 160px;
+  background: var(--ink-800, #1a1a2e); border: 1px solid oklch(1 0 0 / 0.1);
+  border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px oklch(0 0 0 / 0.4);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: all 150ms var(--ease-out); z-index: 100;
+}
+.nav-drop.open .nav-drop-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+.nav-drop-menu a { display: flex; width: 100%; box-sizing: border-box; padding: 9px 12px; border-radius: 6px; }
+.nav-drop-menu a:hover { background: oklch(1 0 0 / 0.07); }
 .user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--paper-400); }
 .user-chip .pts { font-family: var(--font-mono); color: var(--brass-300); font-weight: 700; }
 
@@ -228,7 +246,14 @@ td.n { font-family: var(--font-mono); text-align: right; color: var(--brass-300)
 .mnav-label {
   font-size: 11px; letter-spacing: .15em; color: var(--brass-400);
   padding: 8px 8px 4px; font-family: var(--font-mono);
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none; width: 100%; background: none; border: none;
+  font-family: var(--font-mono);
 }
+.mnav-label .drop-arrow { font-size: 12px; opacity: 0.6; transition: transform 150ms; }
+.mnav-group.collapsed .mnav-label .drop-arrow { transform: rotate(-90deg); }
+.mnav-items { overflow: hidden; transition: max-height 200ms ease-out; }
+.mnav-group.collapsed .mnav-items { max-height: 0 !important; }
 /* AI 生成圖示 */
 .nav-ico {
   width: 22px; height: 22px; border-radius: 6px; object-fit: cover;
