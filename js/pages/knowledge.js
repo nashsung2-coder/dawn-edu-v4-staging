@@ -13,8 +13,10 @@ let mode = "all"; // all | mine
 let activeCat = "全部";
 // 從群島跳轉：?cat=xxx 預選分類
 try {
-  const urlCat = new URLSearchParams(location.search).get("cat");
+  const _sp = new URLSearchParams(location.search);
+  const urlCat = _sp.get("cat");
   if (urlCat) { activeCat = urlCat; mode = "mine"; }
+  if (_sp.get("mode") === "mine") mode = "mine";
 } catch {}
 let cache = [];
 
@@ -25,18 +27,33 @@ function skeleton() {
 }
 
 async function fetchNodes() {
-  // 先嘗試帶 is_public 篩選；欄位不存在時降級為全取再客戶端過濾
+  // 載入：所有公開節點 + 自己的所有節點（含私人）
   try {
-    const { data, error } = await supabase.from("knowledge_nodes")
-      .select("*").eq("is_public", true)
-      .order("created_at", { ascending: false }).limit(100);
-    if (error) throw error;
-    return data || [];
+    const [pubRes, mineRes] = await Promise.all([
+      supabase.from("knowledge_nodes").select("*").eq("is_public", true)
+        .order("created_at", { ascending: false }).limit(100),
+      supabase.from("knowledge_nodes").select("*").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(100),
+    ]);
+    const seen = new Set();
+    const merged = [];
+    for (const n of [...(mineRes.data || []), ...(pubRes.data || [])]) {
+      if (!seen.has(n.id)) { seen.add(n.id); merged.push(n); }
+    }
+    // 按建立時間排序
+    merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return merged;
   } catch (e) {
-    const { data, error } = await supabase.from("knowledge_nodes")
-      .select("*").order("created_at", { ascending: false }).limit(100);
-    if (error) throw error;
-    return (data || []).filter(n => n.is_public !== false);
+    // 降級：全取再客戶端過濾
+    try {
+      const { data, error } = await supabase.from("knowledge_nodes")
+        .select("*").order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      return (data || []).filter(n => n.is_public !== false || n.user_id === user.id);
+    } catch (e2) {
+      console.error("載入節點失敗:", e2);
+      return [];
+    }
   }
 }
 

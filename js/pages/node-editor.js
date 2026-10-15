@@ -309,8 +309,26 @@ $("pub-confirm").onclick = async () => {
     localStorage.removeItem(draftKey());
     isDirty = false;
     setStatus("published", "已發布");
-    toast("發布成功！");
     renderVersionList();
+    // 發布成功對話框：提供前往查看
+    const doneOverlay = document.createElement("div");
+    doneOverlay.className = "modal-overlay";
+    doneOverlay.style.display = "flex";
+    doneOverlay.style.alignItems = "center";
+    doneOverlay.style.justifyContent = "center";
+    doneOverlay.innerHTML = `
+      <div class="modal" style="max-width:400px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+        <h3>發布成功！</h3>
+        <p style="font-size:13px;color:var(--paper-400);margin-bottom:20px;">你的知識節點已經${$("ed-public").checked ? "公開" : "私人"}發布${$("ed-public").checked ? "，其他人可以在知識庫看到它" : "，可在「我的節點」中找到它"}。</p>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn btn-ghost" id="done-stay">繼續編輯</button>
+          <button class="btn btn-primary" id="done-view">前往知識庫</button>
+        </div>
+      </div>`;
+    document.body.appendChild(doneOverlay);
+    doneOverlay.querySelector("#done-stay").onclick = () => doneOverlay.remove();
+    doneOverlay.querySelector("#done-view").onclick = () => location.href = "knowledge.html?mode=mine";
   } catch (e) {
     setStatus("draft", "草稿");
     toast("發布失敗：" + e.message);
