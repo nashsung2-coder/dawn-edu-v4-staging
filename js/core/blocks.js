@@ -50,7 +50,10 @@ export function renderBlocks(blocks, esc) {
         return d.url ? `<figure class="blk-img"><img src="${esc(d.url)}" alt="${esc(d.caption || "")}" loading="lazy">${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}</figure>` : "";
       case "youtube": {
         const vid = youtubeId(d.url);
-        return vid ? `<figure class="blk-yt"><div class="yt-wrap"><iframe src="https://www.youtube.com/embed/${vid}" frameborder="0" allowfullscreen loading="lazy"></iframe></div>${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}</figure>` : "";
+        if (!vid) return "";
+        return `<figure class="blk-yt"><div class="yt-wrap"><iframe src="https://www.youtube.com/embed/${vid}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+          + `${d.caption ? `<figcaption>${esc(d.caption)}</figcaption>` : ""}`
+          + `<div style="text-align:center;margin-top:6px;"><a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener" style="font-size:12px;color:var(--brass-300);">在 YouTube 上觀看 ↗</a></div></figure>`;
       }
       case "code":
         return `<pre class="blk-code"><code>${esc(d.code || "")}</code></pre>`;
@@ -150,8 +153,15 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       case "image":
         inner = `<div class="be-hint">圖片</div><input class="be-input" data-k="url" placeholder="圖片網址（https://…）" value="${esc(d.url || "")}">${d.url ? `<img src="${esc(d.url)}" style="max-width:100%;border-radius:8px;margin-top:8px;" onerror="this.style.display='none'">` : ""}<input class="be-input" data-k="caption" placeholder="圖片說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
         break;
-      case "youtube":
-        inner = `<div class="be-hint">YouTube 影片</div><input class="be-input" data-k="url" placeholder="YouTube 連結" value="${esc(d.url || "")}">${youtubeId(d.url) ? `<div style="margin-top:8px;color:var(--brass-300);font-size:12px;">✓ 影片已識別</div>` : ""}<input class="be-input" data-k="caption" placeholder="影片說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
+      case "youtube": {
+        const _vid = youtubeId(d.url);
+        inner = `<div class="be-hint">YouTube 影片</div><input class="be-input" data-k="url" placeholder="貼上 YouTube 連結（watch / shorts / youtu.be 皆可）" value="${esc(d.url || "")}">`
+          + (_vid
+            ? `<div style="margin-top:8px;"><div style="color:var(--brass-300);font-size:12px;margin-bottom:6px;">✓ 影片已識別 — 即時預覽</div><div class="yt-wrap" style="max-width:480px;"><iframe src="https://www.youtube.com/embed/${_vid}?rel=0" frameborder="0" allowfullscreen loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:10px;"></iframe></div></div>`
+            : (d.url ? `<div style="margin-top:8px;color:var(--signal-red);font-size:12px;">⚠ 無法識別影片連結，請檢查網址</div>` : ""))
+          + `<input class="be-input" data-k="caption" placeholder="影片說明（選填）" value="${esc(d.caption || "")}" style="margin-top:6px;font-size:12px;">`;
+        break;
+      }
         break;
       case "code":
         inner = `<div class="be-hint">程式碼</div><textarea class="be-textarea" data-k="code" style="font-family:var(--font-mono);font-size:13px;" placeholder="貼上程式碼…">${esc(d.code || "")}</textarea>`;
@@ -236,6 +246,15 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         const i = blocks.findIndex(x => x.id === bid);
         if (i < blocks.length - 1) { [blocks[i+1], blocks[i]] = [blocks[i], blocks[i+1]]; render(); }
       };
+      /* YouTube URL 即時預覽 */
+      const ytInput = el.querySelector('input[data-k="url"]');
+      if (ytInput && el.querySelector(".be-hint")?.textContent?.includes("YouTube")) {
+        let _t = null;
+        ytInput.addEventListener("input", () => {
+          clearTimeout(_t);
+          _t = setTimeout(() => { syncFromDOM(); render(); }, 800);
+        });
+      }
       const addItem = el.querySelector("[data-act='add-item']");
       if (addItem) addItem.onclick = () => {
         syncFromDOM();
