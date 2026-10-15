@@ -80,7 +80,12 @@ function collectData() {
   return {
     title: titleInput.value.trim(),
     question: $("ed-question").value.trim(),
-    category: $("ed-category").value.trim(),
+    category: (() => {
+      const main = $("ed-category").value.trim();
+      const subEl = $("ed-subcategory");
+      const sub = subEl ? subEl.value.trim() : "";
+      return sub ? main + "/" + sub : main;
+    })(),
     concepts: $("ed-concepts").value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
     isPublic: $("ed-public").checked,
     allowCollab: $("ed-collab").checked,
