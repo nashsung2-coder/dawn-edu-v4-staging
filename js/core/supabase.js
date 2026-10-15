@@ -28,10 +28,24 @@ export async function getUser() {
   return user;
 }
 
-export async function getProfile(userId) {
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
-  if (error) throw error;
-  return data;
+export async function getProfile(userId, retries = 2) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      lastErr = e;
+      if (i < retries) await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+/* 檢查網路連線：離線時提醒用戶 */
+export function isOnline() {
+  return navigator.onLine !== false;
 }
 
 export async function signInWithGoogle() {
