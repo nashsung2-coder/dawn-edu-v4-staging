@@ -77,6 +77,22 @@ function getCurrentBlocks() {
 }
 
 /* ---------- 草稿自動儲存（本地） ---------- */
+function loadGuidedDraft(g) {
+  if (typeof titleInput !== "undefined") titleInput.value = g.title || "";
+  const qEl = $("ed-question");
+  if (qEl) qEl.value = g.question || "";
+  // 載入 AI 生成的區塊（editor 是全域的區塊編輯器實例）
+  if (g.blocks && g.blocks.length) {
+    if (typeof editor !== "undefined" && editor && editor.setBlocks) {
+      editor.setBlocks(g.blocks);
+    } else {
+      // editor 還沒好，等一下再試
+      setTimeout(() => loadGuidedDraft(g), 500);
+      return;
+    }
+  }
+  toast("已載入引導式建立的內容，可以繼續編輯");
+}
 function collectData() {
   return {
     title: titleInput.value.trim(),
