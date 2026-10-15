@@ -162,6 +162,24 @@ function applyData(d) {
   if (editor) { editor.setBlocks(blocks); } else { renderCanvas(); }
 }
 
+/* ---------- 快捷鍵 ---------- */
+document.addEventListener("keydown", e => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (!mod) return;
+  const k = e.key.toLowerCase();
+  // Ctrl+S：儲存草稿（不觸發瀏覽器存檔）
+  if (k === "s") {
+    e.preventDefault();
+    saveDraft();
+    toast("草稿已儲存到本地");
+  }
+  // Ctrl+P：發布（避免瀏覽器列印）
+  if (k === "p" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || "")) {
+    e.preventDefault();
+    $("btn-publish").click();
+  }
+});
+
 /* ---------- 手動儲存草稿 ---------- */
 $("btn-save-draft").onclick = () => {
   saveDraft();
