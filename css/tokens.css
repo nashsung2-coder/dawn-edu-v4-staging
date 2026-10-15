@@ -205,7 +205,8 @@ td.n { font-family: var(--font-mono); text-align: right; color: var(--brass-300)
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: var(--ink-800); border: 1px solid var(--brass-600);
   color: var(--paper-50); padding: 12px 24px; border-radius: 3px;
-  font-size: 14px; z-index: 100; opacity: 0; transition: opacity 200ms;
+  font-size: 14px; z-index: 1000; opacity: 0; transition: opacity 200ms;
+  pointer-events: none; max-width: calc(100vw - 32px); text-align: center;
 }
 .toast.show { opacity: 1; }
 
