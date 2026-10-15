@@ -57,6 +57,26 @@ function bindCatTabs() {
   });
 }
 
+/* 跳轉到對戰驗證：帶節點內容 */
+window.verifyNode = function(id) {
+  const n = cache.find(x => x.id === id);
+  if (!n) return;
+  let text = "";
+  try {
+    const parsed = JSON.parse(n.content);
+    if (parsed.blocks) {
+      text = parsed.blocks.map(b => {
+        const d = b.data || {};
+        return d.text || d.code || d.explanation || d.concept || d.caption || "";
+      }).filter(Boolean).join("\n");
+    } else {
+      text = n.content;
+    }
+  } catch { text = n.content || ""; }
+  const params = new URLSearchParams({ topic: n.title || "", content: text.slice(0, 2000) });
+  location.href = "quiz.html?" + params.toString();
+};
+
 /* 從 localStorage 載入未發布草稿 */
 function loadDrafts() {
   const drafts = [];
@@ -150,6 +170,7 @@ function render() {
     const owner = n.owner_name ? ` · ${esc(n.owner_name)}` : "";
     const isMine = n.user_id === user.id;
     const editBtn = isMine ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : "";
+    const battleBtn = `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>`;
     return `<div class="card node" data-id="${n.id}">
       <div class="title">${esc(title)}</div>
       ${`<div class="tags">${cat}${tags}</div>`}
@@ -158,6 +179,7 @@ function render() {
         <span class="up">▲ <span class="num-sm">${up}</span></span>
         <span>${owner}</span>
         <button class="btn btn-ghost upbtn" style="padding:4px 12px;font-size:12px;" data-up="${n.id}">讚</button>
+        ${battleBtn}
         ${editBtn}
         ${isMine ? `<button class="btn btn-ghost" style="padding:4px 12px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
       </div>
