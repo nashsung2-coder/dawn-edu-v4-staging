@@ -181,39 +181,55 @@ const recommendHtml = `
 </div>`;
 view.innerHTML = learnHtml + recommendHtml + gameHtml + homeHtml;
 
-// AI 推薦：根據學習活動推薦知識節點
+// AI 推薦：根據學習活動推薦知識節點（快取 1 小時）
 (async () => {
+  const cardEl = document.getElementById("ai-recommend-card");
+  const cacheKey = `dawn_recommend_${user.id}`;
+  // 先讀快取
+  try {
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+    if (cached && Date.now() - cached.ts < 3600000 && cached.html) {
+      cardEl.innerHTML = cached.html + `<div style="text-align:right;margin-top:8px;"><button class="btn btn-ghost btn-sm" id="rec-refresh">換一批</button></div>`;
+      document.getElementById("rec-refresh").onclick = () => { localStorage.removeItem(cacheKey); location.reload(); };
+      return;
+    }
+  } catch {}
   try {
     const { ask } = await import("../core/llm.js?v=fixed002");
-    // 取得公開知識節點
     const { data: nodes } = await supabase.from("knowledge_nodes")
       .select("id, title, category").eq("is_public", true)
       .order("created_at", { ascending: false }).limit(20);
     if (!nodes || !nodes.length) {
-      document.getElementById("ai-recommend-card").innerHTML = `<p style="font-size:13px;color:var(--paper-400);">尚無公開知識節點可推薦</p>`;
+      cardEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">尚無公開知識節點可推薦</p>`;
       return;
     }
-    // 用戶學習軌跡摘要
     const recentCats = battles.slice(0, 5).map(b => b.question || "").join("；").slice(0, 200);
     const goals = learningGoals.map(g => g.text).join("、");
     const reply = await ask(
       `你是學習推薦引擎。用繁體中文，根據學生的學習軌跡，從知識庫中推薦 3 個最適合他的節點。
-輸出格式：每行一個，格式為「標題 | 推薦理由（一句話）」
+輸出格式：每行一個，格式為「編號 | 推薦理由（一句話）」
+例如：「2 | 延續你最近的光合作用學習」
 只輸出 3 行，不要其他內容。`,
-      `學生學習目標：${goals || "未設定"}\n近期學習：${recentCats || "無"}\n\n可推薦的知識節點：\n${nodes.map((n, i) => `${i + 1}. ${n.title}（${n.category || "未分類"}）`).join("\n")}`
+      `學生學習目標：${goals || "未設定"}\n近期學習：${recentCats || "無"}\n\n可推薦的知識節點：\n${nodes.map((n, i) => `${i + 1}. ${n.title}（${n.category || "未分類"}）`).join("\n")}`,
+      { model: "deepseek/deepseek-chat" }
     );
-    const recs = reply.split("\n").filter(l => l.trim()).slice(0, 3);
+    const recs = reply.split("\n").map(l => l.trim()).filter(Boolean).slice(0, 3);
     const recHtml = recs.map(line => {
-      const [title, reason] = line.split("|").map(s => s.trim());
-      const node = nodes.find(n => n.title === title.replace(/^\d+\.\s*/, ""));
-      const link = node ? `node.html?id=${node.id}` : "knowledge.html";
-      return `<a href="${link}" style="display:block;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);text-decoration:none;color:inherit;">
-        <div style="font-size:14px;font-weight:600;color:var(--paper-200);">${esc(title.replace(/^\d+\.\s*/, ""))}</div>
+      const [numStr, reason] = line.split("|").map(s => s.trim());
+      const idx = parseInt(numStr.replace(/\D/g, "")) - 1;
+      const node = nodes[idx];
+      if (!node) return "";
+      return `<a href="node.html?id=${node.id}" style="display:block;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);text-decoration:none;color:inherit;">
+        <div style="font-size:14px;font-weight:600;color:var(--paper-200);">${esc(node.title)}</div>
         <div style="font-size:12px;color:var(--paper-400);margin-top:4px;">${esc(reason || "")}</div>
       </a>`;
-    }).join("");
-    document.getElementById("ai-recommend-card").innerHTML = recHtml || `<p style="font-size:13px;color:var(--paper-400);">暫無推薦</p>`;
+    }).filter(Boolean).join("");
+    const finalHtml = (recHtml || `<p style="font-size:13px;color:var(--paper-400);">暫無推薦</p>`)
+      + `<div style="text-align:right;margin-top:8px;"><button class="btn btn-ghost btn-sm" id="rec-refresh">換一批</button></div>`;
+    cardEl.innerHTML = finalHtml;
+    try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), html: finalHtml })); } catch {}
+    document.getElementById("rec-refresh").onclick = () => { localStorage.removeItem(cacheKey); location.reload(); };
   } catch (e) {
-    document.getElementById("ai-recommend-card").innerHTML = `<p style="font-size:13px;color:var(--paper-400);">推薦暫時無法使用</p>`;
+    cardEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">推薦暫時無法使用 <button class="btn btn-ghost btn-sm" onclick="location.reload()">重試</button></p>`;
   }
 })();

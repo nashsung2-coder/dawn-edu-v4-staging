@@ -1,7 +1,7 @@
 /* v4 複習：SM-2 間隔重複 + 挑戰模式（對戰化） */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
 
 await renderTopbar("review.html");
 const user = await requireAuth();
@@ -219,13 +219,18 @@ async function battleAnswer(correct, timeout) {
     streak = 0;
     toast(timeout ? "時間到！" : "答錯了", false);
   }
-  /* SM-2 更新：答對=記得(2)，答錯=忘記(0) */
-  const upd = sm2(c, correct ? 2 : 0);
+  /* SM-2 更新：超時=1（模糊），答錯=0（忘記），答對=3（記得），連擊3+=4（輕鬆） */
+  const grade = timeout ? 1 : correct ? (streak >= 3 ? 4 : 3) : 0;
+  const upd = sm2(c, grade);
   try {
     await supabase.from("review_cards").update(upd).eq("id", c.id);
   } catch (e) {}
   done++;
   idx++;
+  // 記錄複習日誌（學習頁今日任務用）
+  try {
+    await supabase.from("review_logs").insert({ user_id: user.id, card_id: c.id, grade });
+  } catch {}
   setTimeout(renderBattle, 300);
 }
 
@@ -288,6 +293,7 @@ async function grade(g) {
   try {
     const { error } = await supabase.from("review_cards").update(upd).eq("id", c.id);
     if (error) throw error;
+    await supabase.from("review_logs").insert({ user_id: user.id, card_id: c.id, grade: g });
   } catch (e) {
     toast("儲存失敗：" + e.message);
   }
