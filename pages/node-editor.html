@@ -172,14 +172,18 @@
 <script src="../js/vendor/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script type="module" src="../js/pages/node-editor.js?v=fixed002"></script>
-<div class="modal-overlay" id="ai-polish-modal" style="display:none;align-items:center;justify-content:center;">
-  <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto;">
-    <h3 style="margin:0 0 16px;">✨ AI 寫作建議</h3>
-    <div id="ai-polish-content"><p style="color:var(--paper-400);font-size:14px;">AI 正在閱讀你的內容…</p></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-      <button class="btn btn-ghost" id="ai-polish-close">關閉</button>
-    </div>
+<!-- AI 寫作建議：懸浮側邊面板 -->
+<div id="ai-polish-panel" style="display:none;position:fixed;top:0;right:0;width:min(420px,92vw);height:100vh;z-index:200;background:oklch(0.16 0.03 260);border-left:1px solid oklch(0.60 0.12 80 / 0.25);box-shadow:-8px 0 32px rgba(0,0,0,0.4);flex-direction:column;">
+  <div style="display:flex;align-items:center;gap:8px;padding:16px;border-bottom:1px solid oklch(0.60 0.12 80 / 0.15);">
+    <h3 style="margin:0;flex:1;font-size:16px;">✨ AI 寫作建議</h3>
+    <button class="btn btn-ghost btn-sm" id="ai-polish-refresh" title="重新分析">↻</button>
+    <button class="btn btn-ghost btn-sm" id="ai-polish-min" title="收合">—</button>
+    <button class="btn btn-ghost btn-sm" id="ai-polish-close" title="關閉">✕</button>
   </div>
+  <div id="ai-polish-content" style="flex:1;overflow-y:auto;padding:16px;"></div>
+</div>
+<!-- 收合後的懸浮按鈕 -->
+<button id="ai-polish-fab" style="display:none;position:fixed;right:20px;bottom:100px;z-index:200;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--brass-400),var(--brass-500));border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3);" title="AI 寫作建議">✨</button>
 </div>
 </body>
 </html>
