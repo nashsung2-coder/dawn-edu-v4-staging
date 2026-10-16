@@ -16,6 +16,15 @@ const MAX_ROUNDS = 8;
 
 const $ = id => document.getElementById(id);
 
+// 從編輯器小幫手跳轉過來時，自動帶入主題
+try {
+  const st = sessionStorage.getItem("socratic_topic");
+  if (st) {
+    $("soc-title").value = st;
+    sessionStorage.removeItem("socratic_topic");
+  }
+} catch {}
+
 function showStep(n) {
 document.querySelectorAll(".soc-step").forEach(el => el.classList.remove("on"));
 $(`step${n}`).classList.add("on");

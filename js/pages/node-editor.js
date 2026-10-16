@@ -647,7 +647,8 @@ async function renderAbSocratic(c) {
     }
   }
   c.innerHTML = `
-    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">回答後可一鍵插入編輯器。</p>
+    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">回答後可一鍵插入編輯器。想要深入對話？</p>
+    <button class="btn btn-primary btn-sm" id="ab-socratic-chat" style="margin-bottom:12px;width:100%;">💬 開始 AI 蘇格拉底對話 →</button>
     ${abSocraticQA.map((qa, i) => `
       <div class="gc-q" style="margin-bottom:10px;">
         <div class="q-label">問題 ${i + 1}</div>
@@ -658,6 +659,12 @@ async function renderAbSocratic(c) {
       <button class="btn btn-ghost btn-sm" id="ab-regen">換一組</button>
       <button class="btn btn-primary btn-sm" id="ab-insert-qa">插入問答 →</button>
     </div>`;
+  $("ab-socratic-chat").onclick = () => {
+    const t = getTopic();
+    // 把對話結果存回來：對話頁會把主題存在 sessionStorage
+    try { sessionStorage.setItem("socratic_topic", t); } catch {}
+    window.open("socratic.html", "_blank");
+  };
   $("ab-regen").onclick = () => { abSocraticQA = []; renderBuilderTab(); };
   $("ab-insert-qa").onclick = () => {
     abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
