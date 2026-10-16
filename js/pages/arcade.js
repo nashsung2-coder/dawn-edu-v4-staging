@@ -30,7 +30,7 @@ const sfx = {
 
 /* ===== 遊戲狀態 ===== */
 const G = {
-  running: false, mode: "timed",
+  running: false, paused: false, mode: "timed", conquest: null,
   score: 0, combo: 0, maxCombo: 0, hp: 3,
   timeLeft: 60, level: 1, qIndex: 0,
   questions: [], current: null,
@@ -114,16 +114,18 @@ function checkCollisions() {
           G.asteroids = [];
           setTimeout(() => { if (G.running) spawnQuestion(); }, 900);
         } else {
-          // 打錯！
+          // 打錯！先標示正確答案讓玩家學到，再換題
           G.combo = 0;
           G.hp--;
           explode(a.x, a.y, "#f87171");
           addFloater(a.x, a.y, "答錯！", "#f87171");
           sfx.wrong();
+          // 把正確答案標綠
+          G.asteroids.forEach(ast => { if (ast.correct) ast.revealed = true; });
+          G.bullets = []; // 清空子彈避免誤擊
           updateHUD();
-          if (G.hp <= 0) { endGame(false); return; }
-          G.asteroids = [];
-          setTimeout(() => { if (G.running) spawnQuestion(); }, 900);
+          if (G.hp <= 0) { setTimeout(() => endGame(false), 1500); return; }
+          setTimeout(() => { if (G.running) { G.asteroids = []; spawnQuestion(); } }, 1500);
         }
         break;
       }
@@ -232,7 +234,7 @@ function draw() {
     grad.addColorStop(1, "#1e293b");
     ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = a.correct && false ? "#4ade80" : "#64748b"; // 不提示正確答案！
+    ctx.strokeStyle = a.revealed ? "#4ade80" : "#64748b"; // 答錯後才揭示正確答案
     ctx.lineWidth = 2;
     ctx.stroke();
     // 答案文字
@@ -298,7 +300,20 @@ function updateHUD() {
 /* ===== 遊戲循環 ===== */
 let lastTime = 0;
 function loop(t) {
-  if (!G.running) return;
+  if (!G.running || G.paused) {
+    if (G.paused) {
+      // 繪製暫停畫面
+      ctx.fillStyle = "oklch(0 0 0 / 0.7)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 32px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("已暫停", W / 2, H / 2);
+      ctx.font = "14px sans-serif";
+      ctx.fillText("按 P 繼續", W / 2, H / 2 + 40);
+    }
+    return;
+  }
   const dt = t - lastTime;
   lastTime = t;
   update(Math.min(dt, 50));
@@ -360,8 +375,32 @@ async function endGame(completed) {
         max_combo: G.maxCombo,
         mode: `arcade_${G.mode}`,
       });
+      // 征服模式：分數達標則佔領星球
+      if (G.conquest && G.conquest.planet_id) {
+        const threshold = 800; // 達標分數
+        if (G.score >= threshold) {
+          await supabase.from("planet_ownership").upsert({
+            planet_id: G.conquest.planet_id,
+            user_id: user.id,
+            conquered_at: new Date().toISOString(),
+          }, { onConflict: "planet_id" });
+          await supabase.from("conquest_battles").insert({
+            user_id: user.id,
+            planet_id: G.conquest.planet_id,
+            won: true,
+            score: G.score,
+          });
+        } else {
+          await supabase.from("conquest_battles").insert({
+            user_id: user.id,
+            planet_id: G.conquest.planet_id,
+            won: false,
+            score: G.score,
+          });
+        }
+      }
     }
-  } catch {}
+  } catch (e) { console.error("儲存失敗:", e); }
 
   // 結算畫面
   ctx.fillStyle = "oklch(0 0 0 / 0.8)";
@@ -375,6 +414,12 @@ async function endGame(completed) {
   ctx.fillText(`分數：${G.score}`, W / 2, H / 2 - 10);
   ctx.fillText(`最高連擊：${G.maxCombo}`, W / 2, H / 2 + 25);
   ctx.fillText(`答題數：${G.qIndex}`, W / 2, H / 2 + 60);
+  if (G.conquest && G.conquest.planet_id) {
+    const won = G.score >= 800;
+    ctx.fillStyle = won ? "#4ade80" : "#f87171";
+    ctx.font = "bold 20px sans-serif";
+    ctx.fillText(won ? `🎉 成功征服 ${G.conquest.name}！` : `征服失敗（需 800 分）`, W / 2, H / 2 + 95);
+  }
   ctx.font = "14px sans-serif";
   ctx.fillStyle = "#94a3b8";
   ctx.fillText("點擊重新開始", W / 2, H / 2 + 110);
@@ -385,6 +430,13 @@ async function endGame(completed) {
 
 /* ===== 輸入 ===== */
 window.addEventListener("keydown", e => {
+  if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+    if (G.running) {
+      G.paused = !G.paused;
+      if (!G.paused) { lastTime = performance.now(); requestAnimationFrame(loop); }
+    }
+    return;
+  }
   G.keys[e.key] = true;
   if ([" ", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
 });
@@ -416,6 +468,27 @@ canvas.addEventListener("click", () => { if (G.running) shoot(); });
 async function init() {
   await renderTopbar("arcade.html");
   await requireAuth();
+  // 征服模式：從宇宙跳轉過來
+  const params = new URLSearchParams(location.search);
+  if (params.get("mode") === "conquest") {
+    try {
+      const cq = JSON.parse(sessionStorage.getItem("arcade_conquest") || "{}");
+      if (cq.theme) {
+        document.getElementById("arcade-topic").value = cq.theme;
+        G.conquest = cq;
+        // 自動開始生存模式（征服戰）
+        const menu = document.getElementById("game-menu");
+        menu.querySelector("h1").textContent = `征服 ${cq.name || ""}`;
+        // 隱藏模式選擇，只留一個開始按鈕
+        menu.querySelectorAll(".mode-btn").forEach(b => b.style.display = "none");
+        const startBtn = document.createElement("button");
+        startBtn.className = "btn btn-primary mode-btn";
+        startBtn.textContent = "🚀 開始征服戰";
+        startBtn.onclick = () => startGame("survival", cq.theme);
+        menu.appendChild(startBtn);
+      }
+    } catch {}
+  }
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.onclick = () => startGame(btn.dataset.mode, document.getElementById("arcade-topic").value);
   });
