@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>星艦解碼 — 曙光教育</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<style>
+#game-wrap { position:relative; width:100%; max-width:800px; margin:0 auto; }
+#game-canvas { width:100%; display:block; background:#050814; border-radius:12px; touch-action:none; }
+#game-ui { position:absolute; top:0; left:0; right:0; padding:12px 16px; display:flex; justify-content:space-between; pointer-events:none; font-family:var(--font-mono); }
+#game-ui .hud { background:oklch(0 0 0 / 0.5); padding:6px 12px; border-radius:8px; font-size:14px; }
+#game-menu { text-align:center; padding:40px 20px; }
+#game-menu h1 { font-size:32px; margin-bottom:8px; }
+#game-menu .sub { color:var(--paper-400); margin-bottom:24px; }
+.mode-btn { display:block; width:100%; max-width:320px; margin:0 auto 12px; }
+</style>
+</head>
+<body>
+<div id="topbar"></div>
+<main class="main" style="max-width:820px;">
+  <div id="game-menu">
+    <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);">STARSHIP DECODE</div>
+    <h1>星艦解碼</h1>
+    <p class="sub">駕駛星艦，射擊正確答案的隕石！知識＋反應的街機挑戰。</p>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:13px;display:block;margin-bottom:8px;">選擇主題</label>
+      <input class="input" id="arcade-topic" placeholder="例如：光合作用、宋朝歷史…" style="max-width:320px;">
+    </div>
+    <button class="btn btn-primary mode-btn" data-mode="timed">⏱️ 限時模式（60 秒）</button>
+    <button class="btn btn-ghost mode-btn" data-mode="survival">💀 生存模式（3 條命）</button>
+    <div id="arcade-err" style="color:var(--signal-red);font-size:13px;margin-top:12px;display:none;"></div>
+  </div>
+  <div id="game-wrap" style="display:none;">
+    <canvas id="game-canvas" width="800" height="600"></canvas>
+    <div id="game-ui">
+      <div class="hud" id="hud-score">分數 0</div>
+      <div class="hud" id="hud-combo"></div>
+      <div class="hud" id="hud-hp">❤️❤️❤️</div>
+      <div class="hud" id="hud-time"></div>
+    </div>
+  </div>
+</main>
+<script src="../js/vendor/supabase.min.js"></script>
+<script type="module" src="../js/pages/arcade.js?v=001"></script>
+</body>
+</html>
