@@ -647,7 +647,7 @@ async function renderAbSocratic(c) {
     }
   }
   c.innerHTML = `
-    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">回答後可一鍵插入編輯器。想要深入對話？</p>
+    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">回答完後，AI 會綜合評估你的思考、指出盲點並引導下一步學習。想要深入對話？</p>
     <button class="btn btn-primary btn-sm" id="ab-socratic-chat" style="margin-bottom:12px;width:100%;">💬 開始 AI 蘇格拉底對話 →</button>
     ${abSocraticQA.map((qa, i) => `
       <div class="gc-q" style="margin-bottom:10px;">
@@ -655,10 +655,12 @@ async function renderAbSocratic(c) {
         <div class="q-text" style="font-size:14px;">${esc(qa.q)}</div>
         <textarea class="input" id="ab-a${i}" rows="2" placeholder="你的回答…" style="width:100%;margin-top:8px;">${esc(qa.a || "")}</textarea>
       </div>`).join("")}
-    <div style="display:flex;gap:8px;margin-top:12px;">
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
       <button class="btn btn-ghost btn-sm" id="ab-regen">換一組</button>
-      <button class="btn btn-primary btn-sm" id="ab-insert-qa">插入問答 →</button>
-    </div>`;
+      <button class="btn btn-primary btn-sm" id="ab-eval">🤔 AI 綜合評估</button>
+      <button class="btn btn-ghost btn-sm" id="ab-insert-qa">插入問答 →</button>
+    </div>
+    <div id="ab-eval-result" style="margin-top:12px;display:none;"></div>`;
   $("ab-socratic-chat").onclick = () => {
     const t = getTopic();
     // 把對話結果存回來：對話頁會把主題存在 sessionStorage
@@ -666,6 +668,32 @@ async function renderAbSocratic(c) {
     window.open("socratic.html", "_blank");
   };
   $("ab-regen").onclick = () => { abSocraticQA = []; renderBuilderTab(); };
+  $("ab-eval").onclick = async () => {
+    abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
+    const answered = abSocraticQA.filter(qa => qa.a);
+    if (!answered.length) { toast("先回答至少一個問題，AI 才能評估"); return; }
+    const btn = $("ab-eval"), resultEl = $("ab-eval-result");
+    btn.disabled = true; btn.textContent = "評估中…";
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">AI 正在分析你的回答…</p>`;
+    try {
+      const topic = getTopic();
+      const reply = await ask(
+        `你是蘇格拉底式的導師，用繁體中文。學生回答了關於「${topic}」的 ${answered.length} 個情境思考題。請綜合評估：
+1. 他的思考亮點（具體指出哪個回答好在哪）
+2. 思考盲點或漏洞（溫和指出）
+3. 下一步引導：給 1-2 個更深的問題，帶他繼續想
+語氣像朋友聊天，不要像改考卷。200 字以內。`,
+        answered.map((qa, i) => `問題${i + 1}：${qa.q}
+回答：${qa.a}`).join("\n\n"),
+        { model: MODELS.socratic }
+      );
+      resultEl.innerHTML = `<div style="background:oklch(0.74 0.14 80/0.07);border:1px solid oklch(0.74 0.14 80/0.25);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;">${esc(reply).replace(/\n/g, "<br>")}</div>`;
+    } catch (e) {
+      resultEl.innerHTML = `<p style="font-size:13px;color:var(--signal-red);">評估失敗：${esc(e.message)}</p>`;
+    }
+    btn.disabled = false; btn.textContent = "🤔 AI 綜合評估";
+  };
   $("ab-insert-qa").onclick = () => {
     abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
     const answered = abSocraticQA.filter(qa => qa.a);
