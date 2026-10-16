@@ -1,235 +1,125 @@
-/* v4 主控台：學習總覽 + 遊戲成就 + 家庭狀態 */
-import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
+/* 主控台 v2：小曙對話優先 */
+import { supabase } from "../core/supabase.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js";
+import { buildLearningContext, companionChat, companionGreeting } from "../core/companion.js";
 
-function withTimeout(promise, ms, label) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(label + " 超時")), ms)),
-  ]);
+const $ = id => document.getElementById(id);
+let learningContext = "";
+let chatHistory = [];
+
+function addMsg(role, text) {
+  const box = $("cp-msgs");
+  box.style.display = "flex";
+  const div = document.createElement("div");
+  div.className = `cp-msg ${role}`;
+  div.innerHTML = esc(text).replace(/\n/g, "<br>");
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
 }
 
-const view = document.getElementById("dash-view");
-
-try {
-  await withTimeout(renderTopbar("dashboard.html"), 15000, "載入導覽列");
-  var user = await withTimeout(requireAuth(), 15000, "驗證登入");
-  await withTimeout(ensureProfile(supabase, user), 15000, "建立使用者資料");
-} catch (e) {
-  view.innerHTML = `<div class="state-empty"><p>載入失敗：${esc(e.message)}</p><button class="btn btn-primary" onclick="location.reload()">重試</button></div>`;
-  throw e;
+function showTyping() {
+  const box = $("cp-msgs");
+  box.style.display = "flex";
+  const div = document.createElement("div");
+  div.className = "cp-msg ai"; div.id = "cp-typing";
+  div.innerHTML = `<span class="typing"><span>●</span><span>●</span><span>●</span></span>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
 }
+function hideTyping() { $("cp-typing")?.remove(); }
 
-const now = new Date().toISOString();
-const todayStr = now.slice(0, 10);
-
-const [profileR, dueR, battleR, nodesR, planetsR, petR] = await Promise.allSettled([
-  getProfile(user.id),
-  supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).lte("next_review_at", now),
-  supabase.from("battle_records").select("question, quiz_score, feynman_score, badge_name, badge_rarity, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-  supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-  supabase.from("planet_ownership").select("planet_id", { count: "exact", head: true }).eq("user_id", user.id),
-  supabase.from("pets").select("*").eq("user_id", user.id).limit(1).maybeSingle(),
-]);
-
-const profile = profileR.status === "fulfilled" ? profileR.value : null;
-const dueCount = dueR.status === "fulfilled" ? (dueR.value.count ?? 0) : 0;
-const battles = battleR.status === "fulfilled" ? (battleR.value.data || []) : [];
-const nodeCount = nodesR.status === "fulfilled" ? (nodesR.value.count ?? 0) : 0;
-const planetCount = planetsR.status === "fulfilled" ? (planetsR.value.count ?? 0) : 0;
-const pet = petR.status === "fulfilled" ? petR.value : null;
-
-/* ===== 學習總覽 ===== */
-const todayBattles = battles.filter(b => (b.created_at || "").slice(0, 10) === todayStr);
-// 學習目標（從 localStorage 讀取，用戶可在設定中修改）
-let learningGoals = [];
-try { learningGoals = JSON.parse(localStorage.getItem("learning_goals") || "[]"); } catch {}
-const tasks = [
-  {
-    nm: "複習到期卡片",
-    desc: dueCount > 0 ? `還有 ${dueCount} 張卡片等你複習，鞏固記憶` : "今日複習已完成，記憶曲線穩定",
-    done: dueCount === 0, link: "review.html",
-    progress: dueCount === 0 ? 100 : 0
-  },
-  {
-    nm: "費曼說服 1 次",
-    desc: "用自己的話解釋一個概念，挑戰 AI",
-    done: todayBattles.some(b => Number(b.feynman_score) > 0), link: "feynman.html",
-    progress: todayBattles.some(b => Number(b.feynman_score) > 0) ? 100 : 0
-  },
-  {
-    nm: "知識對戰 1 場",
-    desc: "與 AI 對戰，測試你的知識掌握度",
-    done: todayBattles.some(b => Number(b.quiz_score) > 0), link: "quiz.html",
-    progress: todayBattles.some(b => Number(b.quiz_score) > 0) ? 100 : 0
-  },
-];
-const doneTasks = tasks.filter(t => t.done).length;
-const fScores = battles.map(b => Number(b.feynman_score) || 0).filter(s => s > 0);
-const fAvg = fScores.length ? Math.round(fScores.reduce((a, b) => a + b, 0) / fScores.length) : 0;
-
-const learnHtml = `
-<div class="dash-section-title"><span class="en">LEARN</span>學習總覽</div>
-<div class="card">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <div style="font-weight:700;">${esc(profile?.name || "旅人")}</div>
-    <div style="font-size:13px;color:var(--paper-400);"><span class="mono" style="color:var(--brass-300);">${(profile?.points ?? 0).toLocaleString()}</span> 星砂 · 今日任務 ${doneTasks}/3</div>
-    <span style="flex:1"></span>
-    <a class="btn btn-ghost btn-sm" href="learn.html">詳細 →</a>
-  </div>
-  <div style="font-size:12px;color:var(--paper-400);margin-bottom:8px;letter-spacing:1px;">今日任務 ${doneTasks}/3</div>
-  ${tasks.map(t => `<a href="${t.link}" class="task-item" style="text-decoration:none;color:inherit;display:block;margin-bottom:10px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="task-check ${t.done ? "done" : ""}">${t.done ? "✓" : ""}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:600;">${esc(t.nm)}</div>
-        <div style="font-size:12px;color:var(--paper-400);margin-top:2px;">${esc(t.desc)}</div>
-      </div>
-      <div style="font-size:12px;color:${t.done ? "#6ee7b7" : "var(--paper-400)"};min-width:36px;text-align:right;">${t.progress}%</div>
-    </div>
-    <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.06);margin-top:6px;margin-left:34px;overflow:hidden;">
-      <div style="height:100%;width:${t.progress}%;border-radius:2px;background:${t.done ? "linear-gradient(90deg,#34d399,#10b981)" : "rgba(255,255,255,0.15)"};transition:width 0.3s;"></div>
-    </div>
-  </a>`).join("")}
-  ${learningGoals.length ? `
-  <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">
-    <div style="font-size:12px;color:var(--paper-400);margin-bottom:8px;letter-spacing:1px;">我的學習目標</div>
-    ${learningGoals.map(g => `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <span style="font-size:13px;">🎯</span>
-      <span style="font-size:13px;flex:1;">${esc(g.text)}</span>
-      <span style="font-size:11px;color:var(--paper-400);">${esc(g.progress || "")}</span>
-    </div>`).join("")}
-  </div>` : `
-  <div style="margin-top:12px;">
-    <a href="settings.html" style="font-size:12px;color:var(--brass-300);text-decoration:none;">＋ 設定學習目標</a>
-  </div>`}
-  <div class="stat-row" style="margin-top:12px;">
-    <div class="stat"><div class="num">${dueCount}</div><div class="lbl">到期複習</div></div>
-    <div class="stat"><div class="num">${fAvg}%</div><div class="lbl">費曼平均</div></div>
-    <div class="stat"><div class="num">${nodeCount}</div><div class="lbl">知識節點</div></div>
-  </div>
-</div>`;
-
-/* ===== 遊戲成就 ===== */
-const wins = battles.filter(b => (Number(b.quiz_score) || 0) >= 60).length;
-const badges = battles.filter(b => b.badge_name);
-const gameHtml = `
-<div class="dash-section-title"><span class="en">GAME</span>遊戲成就</div>
-<div class="card">
-  <div class="stat-row">
-    <div class="stat"><div class="num">${planetCount}</div><div class="lbl">佔領星球</div></div>
-    <div class="stat"><div class="num">${battles.length}</div><div class="lbl">對戰場次</div></div>
-    <div class="stat"><div class="num">${wins}</div><div class="lbl">勝利</div></div>
-    <div class="stat"><div class="num">${badges.length}</div><div class="lbl">徽章</div></div>
-  </div>
-  <div class="quick-links" style="margin-top:12px;">
-    <a class="btn btn-ghost" href="universe.html">宇宙征服</a>
-    <a class="btn btn-ghost" href="island.html">群島</a>
-    <a class="btn btn-ghost" href="quiz.html">知識對戰</a>
-  </div>
-</div>`;
-
-/* ===== 家庭狀態 ===== */
-const charNames = { scholar: "博學者", warrior: "勇者", explorer: "探險家", artist: "藝術家" };
-const homeHtml = `
-<div class="dash-section-title"><span class="en">HOME</span>家庭狀態</div>
-<div class="card">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-    <div style="font-weight:700;">${esc(charNames[profile?.character] || "博學者")}</div>
-    <div style="font-size:13px;color:var(--paper-400);">${esc(profile?.vehicle || "飛行書")} · ${esc(profile?.outfit || "學者長袍")}</div>
-    <span style="flex:1"></span>
-    <a class="btn btn-ghost btn-sm" href="home.html">我的家 →</a>
-  </div>
-  <div class="stat-row">
-    <div class="stat" style="min-width:0;flex:1.4;display:flex;flex-direction:column;justify-content:center;">
-      ${pet ? `
-      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-size:11px;color:var(--paper-400);letter-spacing:1px;">靈獸</span>
-        <span style="font-size:15px;font-weight:700;color:#fcd34d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;">${esc(pet.name || "無名")} <span style="font-weight:400;font-size:11px;color:var(--paper-400);">Lv.${pet.level || 1}</span></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <span style="font-size:12px;min-width:42px;">開心度</span>
-        <div style="flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;">
-          <div style="height:100%;width:${Math.min(100, Math.max(0, pet.mood ?? 80))}%;border-radius:4px;background:linear-gradient(90deg,#f472b6,#ec4899);"></div>
-        </div>
-        <span style="font-size:12px;font-weight:600;color:#f9a8d4;min-width:36px;text-align:right;">${Math.min(100, Math.max(0, Math.round(pet.mood ?? 80)))}%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:12px;min-width:42px;">健康度</span>
-        <div style="flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;">
-          <div style="height:100%;width:${Math.min(100, Math.max(0, pet.hunger ?? 100))}%;border-radius:4px;background:linear-gradient(90deg,#34d399,#10b981);"></div>
-        </div>
-        <span style="font-size:12px;font-weight:600;color:#6ee7b7;min-width:36px;text-align:right;">${Math.min(100, Math.max(0, Math.round(pet.hunger ?? 100)))}%</span>
-      </div>
-      ` : `<div class="num">無</div><div class="lbl">靈獸</div>`}
-    </div>
-    <div class="stat"><div class="num">${(profile?.points ?? 0).toLocaleString()}</div><div class="lbl">星砂</div></div>
-    <div class="stat"><div class="num">${nodeCount}</div><div class="lbl">知識節點</div></div>
-  </div>
-  <div class="quick-links" style="margin-top:12px;">
-    <a class="btn btn-ghost" href="home.html">我的家</a>
-    <a class="btn btn-ghost" href="pet.html">靈獸</a>
-    <a class="btn btn-ghost" href="market.html">商店</a>
-  </div>
-</div>`;
-
-const recommendHtml = `
-<div class="dash-section-title"><span class="en">FOR YOU</span>為你推薦</div>
-<div class="card" id="ai-recommend-card">
-  <p style="font-size:13px;color:var(--paper-400);">AI 正在分析你的學習軌跡…</p>
-</div>`;
-view.innerHTML = learnHtml + recommendHtml + gameHtml + homeHtml;
-
-// AI 推薦：根據學習活動推薦知識節點（快取 1 小時）
-(async () => {
-  const cardEl = document.getElementById("ai-recommend-card");
-  const cacheKey = `dawn_recommend_${user.id}`;
-  // 先讀快取
+async function send(text) {
+  if (!text.trim() || $("cp-send").disabled) return;
+  $("cp-input").value = "";
+  addMsg("user", text);
+  chatHistory.push({ role: "user", content: text });
+  showTyping();
+  $("cp-send").disabled = true;
   try {
-    const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
-    if (cached && Date.now() - cached.ts < 3600000 && cached.html) {
-      cardEl.innerHTML = cached.html + `<div style="text-align:right;margin-top:8px;"><button class="btn btn-ghost btn-sm" id="rec-refresh">換一批</button></div>`;
-      document.getElementById("rec-refresh").onclick = () => { localStorage.removeItem(cacheKey); location.reload(); };
-      return;
-    }
-  } catch {}
-  try {
-    const { ask } = await import("../core/llm.js?v=fixed002");
-    const { data: nodes } = await supabase.from("knowledge_nodes")
-      .select("id, title, category").eq("is_public", true)
-      .order("created_at", { ascending: false }).limit(20);
-    if (!nodes || !nodes.length) {
-      cardEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">尚無公開知識節點可推薦</p>`;
-      return;
-    }
-    const recentCats = battles.slice(0, 5).map(b => b.question || "").join("；").slice(0, 200);
-    const goals = learningGoals.map(g => g.text).join("、");
-    const reply = await ask(
-      `你是學習推薦引擎。用繁體中文，根據學生的學習軌跡，從知識庫中推薦 3 個最適合他的節點。
-輸出格式：每行一個，格式為「編號 | 推薦理由（一句話）」
-例如：「2 | 延續你最近的光合作用學習」
-只輸出 3 行，不要其他內容。`,
-      `學生學習目標：${goals || "未設定"}\n近期學習：${recentCats || "無"}\n\n可推薦的知識節點：\n${nodes.map((n, i) => `${i + 1}. ${n.title}（${n.category || "未分類"}）`).join("\n")}`,
-      { model: "deepseek/deepseek-chat" }
-    );
-    const recs = reply.split("\n").map(l => l.trim()).filter(Boolean).slice(0, 3);
-    const recHtml = recs.map(line => {
-      const [numStr, reason] = line.split("|").map(s => s.trim());
-      const idx = parseInt(numStr.replace(/\D/g, "")) - 1;
-      const node = nodes[idx];
-      if (!node) return "";
-      return `<a href="node.html?id=${node.id}" style="display:block;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);text-decoration:none;color:inherit;">
-        <div style="font-size:14px;font-weight:600;color:var(--paper-200);">${esc(node.title)}</div>
-        <div style="font-size:12px;color:var(--paper-400);margin-top:4px;">${esc(reason || "")}</div>
-      </a>`;
-    }).filter(Boolean).join("");
-    const finalHtml = (recHtml || `<p style="font-size:13px;color:var(--paper-400);">暫無推薦</p>`)
-      + `<div style="text-align:right;margin-top:8px;"><button class="btn btn-ghost btn-sm" id="rec-refresh">換一批</button></div>`;
-    cardEl.innerHTML = finalHtml;
-    try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), html: finalHtml })); } catch {}
-    document.getElementById("rec-refresh").onclick = () => { localStorage.removeItem(cacheKey); location.reload(); };
+    const reply = await companionChat(chatHistory, learningContext);
+    hideTyping();
+    addMsg("ai", reply);
+    chatHistory.push({ role: "assistant", content: reply });
   } catch (e) {
-    cardEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">推薦暫時無法使用 <button class="btn btn-ghost btn-sm" onclick="location.reload()">重試</button></p>`;
+    hideTyping();
+    console.error("小曙回應失敗:", e);
+    addMsg("ai", `抱歉，我剛才恍神了（${e.message || "連線問題"}），再說一次好嗎？`);
   }
-})();
+  $("cp-send").disabled = false;
+}
+
+/* 新用戶 1 分鐘 aha 體驗：天空為什麼是藍的 */
+async function startAha() {
+  $("cp-suggest").innerHTML = "";
+  $("cp-greeting").style.display = "none";
+  addMsg("ai", "好！來玩個小遊戲。我問你：你覺得天空為什麼是藍的？");
+  // 在歷史中加入引導，讓 AI 知道這是 aha 體驗，用蘇格拉底方式追問 2-3 輪
+  chatHistory.push({ role: "assistant", content: "好！來玩個小遊戲。我問你：你覺得天空為什麼是藍的？（這是新用戶的 aha 體驗：接下來用 2-3 輪情境問題讓他發現自己其實沒完全想通，最後點出「你看，你以為你懂，但中間有個洞，這就是小曙的學習方式」）" });
+}
+
+async function init() {
+  try {
+    await renderTopbar("dashboard.html");
+    const user = await requireAuth();
+    await ensureProfile(supabase, user);
+
+    // 建立學習 context
+    learningContext = await buildLearningContext(supabase, user.id);
+
+    // 檢測是否為新用戶（無任何學習數據）
+    const isNewUser = (review.count ?? 0) === 0 && (nodes.count ?? 0) === 0;
+
+    // 小曙主動打招呼
+    if (isNewUser) {
+      $("cp-greeting").innerHTML = `嗨，我是小曙，你的學習陪伴者！<br><br>我跟其他 AI 不一樣——我不會直接給你答案，而是用問題帶你自己想通。<br><br>要不要體驗 1 分鐘看看？👇`;
+      $("cp-suggest").innerHTML = `<button class="chip" id="cp-aha">✨ 體驗 1 分鐘</button><button class="chip">先逛逛就好</button>`;
+      $("cp-suggest").querySelector("#cp-aha").onclick = startAha;
+      $("cp-suggest").querySelectorAll(".chip")[1].onclick = () => {
+        $("cp-suggest").innerHTML = "";
+        $("cp-greeting").textContent = "沒問題！想學什麼的時候跟我說，我都在。";
+      };
+    } else {
+      try {
+        const greet = await companionGreeting(learningContext);
+        $("cp-greeting").textContent = greet;
+      } catch {
+        $("cp-greeting").textContent = "今天想學點什麼？我陪你！";
+      }
+    }
+
+    // 建議快捷問題
+    const suggests = ["我今天該複習什麼？", "推薦一個知識庫給我", "幫我安排這週的學習計畫"];
+    $("cp-suggest").innerHTML = suggests.map(s => `<button class="chip">${esc(s)}</button>`).join("");
+    $("cp-suggest").querySelectorAll(".chip").forEach(c => c.onclick = () => send(c.textContent));
+
+    // 學習統計
+    const now = new Date().toISOString();
+    const [review, nodes, profile] = await Promise.all([
+      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).lte("next_review_at", now),
+      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+    ]);
+    $("cp-stats").innerHTML = `
+      <div class="stat"><div class="num">${review.count ?? 0}</div><div class="lbl">到期複習</div></div>
+      <div class="stat"><div class="num">${nodes.count ?? 0}</div><div class="lbl">知識節點</div></div>
+      <div class="stat"><div class="num">${profile.data?.streak_days ?? 0}</div><div class="lbl">連續天數</div></div>`;
+
+    // 快捷入口
+    const links = [
+      ["socratic.html", "蘇格拉底對話"], ["review.html", "複習"], ["knowledge.html", "知識庫"],
+      ["feynman.html", "費曼"], ["quiz.html", "對戰"], ["universe.html", "宇宙"],
+      ["island.html", "群島"], ["pet.html", "靈獸"],
+    ];
+    $("cp-links").innerHTML = links.map(([h, t]) => `<a class="btn btn-ghost btn-sm" href="${h}" style="justify-content:center;">${t}</a>`).join("");
+
+    // 綁定發送
+    $("cp-send").onclick = () => send($("cp-input").value);
+    $("cp-input").addEventListener("keydown", e => { if (e.key === "Enter") send($("cp-input").value); });
+
+  } catch (e) {
+    console.error("主控台載入失敗:", e);
+    $("cp-greeting").innerHTML = `<span style="color:var(--signal-red);">載入失敗：${esc(e.message)}</span>`;
+  }
+}
+
+init();
