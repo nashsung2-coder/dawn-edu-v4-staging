@@ -23,26 +23,84 @@ const DIFF = {
 };
 
 /* SM-2：grade 0=忘記 1=模糊 2=記得 */
-function sm2(card, grade) {
-  let { ease_factor: ef, interval_days: iv, repetitions: rep } = card;
-  ef = Number(ef) || 2.5;
-  iv = Number(iv) || 1;
-  rep = Number(rep) || 0;
-  if (grade >= 1) {
-    if (rep === 0) iv = 1;
-    else if (rep === 1) iv = 6;
-    else iv = Math.round(iv * ef);
-    rep++;
-    ef = ef + (0.1 - (2 - grade) * (0.08 + (2 - grade) * 0.02));
-    if (ef < 1.3) ef = 1.3;
-  } else {
-    rep = 0;
-    iv = 1;
+/* FSRS-4.5 簡化版：取代 SM-2
+ * 核心改進：三參數記憶模型（穩定度/難度/可提取性），消除 SM-2 的 ease hell
+ * grade: 1=忘記(Again) 2=困難(Hard) 3=記得(Good) 4=輕鬆(Easy)
+ */
+// 保守調校版權重（避免間隔膨脹過快）
+const FSRS_W = [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 0.8, 0.3, 0.5, 1.2, 0.2, 0.3, 0.8, 0.7, 1.5];
+const FSRS_RETRIEVABILITY = 0.9; // 目標記憶保留率
+
+function fsrs(card, grade) {
+  // grade 0（舊 SM-2 的忘記）映射為 FSRS 的 1（Again）
+  if (grade < 1) grade = 1;
+  if (grade > 4) grade = 4;
+  // 初始化或讀取參數
+  let D = Number(card.fsrs_difficulty) || 5.0;  // 難度 1-10
+  let S = Number(card.fsrs_stability) || 1.0;  // 穩定度（天）
+  const now = new Date();
+
+  // 計算上次複習至今的天數
+  let elapsed = 1;
+  if (card.last_review_at) {
+    elapsed = Math.max(1, Math.round((now - new Date(card.last_review_at)) / 86400000));
   }
-  const next = new Date();
-  next.setDate(next.getDate() + iv);
-  return { ease_factor: ef, interval_days: iv, repetitions: rep, next_review_at: next.toISOString() };
+
+  // 可提取性 R = e^(-t/S)
+  const R = Math.exp(-elapsed / S);
+
+  // 更新難度：D' = D - w6 * (G - 3)
+  const G = grade; // 1-4
+  let newD = D - FSRS_W[6] * (G - 3);
+  // 難度變化阻尼
+  newD = D + (newD - D) * 0.5;
+  newD = Math.max(1, Math.min(10, newD));
+
+  // 更新穩定度
+  let newS;
+  if (G === 1) {
+    // 忘記：穩定度大幅下降
+    newS = FSRS_W[11] * Math.pow(D, -FSRS_W[12]) * Math.pow(S, FSRS_W[13]) * Math.exp(FSRS_W[14] * (1 - R));
+    newS = Math.max(0.1, Math.min(S, newS));
+  } else {
+    // 記得：穩定度增長
+    const hardPenalty = G === 2 ? FSRS_W[15] : 1;
+    const easyBonus = G === 4 ? FSRS_W[16] : 1;
+    newS = S * (1 + Math.exp(FSRS_W[8]) * (11 - D) * Math.pow(S, -FSRS_W[9]) * Math.exp((1 - R) * FSRS_W[10]) * hardPenalty * easyBonus);
+  }
+  newS = Math.max(0.1, Math.min(365, newS));
+
+  // 計算下次間隔：I = S * ln(R_target) / ln(0.9)
+  // 目標保留率 90%
+  let interval = Math.round(newS * Math.log(FSRS_RETRIEVABILITY) / Math.log(0.9));
+  // 新卡或忘記的卡最短間隔
+  if (G === 1) interval = 1;
+  else interval = Math.max(1, Math.min(365, interval));
+
+  // 首次學習的特殊處理
+  if (!card.last_review_at) {
+    if (G === 1) interval = 1;
+    else if (G === 2) interval = 1;
+    else if (G === 3) interval = 3;
+    else interval = 4;
+    newS = [0.5, 1.0, 2.0, 3.0][G - 1] || 1.0;
+  }
+
+  const next = new Date(now);
+  next.setDate(next.getDate() + interval);
+
+  return {
+    fsrs_difficulty: Math.round(newD * 100) / 100,
+    fsrs_stability: Math.round(newS * 100) / 100,
+    interval_days: interval,
+    last_review_at: now.toISOString(),
+    next_review_at: next.toISOString(),
+    // 保留舊欄位以相容
+    ease_factor: 2.5, repetitions: 0,
+  };
 }
+// 別名保持調用處不變
+const sm2 = fsrs;
 
 async function load() {
   view.innerHTML = `<div class="card"><p style="color:var(--paper-400);">載入中…</p></div>`;
@@ -55,6 +113,8 @@ async function load() {
     cards = data || [];
     idx = 0; done = 0; score = 0; streak = 0;
     renderModeSelect();
+    // 後台預生成所有選項，複習時不用等 AI
+    pregenOptions(cards);
   } catch (e) {
     view.innerHTML = `<div class="card"><p style="color:var(--signal-red);">載入失敗：${esc(e.message)}</p>
       <button class="btn btn-ghost" style="margin-top:12px;" onclick="location.reload()">重試</button></div>`;
@@ -146,7 +206,8 @@ async function renderBattle() {
     </div>`;
   if (d.time) startTimer(d.time);
   try {
-    const opts = await genOptions(c);
+    // 優先用預生成的，沒有才即時生成
+    const opts = c._opts || await genOptions(c);
     renderBattleOpts(c, opts);
   } catch (e) {
     document.getElementById("rv-opts").innerHTML = `<p style="color:var(--signal-red);">選項生成失敗：${esc(e.message)}</p>`;
@@ -165,6 +226,21 @@ function startTimer(sec) {
       battleAnswer(false, true);  // 超時算錯
     }
   }, 1000);
+}
+
+/* 後台批量預生成選項（並行，不阻塞 UI） */
+async function pregenOptions(cardList) {
+  // 限制並行數避免打爆 API
+  const batch = 3;
+  for (let i = 0; i < cardList.length; i += batch) {
+    const slice = cardList.slice(i, i + batch);
+    await Promise.all(slice.map(async (card) => {
+      if (card._opts) return; // 已有就跳過
+      try {
+        card._opts = await genOptions(card);
+      } catch { /* 失敗時用時再生成 */ }
+    }));
+  }
 }
 
 /* AI 生成 3 個干擾選項 */
@@ -268,6 +344,10 @@ function render() {
     <div class="card rv-card">
       ${c.concept ? `<div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">${esc(c.concept)}</div>` : ""}
       <div class="rv-q">${esc(c.question)}</div>
+      <div style="margin-top:12px;">
+        <label style="font-size:12px;color:var(--paper-400);display:block;margin-bottom:6px;">先寫下你記得的內容（研究證實：打出來比用想的效果好兩倍）</label>
+        <textarea class="input" id="rv-recall" rows="2" placeholder="在這裡打字回答…" style="width:100%;"></textarea>
+      </div>
       <div class="rv-a hidden" id="rv-a">${esc(c.answer)}</div>
       <div id="rv-actions" style="margin-top:20px;">
         <button class="btn btn-primary" id="rv-show">顯示答案</button>
