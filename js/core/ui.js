@@ -11,6 +11,7 @@ const NAV_GROUPS = [
     ["feynman.html", "\u8cbb\u66fc\u8aaa\u670d", "nav-feynman.webp"],
     ["socratic.html", "\u8607\u683c\u62c9\u5e95\u5c0d\u8a71", "nav-sparkle.webp"],
     ["quiz.html", "\u77e5\u8b58\u5c0d\u6230", "nav-quiz.webp"],
+    ["arcade.html", "\u661f\u8266\u89e3\u78bc", "nav-quiz.webp"],
     ["review.html", "\u8907\u7fd2", "nav-review.webp"],
     ["bookshelf.html", "\u66f8\u67b6", "nav-bookshelf.webp"],
   ]},
