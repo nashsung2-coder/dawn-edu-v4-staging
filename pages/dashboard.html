@@ -13,36 +13,64 @@
 <link rel="stylesheet" href="../css/tokens.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-.dash-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
-.dash-section-title { display:flex; align-items:center; gap:8px; margin:24px 0 12px; font-size:15px; font-weight:700; }
-.dash-section-title .en { font-family:var(--font-mono); font-size:10px; letter-spacing:.2em; color:var(--brass-400); }
-.stat-row { display:flex; gap:12px; flex-wrap:wrap; }
-.stat { flex:1; min-width:100px; text-align:center; padding:12px 8px; background:oklch(1 0 0 / 0.03); border-radius:10px; }
-.stat .num { font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--brass-300); }
-.stat .lbl { font-size:12px; color:var(--paper-400); margin-top:4px; }
-.task-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid oklch(1 0 0 / 0.05); }
-.task-item:last-child { border:none; }
-.task-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--brass-400); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
-.task-check.done { background:var(--brass-400); color:#000; }
-.quick-links { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
-.quick-links .btn { flex-direction:column; gap:4px; padding:12px 8px; height:auto; }
-.bar { height:8px; background:oklch(1 0 0 / 0.08); border-radius:99px; overflow:hidden; }
-.bar > div { height:100%; background:linear-gradient(90deg, var(--brass-400), var(--brass-300)); border-radius:99px; }
+/* 對話優先主控台 */
+.cp-hero { display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
+.cp-avatar { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, oklch(0.74 0.14 80), oklch(0.6 0.18 60)); display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+.cp-chat-card { flex:1; background:oklch(1 0 0 / 0.03); border:1px solid oklch(1 0 0 / 0.08); border-radius:16px; padding:16px; min-width:0; }
+.cp-greeting { font-size:14px; line-height:1.8; margin-bottom:12px; }
+.cp-msgs { display:flex; flex-direction:column; gap:10px; max-height:300px; overflow-y:auto; margin-bottom:12px; }
+.cp-msg { padding:10px 14px; border-radius:12px; font-size:13.5px; line-height:1.75; max-width:92%; }
+.cp-msg.ai { background:oklch(0.74 0.14 80 / 0.08); border:1px solid oklch(0.74 0.14 80 / 0.2); align-self:flex-start; border-bottom-left-radius:4px; }
+.cp-msg.user { background:oklch(0.6 0.2 250 / 0.12); border:1px solid oklch(0.6 0.2 250 / 0.25); align-self:flex-end; border-bottom-right-radius:4px; }
+.cp-input-row { display:flex; gap:8px; }
+.cp-input-row .input { flex:1; border-radius:20px; padding:10px 16px; font-size:14px; }
+.cp-suggest { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.cp-suggest .chip { font-size:12px; padding:6px 12px; border-radius:99px; border:1px solid oklch(1 0 0 / 0.12); background:transparent; color:var(--paper-300); cursor:pointer; }
+.cp-suggest .chip:hover { border-color:var(--brass-400); color:var(--brass-300); }
+.typing span { animation:blink 1s infinite; } .typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }
+/* 下方功能區 */
+.stat-row { display:flex; gap:10px; flex-wrap:wrap; }
+.stat { flex:1; min-width:90px; text-align:center; padding:10px 6px; background:oklch(1 0 0 / 0.03); border-radius:10px; }
+.stat .num { font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--brass-300); }
+.stat .lbl { font-size:11px; color:var(--paper-400); margin-top:2px; }
+.quick-links { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+.sec-title { font-size:14px; font-weight:700; margin:20px 0 10px; display:flex; align-items:center; gap:8px; }
+.sec-title .en { font-family:var(--font-mono); font-size:10px; letter-spacing:.15em; color:var(--brass-400); }
+@media (max-width:600px){ .quick-links{grid-template-columns:repeat(2,1fr);} }
 </style>
 </head>
 <body>
-<main class="main">
-  <div class="page-head">
-    <div class="en">DASHBOARD</div>
-    <h1>主控台</h1>
+<div id="topbar"></div>
+<main class="main" style="max-width:900px;">
+  <!-- 小曙對話區 -->
+  <div class="cp-hero">
+    <div class="cp-avatar">🌅</div>
+    <div class="cp-chat-card">
+      <div style="font-size:12px;color:var(--brass-400);font-family:var(--font-mono);letter-spacing:.15em;margin-bottom:8px;">XIAO SHU · 學習陪伴者</div>
+      <div class="cp-greeting" id="cp-greeting"><span style="color:var(--paper-400);">小曙正在了解你的學習狀況…</span></div>
+      <div class="cp-msgs" id="cp-msgs" style="display:none;"></div>
+      <div class="cp-input-row">
+        <input class="input" id="cp-input" placeholder="跟小曙聊聊：想學什麼？需要安排複習？">
+        <button class="btn btn-primary btn-sm" id="cp-send" style="border-radius:20px;">送出</button>
+      </div>
+      <div class="cp-suggest" id="cp-suggest"></div>
+    </div>
   </div>
-  <div id="dash-view">
-    <div class="skeleton" style="height:120px;margin-bottom:16px"></div>
-    <div class="skeleton" style="height:200px;margin-bottom:16px"></div>
-    <div class="skeleton" style="height:160px"></div>
+
+  <!-- 學習數據 -->
+  <div class="sec-title"><span class="en">OVERVIEW</span> 學習一覽</div>
+  <div class="stat-row" id="cp-stats">
+    <div class="stat"><div class="num">–</div><div class="lbl">到期複習</div></div>
+    <div class="stat"><div class="num">–</div><div class="lbl">知識節點</div></div>
+    <div class="stat"><div class="num">–</div><div class="lbl">連續天數</div></div>
   </div>
+
+  <!-- 快捷入口 -->
+  <div class="sec-title"><span class="en">QUICK ACCESS</span> 功能</div>
+  <div class="quick-links" id="cp-links"></div>
 </main>
 <script src="../js/vendor/supabase.min.js"></script>
-<script type="module" src="../js/pages/dashboard.js?v=fixed001"></script>
+<script type="module" src="../js/pages/dashboard.js?v=companion001"></script>
 </body>
 </html>
