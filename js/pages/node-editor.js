@@ -635,7 +635,7 @@ async function renderAbSocratic(c) {
     c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在為「${esc(topic)}」準備問題…</p>`;
     try {
       const reply = await ask(
-        `你是蘇格拉底式的導師。用繁體中文，為「${topic}」設計 3 個引導探索問題。由淺入深，每行一個，格式「Q1. 問題」。不超過 120 字。`,
+        `你是蘇格拉底式的導師。用繁體中文，為「${topic}」設計 3 個引導思考的問題。要求：不要出考試題（像「有什麼特點」「你了解多少」這種），要出情境代入題（用「如果你是…」「想像…」「你覺得為什麼…」開頭，讓人從某個角度去想，沒有標準答案）。由淺入深，每行一個，格式「Q1. 問題」。不超過 120 字。`,
         `主題：${topic}`,
         { model: MODELS.socratic }
       );
