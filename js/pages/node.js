@@ -21,6 +21,13 @@ if (!nodeId) {
       .select("id,user_id,title,content,category,is_public,created_at").eq("id", nodeId).single();
     if (error || !n) throw new Error("找不到這個節點");
 
+    // 查詢作者暱稱
+    let authorName = "未知作者";
+    try {
+      const { data: prof } = await supabase.from("profiles").select("nickname").eq("id", n.user_id).maybeSingle();
+      if (prof?.nickname) authorName = prof.nickname;
+    } catch {}
+
     let blocks = [];
     let question = "";
     try {
@@ -36,6 +43,7 @@ if (!nodeId) {
           <span class="status-badge ${n.is_public ? "status-published" : "status-draft"}">${n.is_public ? "公開" : "私人"}</span>
           <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:oklch(0.75 0.15 80 / 0.15);color:var(--brass-300);">${htmlEsc(n.category || "未分類")}</span>
           ${date ? `<span style="font-size:12px;color:var(--paper-400);">${date}</span>` : ""}
+          <span style="font-size:12px;color:var(--paper-400);">作者：${htmlEsc(authorName)}</span>
         </div>
         <h1 style="font-size:24px;margin-bottom:8px;line-height:1.4;">${htmlEsc(n.title)}</h1>
         ${question ? `<p style="font-size:15px;color:var(--brass-300);margin-bottom:20px;line-height:1.7;">${htmlEsc(question)}</p>` : ""}
