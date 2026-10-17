@@ -122,45 +122,118 @@ async function load() {
 }
 
 /* 模式 + 難度選擇 */
-/* 編輯學習目標 */
-window.editGoals = function(which) {
-  const g = getGoals();
-  const wN = prompt("本週新增知識節點目標", g.wNodes);
-  if (wN === null) return;
-  const wR = prompt("本週複習卡片目標", g.wReviews);
-  if (wR === null) return;
-  const mN = prompt("本月新增知識節點目標", g.mNodes);
-  if (mN === null) return;
-  const mR = prompt("本月複習卡片目標", g.mReviews);
-  if (mR === null) return;
-  saveGoals({ wNodes: Math.max(1, +wN || 5), wReviews: Math.max(1, +wR || 10), mNodes: Math.max(1, +mN || 20), mReviews: Math.max(1, +mR || 40) });
-  renderMasteryDashboard();
+
+
+/* ===== AI 學習目標規劃系統 ===== */
+function getMonthlyGoal() {
+  try { return localStorage.getItem(`monthly_goal_${user.id}`) || ""; } catch { return ""; }
+}
+function setMonthlyGoal(g) {
+  try { localStorage.setItem(`monthly_goal_${user.id}`, g); } catch {}
+}
+function getGoalPlan() {
+  try { return JSON.parse(localStorage.getItem(`goal_plan_${user.id}`) || "null"); } catch { return null; }
+}
+function saveGoalPlan(p) {
+  try { localStorage.setItem(`goal_plan_${user.id}`, JSON.stringify({ ...p, updatedAt: new Date().toISOString() })); } catch {}
+}
+
+/* AI 拆解月目標 → 週目標 → 今日目標 + 雙線推薦 */
+async function generateGoalPlan(monthlyGoal, categories, existingNodes) {
+  const catList = categories.join("、") || "（尚無）";
+  const nodeSummary = existingNodes.slice(0, 20).map(n => n.title || n.id).join("、") || "（尚無）";
+  const reply = await ask([
+    { role: "system", content: "你是學習規劃師。用繁體中文，只回 JSON。" },
+    { role: "user", content: `用戶本月學習目標：「${monthlyGoal}」
+他現有的知識庫分類：${catList}
+他已有的部分知識節點：${nodeSummary}
+
+請規劃：
+1. 拆成 4 個週目標（由淺入深，每週一個重點）
+2. 本日目標（具體、可在一天內完成的小目標）
+3. 推薦庫：從現有分類中選最相關的 1-3 個，若無相關則推薦「新建XX庫」
+4. 前置複習：為了達成本日目標，他需要先複習哪些已有內容（具體指出節點或概念），若無則空陣列
+
+只回 JSON，格式：
+{"weeklyGoals":["第一週：...","第二週：...","第三週：...","第四週：..."],"dailyGoal":"...","recommendedLibs":["..."],"prerequisites":["..."],"reasoning":"為什麼這樣安排（50字內）"}` },
+  ], { max_tokens: 1500 });
+  const m = reply.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("AI 規劃格式錯誤");
+  return JSON.parse(m[0]);
+}
+
+window.setMonthlyGoalUI = async function() {
+  const cur = getMonthlyGoal();
+  const g = prompt("請輸入本月學習目標（中文描述，例如：了解賦稅制度對百姓以及整體經濟的影響）", cur);
+  if (!g || !g.trim()) return;
+  setMonthlyGoal(g.trim());
+  // 清除舊規劃，重新生成
+  try { localStorage.removeItem(`goal_plan_${user.id}`); } catch {}
+  await renderMasteryDashboard();
 };
 
-/* 無到期卡片時：顯示各庫精熟度儀表板 */
-/* 學習目標：localStorage 存設定，從 DB 算進度 */
-function getGoals() {
-  try {
-    const g = JSON.parse(localStorage.getItem(`review_goals_${user.id}`) || "{}");
-    return {
-      wNodes: g.wNodes || 5, wReviews: g.wReviews || 10,
-      mNodes: g.mNodes || 20, mReviews: g.mReviews || 40,
-    };
-  } catch { return { wNodes: 5, wReviews: 10, mNodes: 20, mReviews: 40 }; }
-}
-function saveGoals(g) {
-  try { localStorage.setItem(`review_goals_${user.id}`, JSON.stringify(g)); } catch {}
-}
-function goalBar(label, done, target) {
-  const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
-  return `<div style="margin-bottom:10px;">
-    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-      <span>${label}</span><span style="color:var(--brass-400);">${done}/${target}</span>
+async function renderGoalSection() {
+  const monthlyGoal = getMonthlyGoal();
+  if (!monthlyGoal) {
+    return `<div style="background:var(--bg-3);border-radius:10px;padding:16px;margin-bottom:20px;text-align:center;">
+      <p style="color:var(--paper-400);margin-bottom:10px;">設定本月學習目標，讓 AI 幫你規劃每週、每日進度</p>
+      <button class="btn btn-primary" onclick="setMonthlyGoalUI()">設定本月目標</button>
+    </div>`;
+  }
+  let plan = getGoalPlan();
+  // 若無規劃或已過一天，重新生成
+  const today = new Date().toDateString();
+  if (!plan || new Date(plan.updatedAt).toDateString() !== today) {
+    try {
+      const { data: nodes } = await supabase.from("knowledge_nodes").select("title, category").eq("user_id", user.id).limit(30);
+      const cats = [...new Set((nodes || []).map(n => n.category).filter(Boolean))];
+      plan = await generateGoalPlan(monthlyGoal, cats, nodes || []);
+      saveGoalPlan(plan);
+    } catch (e) {
+      console.error("AI 規劃失敗:", e);
+    }
+  }
+  if (!plan) {
+    return `<div style="background:var(--bg-3);border-radius:10px;padding:16px;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b>本月目標：${esc(monthlyGoal)}</b>
+        <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="setMonthlyGoalUI()">修改</button>
+      </div>
+      <p style="color:var(--paper-400);font-size:13px;">AI 規劃中，請稍後…</p></div>`;
+  }
+  return `<div style="margin-bottom:20px;">
+    <div style="background:linear-gradient(135deg,var(--bg-3),var(--bg-2));border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid var(--brass-500);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="en" style="font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;color:var(--brass-400);">MONTHLY GOAL</div>
+        <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="setMonthlyGoalUI()">修改目標</button>
+      </div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px;">${esc(monthlyGoal)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:12px;color:var(--brass-400);margin-bottom:6px;">本週進度</div>
+          ${(plan.weeklyGoals || []).map((w, i) => `<div style="font-size:13px;padding:4px 0;${i === 0 ? "color:var(--paper-50);font-weight:600;" : "color:var(--paper-400);"}">${esc(w)}</div>`).join("")}
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--brass-400);margin-bottom:6px;">今日目標</div>
+          <div style="font-size:14px;font-weight:600;background:var(--bg-2);padding:10px;border-radius:8px;">${esc(plan.dailyGoal || "")}</div>
+          ${plan.reasoning ? `<div style="font-size:11px;color:var(--paper-400);margin-top:8px;">${esc(plan.reasoning)}</div>` : ""}
+        </div>
+      </div>
     </div>
-    <div style="height:8px;background:var(--bg-3);border-radius:4px;overflow:hidden;">
-      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--brass-500),var(--brass-300));border-radius:4px;"></div>
-    </div></div>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:var(--bg-3);border-radius:10px;padding:14px;">
+        <div style="font-size:12px;color:var(--brass-400);margin-bottom:8px;">推薦透過這些庫達成</div>
+        ${(plan.recommendedLibs || []).map(lib => `<div style="margin-bottom:6px;"><button class="chip" onclick="location.href='knowledge.html?cat=${encodeURIComponent(lib)}'">${esc(lib)}</button></div>`).join("") || '<span style="color:var(--paper-400);font-size:13px;">暫無</span>'}
+      </div>
+      <div style="background:var(--bg-3);border-radius:10px;padding:14px;">
+        <div style="font-size:12px;color:var(--brass-400);margin-bottom:8px;">達成本日目標前，先複習</div>
+        ${(plan.prerequisites || []).map(p => `<div style="font-size:13px;padding:4px 0;color:var(--paper-200);">• ${esc(p)}</div>`).join("") || '<span style="color:var(--paper-400);font-size:13px;">無需前置複習，直接開始！</span>'}
+      </div>
+    </div>
+  </div>`;
 }
+
+/* 無到期卡片時：顯示各庫精熟度儀表板 */
 
 async function renderMasteryDashboard() {
   view.innerHTML = `<div class="card" style="max-width:640px;margin:0 auto;text-align:center;">
@@ -168,39 +241,8 @@ async function renderMasteryDashboard() {
     <h2>今日無到期卡片</h2>
     <p style="color:var(--paper-400);">載入學習目標與各庫精熟度…</p></div>`;
   try {
-    const goals = getGoals();
-    // 本週一 00:00、本月 1 日 00:00
-    const now = new Date();
-    const wStart = new Date(now); wStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); wStart.setHours(0,0,0,0);
-    const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const [wNodesR, mNodesR, wRevR, mRevR] = await Promise.all([
-      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", wStart.toISOString()),
-      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", mStart.toISOString()),
-      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("last_review_at", wStart.toISOString()),
-      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("last_review_at", mStart.toISOString()),
-    ]);
-    const wNodes = wNodesR.count ?? 0, mNodes = mNodesR.count ?? 0;
-    const wRev = wRevR.count ?? 0, mRev = mRevR.count ?? 0;
-    const goalsHtml = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;text-align:left;">
-        <div style="background:var(--bg-3);border-radius:10px;padding:14px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <b>本週目標</b>
-            <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="editGoals('w')">設定</button>
-          </div>
-          ${goalBar("新增知識節點", wNodes, goals.wNodes)}
-          ${goalBar("複習卡片", wRev, goals.wReviews)}
-        </div>
-        <div style="background:var(--bg-3);border-radius:10px;padding:14px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <b>本月目標</b>
-            <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="editGoals('m')">設定</button>
-          </div>
-          ${goalBar("新增知識節點", mNodes, goals.mNodes)}
-          ${goalBar("複習卡片", mRev, goals.mReviews)}
-        </div>
-      </div>`;
-    // 把目標區存起來，後面組裝時用
+        // AI 目標規劃區（取代舊的數字目標）
+    const goalsHtml = await renderGoalSection();
     view.dataset.goalsHtml = goalsHtml;
     // 查所有知識節點（按分類統計）
     const { data: nodes } = await supabase.from("knowledge_nodes")
