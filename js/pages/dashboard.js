@@ -1,6 +1,6 @@
 /* 主控台 v2：小曙對話優先 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, md } from "../core/ui.js";
 import { buildLearningContext, companionChat, companionGreeting } from "../core/companion.js";
 
 const $ = id => document.getElementById(id);
