@@ -1,4 +1,4 @@
-/* 曙光教育 — AI 學習陪伴者「小曙」核心
+/* 曙光學習 — AI 學習陪伴者「小曙」核心
  * 對話優先的學習 OS：AI 是主控台，功能是它的工具
  */
 import { chat, MODELS } from "./llm.js";
@@ -27,6 +27,8 @@ export async function buildLearningContext(supabase, userId) {
       lines.push(`暱稱：${profile.data.nickname || "同學"}`);
       lines.push(`連續學習：${profile.data.streak_days || 0} 天`);
     }
+    // 把暱稱單獨存起來，給 system prompt 用
+    c._nickname = profile.data?.nickname || "同學";
   } catch (e) {
     lines.push("(學習數據讀取失敗)");
   }
@@ -40,10 +42,14 @@ export async function buildLearningContext(supabase, userId) {
 /* 工具定義：AI 可以調用的平台功能 */
 export const COMPANION_TOOLS = {
   goto_page: {
-    desc: "導航到指定頁面。page 可選：review(複習), knowledge(知識庫), socratic(蘇格拉底對話), feynman(費曼), quiz(對戰), universe(宇宙), island(群島), pet(靈獸), bookshelf(書架)",
+    desc: "導航到指定頁面。page 可選：review(複習), knowledge(知識庫), socratic(蘇格拉底對話), feynman(費曼), quiz(對戰), universe(宇宙), island(群島), pet(靈獸), bookshelf(書架)。若 page 是 knowledge，可加 cat 參數直接進入特定分類的庫（例如 cat=\"物理\"）",
     exec: (args) => {
       const map = { review: "review.html", knowledge: "knowledge.html", socratic: "socratic.html", feynman: "feynman.html", quiz: "quiz.html", universe: "universe.html", island: "island.html", pet: "pet.html", bookshelf: "bookshelf.html" };
-      const target = map[args.page] || "dashboard.html";
+      let target = map[args.page] || "dashboard.html";
+      // 知識庫支援直接跳入特定分類
+      if (args.page === "knowledge" && args.cat) {
+        target = `knowledge.html?cat=${encodeURIComponent(args.cat)}`;
+      }
       COMPANION_TOOLS.goto_page._navTarget = target;
       return `正在前往${target}`;
     }
@@ -95,8 +101,18 @@ export async function execToolCall(call) {
 }
 
 /* 小曙的 system prompt */
-export function companionSystemPrompt(learningContext) {
-  return `你是「小曙」，曙光教育平台的 AI 學習陪伴者。用繁體中文，像朋友一樣親切對話。
+export function companionSystemPrompt(learningContext, nickname = "同學", memory = "") {
+  const timeGreet = (() => {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 11) return "早安";
+    if (h >= 11 && h < 14) return "午安";
+    if (h >= 14 && h < 18) return "下午好";
+    return "晚安";
+  })();
+  return `你是「小曙」，曙光學習平台的 AI 學習陪伴者。用繁體中文，像朋友一樣親切對話。
+現在是${timeGreet}時段，跟用戶打招呼時要自然帶入（例如「早安」）。
+
+用戶的暱稱是「${nickname}」，對話中要親切地叫他，不要叫「同學」或「用戶」。
 
 你的角色不是問答機器，是學習夥伴。你會：
 - 主動關心學習進度，提醒到期複習
@@ -106,6 +122,7 @@ export function companionSystemPrompt(learningContext) {
 
 用戶目前的學習狀態：
 ${learningContext}
+${memory ? `\n你記得關於他的事：\n${memory}\n（對話中可以自然提起，表示你記得他）` : ""}
 
 你可以調用以下工具來幫助用戶。當你想用工具時，必須在回覆中插入 [TOOL:工具名 參數="值"]，例如 [TOOL:goto_page page="review"]。工具執行結果會再餵給你，你再回覆用戶。
 
@@ -115,6 +132,8 @@ ${learningContext}
 - 用戶說「我想複習」→ 回覆「好，我們去複習！[TOOL:review_nudge]」
 - 用戶說「我想學光合作用」→ 回覆「來，我們用蘇格拉底對話搞懂它！[TOOL:start_socratic topic="光合作用"]」
 - 用戶說「帶我去知識庫」→ 回覆「走！[TOOL:goto_page page="knowledge"]」
+- 用戶說「帶我去物理庫」→ 回覆「走，去物理庫！[TOOL:goto_page page="knowledge" cat="物理"]」
+- 用戶說「我想看數學的庫」→ 回覆「來！[TOOL:goto_page page="knowledge" cat="數學"]」
 
 可用工具：
 ${toolDescriptions()}
@@ -127,8 +146,8 @@ ${toolDescriptions()}
 }
 
 /* 帶工具調用的完整對話流程 */
-export async function companionChat(messages, learningContext, onUpdate) {
-  const system = companionSystemPrompt(learningContext);
+export async function companionChat(messages, learningContext, onUpdate, nickname = "同學", memory = "") {
+  const system = companionSystemPrompt(learningContext, nickname, memory);
   const full = [{ role: "system", content: system }, ...messages];
 
   let reply = await chat(full, { model: MODELS.chat, max_tokens: 1500 });
@@ -165,14 +184,17 @@ export async function companionChat(messages, learningContext, onUpdate) {
 }
 
 /* 開場主動建議：根據學習狀態生成一句話 */
-export async function companionGreeting(learningContext) {
+export async function companionGreeting(learningContext, nickname = "同學") {
+  const h = new Date().getHours();
+  const greet = h >= 5 && h < 11 ? "早安" : h >= 11 && h < 14 ? "午安" : h >= 14 && h < 18 ? "下午好" : "晚上好";
+  const fallback = `${greet}，${nickname}！今天想學點什麼？我陪你！`;
   try {
     const reply = await chat([
-      { role: "system", content: `你是「小曙」，AI 學習陪伴者。用繁體中文，親切簡短（80 字內）。根據用戶學習狀態，主動給一句今日建議或關心。不要調用工具，只要一句話。` },
+      { role: "system", content: `你是「小曙」，AI 學習陪伴者。用繁體中文，親切簡短（80 字內）。現在是${greet}時段，開頭一定要用「${greet}，${nickname}」打招呼。根據用戶學習狀態，主動給一句今日建議或關心。不要調用工具，只要一句話。要像朋友一樣溫暖。` },
       { role: "user", content: `我的學習狀態：\n${learningContext}\n請給我一句今日建議。` },
     ], { model: MODELS.fast, max_tokens: 300 });
-    return reply?.trim() || "今天想學點什麼？我陪你！";
+    return reply?.trim() || fallback;
   } catch {
-    return "今天想學點什麼？我陪你！";
+    return fallback;
   }
 }
