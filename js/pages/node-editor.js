@@ -596,6 +596,12 @@ await loadInitial();
 /* ===== AI 建庫小幫手 ===== */
 let abTab = "socratic";
 let abSocraticQA = [];
+let abDifficulty = "normal"; // easy | normal | hard
+const AB_DIFF = {
+  easy: { nm: "簡單", prompt: "問題要淺顯易懂，從生活經驗出發，降低思考門檻" },
+  normal: { nm: "普通", prompt: "問題由淺入深，兼顧思考深度" },
+  hard: { nm: "困難", prompt: "問題要有挑戰性，需要深度思考和跨概念連結" },
+};
 
 function openBuilder() {
   $("ai-builder-panel").style.display = "flex";
@@ -634,8 +640,9 @@ async function renderAbSocratic(c) {
   if (!abSocraticQA.length || abSocraticQA._topic !== topic) {
     c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在為「${esc(topic)}」準備問題…</p>`;
     try {
+      const diff = AB_DIFF[abDifficulty];
       const reply = await ask(
-        `你是蘇格拉底式的導師。用繁體中文，為「${topic}」設計 3 個引導思考的問題。要求：不要出考試題（像「有什麼特點」「你了解多少」這種），要出情境代入題（用「如果你是…」「想像…」「你覺得為什麼…」開頭，讓人從某個角度去想，沒有標準答案）。由淺入深，每行一個，格式「Q1. 問題」。不超過 120 字。`,
+        `你是蘇格拉底式的導師。用繁體中文，為「${topic}」設計 3 個引導思考的問題。難度：${diff.nm}（${diff.prompt}）。要求：不要出考試題（像「有什麼特點」「你了解多少」這種），要出情境代入題（用「如果你是…」「想像…」「你覺得為什麼…」開頭，讓人從某個角度去想，沒有標準答案）。由淺入深，每行一個，格式「Q1. 問題」。不超過 120 字。`,
         `主題：${topic}`,
         { model: MODELS.socratic }
       );
@@ -655,7 +662,13 @@ async function renderAbSocratic(c) {
         <div class="q-text" style="font-size:14px;">${esc(qa.q)}</div>
         <textarea class="input" id="ab-a${i}" rows="2" placeholder="你的回答…" style="width:100%;margin-top:8px;">${esc(qa.a || "")}</textarea>
       </div>`).join("")}
+    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--paper-400);">難度：</span>
+      ${Object.entries(AB_DIFF).map(([k, d]) => `<button class="chip ${abDifficulty === k ? "on" : ""}" data-diff="${k}" style="font-size:12px;padding:4px 12px;">${d.nm}</button>`).join("")}
+    </div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" id="ab-easier">簡單一點</button>
+      <button class="btn btn-ghost btn-sm" id="ab-harder">難一點</button>
       <button class="btn btn-ghost btn-sm" id="ab-regen">換一組</button>
       <button class="btn btn-primary btn-sm" id="ab-eval">🤔 AI 綜合評估</button>
       <button class="btn btn-ghost btn-sm" id="ab-insert-qa">插入問答 →</button>
@@ -668,6 +681,17 @@ async function renderAbSocratic(c) {
     window.open("socratic.html", "_blank");
   };
   $("ab-regen").onclick = () => { abSocraticQA = []; renderBuilderTab(); };
+  c.querySelectorAll("[data-diff]").forEach(b => {
+    b.onclick = () => { abDifficulty = b.dataset.diff; abSocraticQA = []; renderBuilderTab(); };
+  });
+  $("ab-easier").onclick = () => {
+    abDifficulty = abDifficulty === "hard" ? "normal" : "easy";
+    abSocraticQA = []; renderBuilderTab();
+  };
+  $("ab-harder").onclick = () => {
+    abDifficulty = abDifficulty === "easy" ? "normal" : "hard";
+    abSocraticQA = []; renderBuilderTab();
+  };
   $("ab-eval").onclick = async () => {
     abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
     const answered = abSocraticQA.filter(qa => qa.a);
