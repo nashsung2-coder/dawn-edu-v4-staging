@@ -199,6 +199,42 @@ async function init() {
       <div class="stat"><div class="num">${nodes.count ?? 0}</div><div class="lbl">知識節點</div></div>
       <div class="stat"><div class="num">${profile.data?.streak_days ?? 0}</div><div class="lbl">連續天數</div></div>`;
 
+    // 今日學習目標（從 localStorage 讀月目標拆解）
+    try {
+      const goalPlan = JSON.parse(localStorage.getItem(`goal_plan_${user.id}`) || "null");
+      if (goalPlan?.weeks?.length) {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayGoal = localStorage.getItem(`daily_goal_${user.id}_${today}`);
+        $("cp-goals-list").innerHTML = todayGoal
+          ? `<div style="color:var(--paper-200);">${esc(todayGoal)}</div>`
+          : `<div style="color:var(--paper-400);">今日還沒設定目標，跟小曙聊聊讓他幫你安排吧</div>`;
+      } else {
+        $("cp-goals-list").innerHTML = `<div style="color:var(--paper-400);">還沒設定學習目標，在下方跟小曙說「幫我規劃這個月」</div>`;
+      }
+    } catch {
+      $("cp-goals-list").innerHTML = `<div style="color:var(--paper-400);">載入失敗</div>`;
+    }
+
+    // AI 學習建議（基於到期複習和知識節點）
+    try {
+      const dueCount = review.count ?? 0;
+      const nodeCount = nodes.count ?? 0;
+      let suggest = "";
+      if (dueCount > 0) suggest += `<div style="margin-bottom:8px;">📝 有 ${dueCount} 張卡片到期了，先去複習吧</div>`;
+      if (nodeCount < 5) suggest += `<div style="margin-bottom:8px;">📚 知識庫只有 ${nodeCount} 個節點，去建立你的第一個知識庫吧</div>`;
+      else suggest += `<div style="margin-bottom:8px;">📚 你有 ${nodeCount} 個知識節點，試試用情境學習來體驗它們</div>`;
+      suggest += `<div style="font-size:12px;color:var(--paper-400);margin-top:8px;">跟小曙聊聊，他會給你更個人化的建議</div>`;
+      $("cp-suggestions-list").innerHTML = suggest;
+    } catch {
+      $("cp-suggestions-list").innerHTML = `<div style="color:var(--paper-400);">載入失敗</div>`;
+    }
+
+    // 複習建議
+    try {
+      const dueCount = review.count ?? 0;
+      $("cp-review-desc").textContent = dueCount > 0 ? `有 ${dueCount} 張卡片等你複習` : "目前沒有到期卡片，繼續累積吧";
+    } catch {}
+
     // 快捷入口
     const links = [
       ["socratic.html", "蘇格拉底對話"], ["review.html", "複習"], ["knowledge.html", "知識庫"],
