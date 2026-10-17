@@ -27,8 +27,7 @@ export async function buildLearningContext(supabase, userId) {
       lines.push(`暱稱：${profile.data.nickname || "同學"}`);
       lines.push(`連續學習：${profile.data.streak_days || 0} 天`);
     }
-    // 把暱稱單獨存起來，給 system prompt 用
-    c._nickname = profile.data?.nickname || "同學";
+
   } catch (e) {
     lines.push("(學習數據讀取失敗)");
   }
