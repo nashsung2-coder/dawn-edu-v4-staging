@@ -180,9 +180,11 @@ async function doChoice(choice, isFree = false) {
     renderStory(data.story, data.choices);
     // 把歷史加回去（renderStory 會重建，先保存）
     const sEl = $("sc-story");
-    sEl.innerHTML = history.map(h => h.role === "user"
-      ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
-      : `<div style="margin-top:12px;">${md(h.text)}</div>`).join("");
+    if (sEl) {
+      sEl.innerHTML = history.map(h => h.role === "user"
+        ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
+        : `<div style="margin-top:12px;">${md(h.text)}</div>`).join("");
+    }
   } catch (e) {
     toast("AI 回應失敗，再試一次");
     document.querySelectorAll(".sc-opt").forEach(b => b.disabled = false);
