@@ -113,12 +113,13 @@ async function nextQuestion() {
       ? `以下是使用者要驗證的知識內容，請**嚴格根據此內容**出題，驗證他是否真正掌握：\n---\n${knowledgeContent.slice(0, 3000)}\n---\n`
       : `主題：${topic}\n`;
     const reply = await ask(
-      `你是出題老師，專精「迷思概念診斷」。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。
-重要：每個錯誤選項（誘答）必須對應一個學生常見的迷思概念或錯誤推理，不能是隨便編的錯誤答案。這樣才能從學生的選答診斷出他到底哪裡沒搞懂。
+      `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。
+錯誤選項要是學生常見的錯誤想法，不要隨便編。
 只回 JSON，不要其他文字。格式：
-{"question":"題目","options":["選項1純文字","選項2純文字","選項3純文字","選項4純文字"],"answer_index":0,"explanation":"解析（說明正確答案的推理）","misconceptions":{"1":"選了選項2表示的迷思：例如把X誤認為Y","2":"選了選項3表示的迷思：…","3":"選了選項4表示的迷思：…"}}
-注意：options 裡不要加 A/B/C/D 前綴；misconceptions 的 key 是選項索引（0起算），只列錯誤選項`,
-      contextPrompt
+{"question":"題目","options":["選項1","選項2","選項3","選項4"],"answer_index":0,"explanation":"解析（50字內）","misconceptions":{"1":"一句話說明此選項的迷思","2":"…","3":"…"}}
+注意：options 不要加 A/B/C/D 前綴；misconceptions 的 key 是選項索引（0起算），只列錯誤選項，每個迷思一句話就好`,
+      contextPrompt,
+      { model: "fast" }
     );
     const m = reply.match(/\{[\s\S]*\}/);
     if (!m) throw new Error("出題格式錯誤");
