@@ -14,9 +14,50 @@ function addMsg(role, text) {
   box.style.display = "flex";
   const div = document.createElement("div");
   div.className = `cp-msg ${role}`;
-  div.innerHTML = esc(text).replace(/\n/g, "<br>");
+  // 檢查是否有 [HTML]...[/HTML] 標記
+  const htmlMatch = text.match(/\[HTML\]([\s\S]*?)\[\/HTML\]/);
+  if (htmlMatch && role === "ai") {
+    // 渲染 HTML 到 sandboxed iframe
+    const htmlContent = htmlMatch[1].trim();
+    const textBefore = text.replace(/\[HTML\][\s\S]*?\[\/HTML\]/, "").trim();
+    let inner = "";
+    if (textBefore) inner += `<div>${esc(textBefore).replace(/\n/g, "<br>")}</div>`;
+    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid oklch(1 0 0 / 0.1);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
+    div.innerHTML = inner;
+  } else {
+    div.innerHTML = esc(text).replace(/\n/g, "<br>");
+  }
+  // AI 訊息加 HTML 解釋按鈕
+  if (role === "ai" && !htmlMatch) {
+    const btn = document.createElement("button");
+    btn.textContent = "HTML 圖解";
+    btn.style.cssText = "margin-top:8px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid oklch(1 0 0 / 0.15);background:transparent;color:var(--brass-300);cursor:pointer;";
+    btn.onclick = () => requestHtmlExplain(text);
+    div.appendChild(btn);
+  }
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+}
+
+// 請求 AI 用 HTML 重新解釋
+async function requestHtmlExplain(originalText) {
+  const box = $("cp-msgs");
+  showTyping();
+  try {
+    // 構建請求：請 AI 用 HTML 格式重新解釋
+    const messages = [
+      ...chatHistory,
+      { role: "user", content: "請用 [HTML]...[/HTML] 格式，把你剛才的回答做成圖解 HTML（表格、流程圖、比較表等）。只用 HTML+CSS，不要 script。" }
+    ];
+    const reply = await companionChat(messages, learningContext, null, nickname, memory);
+    document.getElementById("cp-typing")?.remove();
+    addMsg("ai", reply);
+    chatHistory.push({ role: "assistant", content: reply });
+    saveChatHistory();
+  } catch (e) {
+    document.getElementById("cp-typing")?.remove();
+    addMsg("ai", "HTML 生成失敗，再試一次好嗎？");
+  }
 }
 
 function showTyping() {
