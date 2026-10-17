@@ -326,8 +326,8 @@ async function pregenOptions(cardList) {
 /* AI 生成 3 個干擾選項 */
 async function genOptions(card) {
   const reply = await ask([
-    { role: "system", content: "你是出題助手。用繁體中文回答，只給選項。" },
-    { role: "user", content: `問題：${card.question}\n正確答案：${card.answer}\n請給 3 個錯誤但合理的干擾選項，每行一個，格式「- 選項內容」。不要編號，不要解釋。` },
+    { role: "system", content: "你是出題助手，專精迷思概念診斷。用繁體中文回答。" },
+    { role: "user", content: `問題：${card.question}\n正確答案：${card.answer}\n請給 3 個干擾選項，每個必須對應一個學生常見的迷思概念或錯誤推理（不是隨便編的錯答案）。每行一個，格式「- 選項內容」。不要編號，不要解釋。` },
   ], { max_tokens: 300 });
   const wrong = reply.split("\n").map(l => l.replace(/^[-•\d.)\s]+/, "").trim()).filter(Boolean).slice(0, 3);
   while (wrong.length < 3) wrong.push("以上皆非");
