@@ -190,11 +190,20 @@ function answer(pick) {
     }
   }
   history.push({ q: q.question, ok, level: LEVELS[level].nm });
-  // 顯示解析
+  // 顯示解析（含迷思診斷）
   const exEl = document.getElementById("qz-explain");
-  if (q.explanation) {
+  if (q.explanation || !ok) {
     exEl.style.display = "";
-    exEl.innerHTML = `<strong>${ok ? "答對了！" : "答錯了。"}</strong> ${esc(q.explanation)}`;
+    let html = `<strong>${ok ? "答對了！" : "答錯了。"}</strong> `;
+    // 答錯時顯示對應的迷思診斷（pick 是用戶選的索引）
+    if (!ok && q.misconceptions && typeof pick === "number") {
+      const mis = q.misconceptions[String(pick)] || q.misconceptions[pick];
+      if (mis) {
+        html += `<div style="background:var(--bg-3);padding:10px 14px;border-radius:8px;border-left:3px solid var(--signal-red);margin:8px 0;"><b>診斷：</b>${esc(mis)}</div>`;
+      }
+    }
+    html += esc(q.explanation || "");
+    exEl.innerHTML = html;
   }
   // 檢查是否掌握
   if (hardStreak >= MASTERY_STREAK) {

@@ -86,6 +86,7 @@ async function startAha() {
   addMsg("ai", "好！來玩個小遊戲。我問你：你覺得天空為什麼是藍的？");
   // 在歷史中加入引導，讓 AI 知道這是 aha 體驗，用蘇格拉底方式追問 2-3 輪
   chatHistory.push({ role: "assistant", content: "好！來玩個小遊戲。我問你：你覺得天空為什麼是藍的？（這是新用戶的 aha 體驗：接下來用 2-3 輪情境問題讓他發現自己其實沒完全想通，最後點出「你看，你以為你懂，但中間有個洞，這就是小曙的學習方式」）" });
+  saveChatHistory();
 }
 
 async function init() {
@@ -138,10 +139,12 @@ async function init() {
       }
     }
 
-    // 建議快捷問題
-    const suggests = ["我今天該複習什麼？", "推薦一個知識庫給我", "幫我安排這週的學習計畫"];
-    $("cp-suggest").innerHTML = suggests.map(s => `<button class="chip">${esc(s)}</button>`).join("");
-    $("cp-suggest").querySelectorAll(".chip").forEach(c => c.onclick = () => send(c.textContent));
+    // 建議快捷問題（新用戶走 aha 流程，不覆蓋）
+    if (!(isNewUser && !hasHistory)) {
+      const suggests = ["我今天該複習什麼？", "推薦一個知識庫給我", "幫我安排這週的學習計畫"];
+      $("cp-suggest").innerHTML = suggests.map(s => `<button class="chip">${esc(s)}</button>`).join("");
+      $("cp-suggest").querySelectorAll(".chip").forEach(x => x.onclick = () => send(x.textContent));
+    }
 
     // 學習統計（review/nodes 已在上方查過，只查 profile）
     const [profile] = await Promise.all([

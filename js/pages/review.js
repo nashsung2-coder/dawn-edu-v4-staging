@@ -142,9 +142,8 @@ function saveGoalPlan(p) {
 async function generateGoalPlan(monthlyGoal, categories, existingNodes) {
   const catList = categories.join("、") || "（尚無）";
   const nodeSummary = existingNodes.slice(0, 20).map(n => n.title || n.id).join("、") || "（尚無）";
-  const reply = await ask([
-    { role: "system", content: "你是學習規劃師。用繁體中文，只回 JSON。" },
-    { role: "user", content: `用戶本月學習目標：「${monthlyGoal}」
+  const reply = await ask("你是學習規劃師。用繁體中文，只回 JSON。",
+    `用戶本月學習目標：「${monthlyGoal}」
 他現有的知識庫分類：${catList}
 他已有的部分知識節點：${nodeSummary}
 
@@ -155,12 +154,17 @@ async function generateGoalPlan(monthlyGoal, categories, existingNodes) {
 4. 前置複習：為了達成本日目標，他需要先複習哪些已有內容（具體指出節點或概念），若無則空陣列
 
 只回 JSON，格式：
-{"weeklyGoals":["第一週：...","第二週：...","第三週：...","第四週：..."],"dailyGoal":"...","recommendedLibs":["..."],"prerequisites":["..."],"reasoning":"為什麼這樣安排（50字內）"}` },
-  ], { max_tokens: 1500 });
+{"weeklyGoals":["第一週：...","第二週：...","第三週：...","第四週：..."],"dailyGoal":"...","recommendedLibs":["..."],"prerequisites":["..."],"reasoning":"為什麼這樣安排（50字內）"}`,
+    { max_tokens: 1500 });
   const m = reply.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("AI 規劃格式錯誤");
   return JSON.parse(m[0]);
 }
+
+window.retryGoalPlan = async function() {
+  try { localStorage.removeItem(`goal_plan_${user.id}`); } catch {}
+  await renderMasteryDashboard();
+};
 
 window.setMonthlyGoalUI = async function() {
   const cur = getMonthlyGoal();
@@ -199,7 +203,7 @@ async function renderGoalSection() {
         <b>本月目標：${esc(monthlyGoal)}</b>
         <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="setMonthlyGoalUI()">修改</button>
       </div>
-      <p style="color:var(--paper-400);font-size:13px;">AI 規劃中，請稍後…</p></div>`;
+      <p style="color:var(--paper-400);font-size:13px;">AI 規劃失敗，<button class="btn btn-ghost" style="padding:2px 8px;font-size:12px;" onclick="retryGoalPlan()">點此重試</button></p></div>`;
   }
   return `<div style="margin-bottom:20px;">
     <div style="background:linear-gradient(135deg,var(--bg-3),var(--bg-2));border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid var(--brass-500);">
@@ -267,10 +271,13 @@ async function renderMasteryDashboard() {
 
     const catNames = Object.keys(cats);
     if (!catNames.length) {
-      view.innerHTML = `<div class="card" style="text-align:center;max-width:520px;margin:0 auto;">
-        <h2>今日無到期卡片</h2>
-        <p style="color:var(--paper-400);">還沒有學習紀錄，去學點新東西吧！</p>
-        <div style="margin-top:16px;"><button class="btn btn-primary" onclick="location.href='learn.html'">去學習</button></div></div>`;
+      view.innerHTML = `<div class="card" style="max-width:640px;margin:0 auto;">
+        ${view.dataset.goalsHtml || ""}
+        <div style="text-align:center;">
+          <h2>今日無到期卡片</h2>
+          <p style="color:var(--paper-400);">還沒有學習紀錄，去學點新東西吧！</p>
+          <div style="margin-top:16px;"><button class="btn btn-primary" onclick="location.href='learn.html'">去學習</button></div>
+        </div></div>`;
       return;
     }
 
@@ -441,10 +448,10 @@ async function pregenOptions(cardList) {
 
 /* AI 生成 3 個干擾選項 */
 async function genOptions(card) {
-  const reply = await ask([
-    { role: "system", content: "你是出題助手，專精迷思概念診斷。用繁體中文回答。" },
-    { role: "user", content: `問題：${card.question}\n正確答案：${card.answer}\n請給 3 個干擾選項，每個必須對應一個學生常見的迷思概念或錯誤推理（不是隨便編的錯答案）。每行一個，格式「- 選項內容」。不要編號，不要解釋。` },
-  ], { max_tokens: 300 });
+  const reply = await ask(
+    "你是出題助手，專精迷思概念診斷。用繁體中文回答。",
+    `問題：${card.question}\n正確答案：${card.answer}\n請給 3 個干擾選項，每個必須對應一個學生常見的迷思概念或錯誤推理（不是隨便編的錯答案）。每行一個，格式「- 選項內容」。不要編號，不要解釋。`,
+    { max_tokens: 300 });
   const wrong = reply.split("\n").map(l => l.replace(/^[-•\d.)\s]+/, "").trim()).filter(Boolean).slice(0, 3);
   while (wrong.length < 3) wrong.push("以上皆非");
   const all = [...wrong, card.answer.trim()];
