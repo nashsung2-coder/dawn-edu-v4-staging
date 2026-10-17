@@ -51,7 +51,9 @@ export const COMPANION_TOOLS = {
         target = `knowledge.html?cat=${encodeURIComponent(args.cat)}`;
       }
       COMPANION_TOOLS.goto_page._navTarget = target;
-      return `正在前往${target}`;
+      const friendly = args.page === "knowledge" && args.cat ? `${args.cat}庫` :
+        { review: "複習頁", knowledge: "知識庫", socratic: "蘇格拉底對話", feynman: "費曼", quiz: "對戰", universe: "宇宙", island: "群島", pet: "靈獸", bookshelf: "書架" }[args.page] || "主控台";
+      return `正在前往${friendly}`;
     }
   },
   start_socratic: {
@@ -165,11 +167,11 @@ export async function companionChat(messages, learningContext, onUpdate, nicknam
     const navTools = ["goto_page", "review_nudge", "start_socratic"];
     if (navTools.includes(call.tool)) {
       displayText = (displayText ? displayText + "\n" : "") + `（${result}）`;
-      // 延遲 1.5 秒讓用戶看到訊息再跳轉
-      setTimeout(() => {
-        const tool = COMPANION_TOOLS[call.tool];
-        if (tool && tool._navTarget) location.href = tool._navTarget;
-      }, 1500);
+      // 立即跳轉（存 target 避免閉包問題）
+      const navTarget = COMPANION_TOOLS[call.tool]?._navTarget;
+      if (navTarget) {
+        setTimeout(() => { location.href = navTarget; }, 800);
+      }
       continue;
     }
     // 非導航工具：把結果餵回 AI 做最終回覆
