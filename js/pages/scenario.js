@@ -228,7 +228,25 @@ ${histText}
 }
 只輸出 JSON。`;
     const raw = await ask(system, prompt, { model: "fast", json: true });
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+    let data;
+    try {
+      data = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      // 嘗試從回覆中提取 JSON
+      const m = String(raw).match(/\{[\s\S]*\}/);
+      if (m) { try { data = JSON.parse(m[0]); } catch {} }
+    }
+    // 還是失敗就用預設值，不讓整個總結掛掉
+    if (!data || typeof data.mastery !== "number") {
+      const pct = scenario.knowledgePoints.length ? Math.round(mastered.size / scenario.knowledgePoints.length * 100) : 0;
+      data = {
+        mastery: pct,
+        summary: `你以「${scenario.identity}」的身份，經歷了「${scenario.concept}」的世界，共進行了 ${turnCount} 回合互動，掌握了 ${mastered.size} 個知識點。`,
+        strengths: [...mastered].slice(0, 3),
+        toImprove: scenario.knowledgePoints.filter(k => !mastered.has(k)).slice(0, 3),
+        saveNode: { title: `${scenario.concept}（情境學習）`, content: `透過情境式學習探索了${scenario.concept}，掌握：${[...mastered].join("、") || "（尚在探索）"}` }
+      };
+    }
 
     // 存成知識節點
     let saveMsg = "";
