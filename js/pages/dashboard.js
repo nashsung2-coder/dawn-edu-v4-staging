@@ -25,7 +25,7 @@ function addMsg(role, text) {
     inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid oklch(1 0 0 / 0.1);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
     div.innerHTML = inner;
   } else {
-    div.innerHTML = esc(text).replace(/\n/g, "<br>");
+    div.innerHTML = md(text);
   }
   // AI 訊息加 HTML 解釋按鈕
   if (role === "ai" && !htmlMatch) {
@@ -41,19 +41,21 @@ function addMsg(role, text) {
 
 // 請求 AI 用 HTML 重新解釋
 async function requestHtmlExplain(originalText) {
-  const box = $("cp-msgs");
   showTyping();
   try {
-    // 構建請求：請 AI 用 HTML 格式重新解釋
-    const messages = [
-      ...chatHistory,
-      { role: "user", content: "請用 [HTML]...[/HTML] 格式，把你剛才的回答做成圖解 HTML（表格、流程圖、比較表等）。只用 HTML+CSS，不要 script。" }
-    ];
-    const reply = await companionChat(messages, learningContext, null, nickname, memory);
+    const { ask } = await import("../core/llm.js");
+    const cleanText = originalText.replace(/\[TOOL:[^\]]+\]/g, "").trim();
+    const system = "你是一位擅長視覺化解釋的老師。用繁體中文思考。";
+    const prompt = `把以下內容做成一頁 HTML 圖解（可用表格、流程、比較表、時間線）。只用 HTML+CSS inline style，深色背景適配，不要 script，不要 markdown。\n\n內容：\n${cleanText}\n\n只輸出 [HTML]...[/HTML] 包住的 HTML，不要其他文字。`;
+    const reply = await ask(system, prompt, { model: "fast" });
     document.getElementById("cp-typing")?.remove();
-    addMsg("ai", reply);
-    chatHistory.push({ role: "assistant", content: reply });
-    saveChatHistory();
+    // 確保有 [HTML] 標記，沒有的話直接包起來
+    let final = reply;
+    if (!reply.includes("[HTML]")) {
+      final = `[HTML]<div style="padding:20px;line-height:1.8;">${esc(reply).replace(/\n/g, "<br>")}</div>[/HTML]`;
+    }
+    addMsg("ai", final);
+    try { chatHistory.push({ role: "assistant", content: final }); saveChatHistory(); } catch {}
   } catch (e) {
     document.getElementById("cp-typing")?.remove();
     addMsg("ai", "HTML 生成失敗，再試一次好嗎？");
