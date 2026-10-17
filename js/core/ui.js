@@ -7,20 +7,21 @@ const NAV_GROUPS = [
     ["dashboard.html", "\u4e3b\u63a7\u53f0", "nav-learn.webp"],
   ]},
   { label: "\u5b78\u7fd2", items: [
-    ["learn.html", "\u5b78\u7fd2\u7e3d\u89bd", "nav-learn.webp"],
     ["knowledge.html", "\u77e5\u8b58\u5eab", "nav-knowledge.webp"],
-    ["feynman.html", "\u8cbb\u66fc\u8aaa\u670d", "nav-feynman.webp"],
-    ["socratic.html", "\u8607\u683c\u62c9\u5e95\u5c0d\u8a71", "nav-learn.webp"],
-    ["quiz.html", "\u77e5\u8b58\u5c0d\u6230", "nav-quiz.webp"],
-    ["reading.html", "\u8de8\u8a9e\u8a00\u95b1\u8b80", "nav-quiz.webp"],
     ["scenario.html", "\u60c5\u5883\u5b78\u7fd2", "nav-island.webp"],
-    ["arcade.html", "\u661f\u8266\u89e3\u78bc", "nav-quiz.webp"],
-    ["review.html", "\u8907\u7fd2", "nav-review.webp"],
+    ["reading.html", "\u8de8\u8a9e\u8a00\u95b1\u8b80", "nav-quiz.webp"],
+    ["socratic.html", "\u8607\u683c\u62c9\u5e95\u5c0d\u8a71", "nav-learn.webp"],
+    ["feynman.html", "\u8cbb\u66fc\u8aaa\u670d", "nav-feynman.webp"],
+    ["learn.html", "\u5b78\u7fd2\u7e3d\u89bd", "nav-learn.webp"],
     ["bookshelf.html", "\u66f8\u67b6", "nav-bookshelf.webp"],
   ]},
-  { label: "\u5b87\u5b99", items: [
-    ["island.html", "\u7fa4\u5cf6", "nav-island.webp"],
+  { label: "\u6aa2\u9a57", items: [
+    ["quiz.html", "\u77e5\u8b58\u5c0d\u6230", "nav-quiz.webp"],
+    ["review.html", "\u8907\u7fd2", "nav-review.webp"],
+  ]},
+  { label: "\u6a02\u8da3", items: [
     ["arcade.html", "\u8857\u6a5f\u904a\u6232", "nav-universe.webp"],
+    ["island.html", "\u7fa4\u5cf6", "nav-island.webp"],
     ["market.html", "\u5546\u5e97", "nav-market.webp"],
   ]},
   { label: "\u5bb6", items: [
