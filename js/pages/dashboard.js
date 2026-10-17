@@ -6,6 +6,8 @@ import { buildLearningContext, companionChat, companionGreeting } from "../core/
 const $ = id => document.getElementById(id);
 let learningContext = "";
 let chatHistory = [];
+let nickname = "同學";
+let userMemory = "";
 
 function addMsg(role, text) {
   const box = $("cp-msgs");
@@ -33,19 +35,48 @@ async function send(text) {
   $("cp-input").value = "";
   addMsg("user", text);
   chatHistory.push({ role: "user", content: text });
+  saveChatHistory();
   showTyping();
   $("cp-send").disabled = true;
   try {
-    const reply = await companionChat(chatHistory, learningContext);
+    const reply = await companionChat(chatHistory, learningContext, null, nickname, userMemory);
     hideTyping();
     addMsg("ai", reply);
     chatHistory.push({ role: "assistant", content: reply });
+    saveChatHistory();
   } catch (e) {
     hideTyping();
     console.error("小曙回應失敗:", e);
     addMsg("ai", `抱歉，我剛才恍神了（${e.message || "連線問題"}），再說一次好嗎？`);
   }
   $("cp-send").disabled = false;
+}
+
+// 對話紀錄存 localStorage
+function saveChatHistory() {
+  try {
+    const key = `xiaoshu_chat_${window._uid || "anon"}`;
+    // 只保留最近 50 輪，避免爆掉
+    const trimmed = chatHistory.slice(-50);
+    localStorage.setItem(key, JSON.stringify(trimmed));
+  } catch {}
+}
+function loadChatHistory() {
+  try {
+    const key = `xiaoshu_chat_${window._uid || "anon"}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      chatHistory = JSON.parse(saved);
+      // 恢復顯示（最多顯示最近 20 條）
+      chatHistory.slice(-20).forEach(m => {
+        if (m.role === "user" || m.role === "assistant") {
+          addMsg(m.role === "user" ? "user" : "ai", m.content.replace(/\[TOOL:[^\]]+\]/g, "").trim() || m.content);
+        }
+      });
+      return true;
+    }
+  } catch {}
+  return false;
 }
 
 /* 新用戶 1 分鐘 aha 體驗：天空為什麼是藍的 */
@@ -65,6 +96,19 @@ async function init() {
 
     // 建立學習 context
     learningContext = await buildLearningContext(supabase, user.id);
+    window._uid = user.id;
+
+    // 讀取暱稱和記憶
+    try {
+      const { data: prof } = await supabase.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
+      if (prof?.nickname) nickname = prof.nickname;
+    } catch {}
+    try {
+      userMemory = localStorage.getItem(`xiaoshu_memory_${user.id}`) || "";
+    } catch {}
+
+    // 載入對話紀錄
+    const hasHistory = loadChatHistory();
 
     // 先查數據（修 TDZ：review/nodes 必須先宣告才能用）
     const now0 = new Date().toISOString();
@@ -76,8 +120,8 @@ async function init() {
     // 檢測是否為新用戶（無任何學習數據）
     const isNewUser = (review0.count ?? 0) === 0 && (nodes0.count ?? 0) === 0;
 
-    // 小曙主動打招呼
-    if (isNewUser) {
+    // 小曙主動打招呼（有對話紀錄就不用重新引導）
+    if (isNewUser && !hasHistory) {
       $("cp-greeting").innerHTML = `嗨，我是小曙，你的學習陪伴者！<br><br>我跟其他 AI 不一樣——我不會直接給你答案，而是用問題帶你自己想通。<br><br>要不要體驗 1 分鐘看看？👇`;
       $("cp-suggest").innerHTML = `<button class="chip" id="cp-aha">✨ 體驗 1 分鐘</button><button class="chip">先逛逛就好</button>`;
       $("cp-suggest").querySelector("#cp-aha").onclick = startAha;
@@ -87,10 +131,10 @@ async function init() {
       };
     } else {
       try {
-        const greet = await companionGreeting(learningContext);
+        const greet = await companionGreeting(learningContext, nickname);
         $("cp-greeting").textContent = greet;
       } catch {
-        $("cp-greeting").textContent = "今天想學點什麼？我陪你！";
+        $("cp-greeting").textContent = `今天想學點什麼？${nickname}，我陪你！`;
       }
     }
 
