@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<meta property="og:site_name" content="曙光學習">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0e1f">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 跨語言閱讀 — 曙光學習</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.rd-setup { max-width: 560px; }
+.rd-field { margin-bottom: 16px; }
+.rd-field label { display: block; font-size: 13px; color: var(--paper-400); margin-bottom: 6px; }
+.rd-field select, .rd-field input[type=text] {
+  width: 100%; padding: 12px 14px; border-radius: 8px;
+  background: var(--ink-800); color: var(--paper-50);
+  border: 1px solid oklch(1 0 0 / 0.1); font-size: 14px;
+  font-family: var(--font-body);
+}
+.rd-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.rd-toggle input { width: 18px; height: 18px; accent-color: var(--brass-400); }
+.rd-article {
+  background: var(--ink-800); border: 1px solid oklch(1 0 0 / 0.08);
+  border-radius: 12px; padding: 28px; margin-bottom: 24px;
+  line-height: 2; font-size: 16px;
+}
+.rd-article h2 { font-size: 20px; margin-bottom: 16px; color: var(--brass-300); }
+.rd-q { background: var(--ink-800); border: 1px solid oklch(1 0 0 / 0.08); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.rd-q h3 { font-size: 15px; margin-bottom: 12px; }
+.rd-opt {
+  display: block; width: 100%; text-align: left;
+  background: transparent; color: var(--paper-50);
+  border: 1px solid oklch(1 0 0 / 0.1); border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 8px; font-size: 14px; cursor: pointer;
+  font-family: var(--font-body); transition: border-color 120ms;
+}
+.rd-opt:hover:not(:disabled) { border-color: var(--brass-400); }
+.rd-opt:disabled { cursor: default; opacity: .85; }
+.rd-opt.correct { border-color: var(--signal-green); background: oklch(0.72 0.14 150 / 0.12); }
+.rd-opt.wrong { border-color: var(--signal-red); background: oklch(0.62 0.18 25 / 0.12); }
+.rd-short { width: 100%; min-height: 80px; padding: 12px; border-radius: 8px; background: var(--ink-900); color: var(--paper-50); border: 1px solid oklch(1 0 0 / 0.1); font-size: 14px; font-family: var(--font-body); margin-bottom: 8px; }
+.rd-explain { font-size: 13px; color: var(--paper-400); margin-top: 10px; line-height: 1.7; padding: 12px; background: oklch(1 0 0 / 0.03); border-radius: 8px; }
+.rd-btn {
+  display: inline-block; padding: 12px 28px; border-radius: 24px;
+  background: var(--brass-400); color: #1a1a1a; font-weight: 700;
+  border: none; cursor: pointer; font-size: 15px; font-family: var(--font-body);
+}
+.rd-btn:disabled { opacity: .5; cursor: default; }
+.rd-btn.ghost { background: transparent; color: var(--brass-300); border: 1px solid var(--brass-400); }
+.rd-progress { display: flex; gap: 6px; margin-bottom: 16px; }
+.rd-progress i { flex: 1; height: 4px; border-radius: 2px; background: oklch(1 0 0 / 0.1); }
+.rd-progress i.done { background: var(--brass-400); }
+.rd-stats { display: flex; gap: 16px; margin-bottom: 20px; font-size: 13px; color: var(--paper-400); }
+.rd-stats b { color: var(--brass-300); font-size: 18px; }
+</style>
+</head>
+<body>
+<main class="main">
+  <div class="page-head">
+    <div class="en">Reading</div>
+    <h1>AI 跨語言閱讀</h1>
+    <p style="color:var(--paper-400);font-size:14px;">用你學過的知識，練你想學的語言</p>
+  </div>
+  <div id="rd-view"></div>
+</main>
+<script src="../js/vendor/supabase.min.js"></script>
+<script type="module" src="../js/pages/reading.js"></script>
+</body>
+</html>
