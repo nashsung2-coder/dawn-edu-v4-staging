@@ -35,14 +35,26 @@ function renderSetup() {
         透過選擇和對話，你會親身經歷這個概念的運作邏輯。
       </p>
     </div>`;
-  // 載入知識庫選項
+  // 載入知識庫選項（自己的 + 收藏的）
   (async () => {
     try {
-      const { data } = await supabase.from("knowledge_nodes")
+      const { data: own } = await supabase.from("knowledge_nodes")
         .select("title").eq("user_id", user.id).eq("is_public", true).limit(30);
-      if (data) {
-        $("sc-kb").innerHTML = `<option value="">— 直接輸入上面 —</option>` +
-          data.map(n => `<option value="${esc(n.title)}">${esc(n.title)}</option>`).join("");
+      let favTitles = [];
+      try {
+        const { data: favs } = await supabase.from("node_favorites").select("node_id").eq("user_id", user.id);
+        if (favs?.length) {
+          const ids = favs.map(f => f.node_id);
+          const { data: favNodes } = await supabase.from("knowledge_nodes").select("title").in("id", ids).eq("is_public", true);
+          if (favNodes) favTitles = favNodes.map(n => n.title);
+        }
+      } catch {}
+      const ownTitles = (own || []).map(n => n.title);
+      const allTitles = [...new Set([...ownTitles, ...favTitles])];
+      if (allTitles.length) {
+        const ownOpts = ownTitles.map(t => `<option value="${esc(t)}">${esc(t)}（我的）</option>`).join("");
+        const favOpts = favTitles.filter(t => !ownTitles.includes(t)).map(t => `<option value="${esc(t)}">${esc(t)}（收藏）</option>`).join("");
+        $("sc-kb").innerHTML = `<option value="">— 直接輸入上面 —</option><optgroup label="我的知識庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
         $("sc-kb").onchange = e => { if (e.target.value) $("sc-concept").value = e.target.value; };
       }
     } catch {}

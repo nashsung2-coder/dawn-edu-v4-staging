@@ -52,10 +52,32 @@ if (!nodeId) {
         <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:24px 0 16px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="node-verify">開始驗證對戰</button>
+          <button class="btn btn-ghost btn-sm" id="node-fav">☆ 收藏</button>
           ${String(n.user_id) === String(user.id) ? `<a href="node-editor.html?id=${n.id}" class="btn btn-ghost btn-sm">編輯</a>` : ""}
         </div>
       </article>`;
     // 驗證對戰：用 sessionStorage 傳內容
+    // 收藏功能
+    const favBtn = document.getElementById("node-fav");
+    const updateFavBtn = async () => {
+      try {
+        const { data } = await supabase.from("node_favorites").select("id").eq("user_id", user.id).eq("node_id", n.id).maybeSingle();
+        favBtn.textContent = data ? "★ 已收藏" : "☆ 收藏";
+      } catch {}
+    };
+    updateFavBtn();
+    favBtn.onclick = async () => {
+      try {
+        const { data } = await supabase.from("node_favorites").select("id").eq("user_id", user.id).eq("node_id", n.id).maybeSingle();
+        if (data) {
+          await supabase.from("node_favorites").delete().eq("id", data.id);
+          favBtn.textContent = "☆ 收藏";
+        } else {
+          await supabase.from("node_favorites").insert({ user_id: user.id, node_id: n.id });
+          favBtn.textContent = "★ 已收藏";
+        }
+      } catch (e) {}
+    };
     document.getElementById("node-verify").onclick = () => {
       try { sessionStorage.setItem("verify_content", blocksText(blocks).slice(0, 5000)); } catch {}
       location.href = "quiz.html?topic=" + encodeURIComponent(n.title) + "&from=verify";
