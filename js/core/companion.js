@@ -51,9 +51,12 @@ export const COMPANION_TOOLS = {
     exec: (args) => {
       const map = { review: "review.html", knowledge: "knowledge.html", socratic: "socratic.html", feynman: "feynman.html", quiz: "quiz.html", universe: "universe.html", island: "island.html", pet: "pet.html", bookshelf: "bookshelf.html" };
       let target = map[args.page] || "dashboard.html";
-      // 知識庫支援直接跳入特定分類
+      // 知識庫支援直接跳入特定分類（用絕對路徑避免相對路徑問題）
       if (args.page === "knowledge" && args.cat) {
-        target = `knowledge.html?cat=${encodeURIComponent(args.cat)}`;
+        target = `/pages/knowledge.html?cat=${encodeURIComponent(args.cat)}`;
+      } else {
+        // 其他頁面也用絕對路徑
+        target = `/pages/${target}`;
       }
       COMPANION_TOOLS.goto_page._navTarget = target;
       const friendly = args.page === "knowledge" && args.cat ? `${args.cat}庫` :
@@ -66,13 +69,13 @@ export const COMPANION_TOOLS = {
     exec: (args) => {
       try { sessionStorage.setItem("socratic_topic", args.topic || ""); } catch {}
       // 同頁導航（window.open 會被擋彈窗）
-      COMPANION_TOOLS.start_socratic._navTarget = "socratic.html";
+      COMPANION_TOOLS.start_socratic._navTarget = "/pages/socratic.html";
       return `已為你準備好「${args.topic}」的蘇格拉底對話`;
     }
   },
   review_nudge: {
     desc: "提醒用戶去複習。會導航到複習頁",
-    exec: () => { COMPANION_TOOLS.review_nudge._navTarget = "review.html"; return "正在前往複習頁"; }
+    exec: () => { COMPANION_TOOLS.review_nudge._navTarget = "/pages/review.html"; return "正在前往複習頁"; }
   },
 };
 

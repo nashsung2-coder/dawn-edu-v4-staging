@@ -309,13 +309,52 @@ async function initFloatingChat(current) {
       </div>
     </div>`);
 
-  $("fc-ball").onclick = () => {
-    $("fc-panel").classList.toggle("open");
-    if ($("fc-panel").classList.contains("open") && !fcUid) initFcChat();
-  };
-  $("fc-close").onclick = () => $("fc-panel").classList.remove("open");
-  $("fc-send").onclick = () => fcSend($("fc-input").value);
-  $("fc-input").addEventListener("keydown", e => { if (e.key === "Enter") fcSend($("fc-input").value); });
+  const ball = document.getElementById("fc-ball");
+  const panel = document.getElementById("fc-panel");
+  // 長按拖動 vs 輕點開啟：用時間和移動距離區分
+  let pressTimer = null, startX = 0, startY = 0, moved = false, isDragging = false;
+  ball.addEventListener("pointerdown", e => {
+    startX = e.clientX; startY = e.clientY; moved = false; isDragging = false;
+    pressTimer = setTimeout(() => {
+      isDragging = true;
+      ball.setPointerCapture(e.pointerId);
+    }, 300); // 長按 300ms 進入拖動模式
+  });
+  ball.addEventListener("pointermove", e => {
+    if (!isDragging) {
+      if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) {
+        moved = true;
+        clearTimeout(pressTimer);
+      }
+      return;
+    }
+    // 拖動中：移動球的位置
+    const newRight = window.innerWidth - e.clientX - 28;
+    const newBottom = window.innerHeight - e.clientY - 28;
+    ball.style.right = Math.max(8, Math.min(window.innerWidth - 64, newRight)) + "px";
+    ball.style.bottom = Math.max(8, Math.min(window.innerHeight - 64, newBottom)) + "px";
+    // 面板跟著球走（保持相對位置）
+    panel.style.right = ball.style.right;
+    panel.style.bottom = (parseInt(ball.style.bottom) + 68) + "px";
+  });
+  ball.addEventListener("pointerup", e => {
+    clearTimeout(pressTimer);
+    if (isDragging) {
+      isDragging = false;
+    } else if (!moved) {
+      // 輕點：開關對話框
+      panel.classList.toggle("open");
+      if (panel.classList.contains("open") && !fcUid) initFcChat();
+    }
+    moved = false;
+  });
+  ball.addEventListener("pointercancel", () => { clearTimeout(pressTimer); isDragging = false; });
+
+  document.getElementById("fc-close").onclick = () => panel.classList.remove("open");
+  document.getElementById("fc-send").onclick = () => fcSend(document.getElementById("fc-input").value);
+  document.getElementById("fc-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") fcSend(document.getElementById("fc-input").value);
+  });
 }
 
 async function initFcChat() {
@@ -342,7 +381,7 @@ async function initFcChat() {
 }
 
 function fcAddMsg(role, text) {
-  const box = $("fc-msgs");
+  const box = document.getElementById("fc-msgs");
   const div = document.createElement("div");
   div.className = `fc-msg ${role}`;
   div.innerHTML = esc(text).replace(/\n/g, "<br>");
@@ -352,11 +391,11 @@ function fcAddMsg(role, text) {
 
 async function fcSend(text) {
   if (!text.trim()) return;
-  $("fc-input").value = "";
+  document.getElementById("fc-input").value = "";
   fcAddMsg("user", text);
   fcHistory.push({ role: "user", content: text });
   fcAddMsg("ai", "…");
-  const typingEl = $("fc-msgs").lastChild;
+  const typingEl = document.getElementById("fc-msgs").lastChild;
   try {
     const reply = await companionChat(fcHistory, fcContext, null, fcNickname, fcMemory);
     typingEl.remove();
