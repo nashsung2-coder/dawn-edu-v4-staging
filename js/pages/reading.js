@@ -114,7 +114,16 @@ async function generateArticle(topicHint) {
 只輸出 JSON，不要其他文字。`;
 
   const raw = await ask(system, prompt, { model: "fast", json: true });
-  const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+  let data;
+  try {
+    data = typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch {
+    const m = String(raw).match(/\{[\s\S]*\}/);
+    if (m) {
+      try { data = JSON.parse(m[0]); } catch {}
+    }
+  }
+  if (!data?.article || !data?.questions) throw new Error("AI 回傳格式錯誤，請重試");
   return { article: { title: data.title, body: data.article, topic }, questions: data.questions };
 }
 

@@ -101,9 +101,8 @@ return;
 
 $("soc-start").onclick = async () => {
 topic = $("soc-title").value.trim();
-scope = $("soc-scope").value.trim();
+scope = $("soc-scope").value.trim() || "通用介紹";
 if (!topic) { toast("請先輸入主題標題"); return;}
-if (!scope) { toast("請簡單描述這個主題涵蓋哪些內容"); return;}
 
 $("soc-err").style.display = "none";
 $("soc-setup").style.display = "none";
