@@ -263,6 +263,13 @@ export function once(key, renderFn) {
 
 /* ===== 懸浮小曙聊天球（非主控台頁面） ===== */
 let fcContext = "", fcNickname = "同學", fcMemory = "", fcHistory = [], fcUid = null;
+const FC_PET_IMG = {
+  "貓": "pet-cat.webp", "狐": "pet-fox.webp", "龍": "pet-dragon.webp", "鳥": "pet-bird.webp",
+  "鹿": "pet-deer.webp", "龜": "pet-turtle.webp", "兔": "pet-rabbit.webp",
+};
+function fcPetImg(species) {
+  return `../assets/icons/${FC_PET_IMG[species] || "xiaoshu-avatar.webp"}`;
+}
 
 async function initFloatingChat(current) {
   if (current === "dashboard.html") return; // 主控台已有完整對話區
@@ -295,10 +302,10 @@ async function initFloatingChat(current) {
 
   // 球 + 面板 HTML
   document.body.insertAdjacentHTML("beforeend", `
-    <div id="fc-ball" title="找小曙聊聊"><img src="../assets/icons/xiaoshu-avatar.webp" alt="小曙"></div>
+    <div id="fc-ball" title="找小曙聊聊"><img id="fc-ball-img" src="../assets/icons/xiaoshu-avatar.webp" alt="小曙"></div>
     <div id="fc-panel">
       <div id="fc-header">
-        <img src="../assets/icons/xiaoshu-avatar.webp" alt="小曙">
+        <img id="fc-header-img" src="../assets/icons/xiaoshu-avatar.webp" alt="小曙">
         <b style="flex:1;">小曙</b>
         <button class="btn btn-ghost btn-sm" id="fc-close" style="padding:2px 8px;">✕</button>
       </div>
@@ -363,20 +370,40 @@ async function initFcChat() {
     const user = await _gu();
     if (!user) return;
     fcUid = user.id;
-    // 載入歷史
+    const { supabase } = await import("./supabase.js");
+    // 載入靈寵：球換成靈寵圖片
+    try {
+      const { data: pet } = await supabase.from("pets").select("species").eq("user_id", user.id).limit(1).maybeSingle();
+      if (pet?.species) {
+        const imgSrc = fcPetImg(pet.species);
+        document.getElementById("fc-ball-img").src = imgSrc;
+        document.getElementById("fc-header-img").src = imgSrc;
+      }
+    } catch {}
+    // 載入歷史並顯示
     try {
       const saved = localStorage.getItem(`xiaoshu_chat_${user.id}`);
-      if (saved) fcHistory = JSON.parse(saved).slice(-20);
+      if (saved) {
+        fcHistory = JSON.parse(saved).slice(-20);
+        // 顯示歷史訊息（去掉工具標記）
+        fcHistory.forEach(m => {
+          if (m.role === "user" || m.role === "assistant") {
+            const display = m.content.replace(/\[TOOL:[^\]]+\]/g, "").trim() || m.content;
+            if (display) fcAddMsg(m.role === "user" ? "user" : "ai", display);
+          }
+        });
+      }
     } catch {}
     // 暱稱 + context
     try {
-      const { supabase } = await import("./supabase.js");
       const { data: prof } = await supabase.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
       if (prof?.nickname) fcNickname = prof.nickname;
       fcContext = await buildLearningContext(supabase, user.id);
       fcMemory = localStorage.getItem(`xiaoshu_memory_${user.id}`) || "";
     } catch {}
-    fcAddMsg("ai", `嗨 ${fcNickname}！我是小曙，有什麼可以幫你的嗎？`);
+    if (!fcHistory.length) {
+      fcAddMsg("ai", `嗨 ${fcNickname}！我是小曙，有什麼可以幫你的嗎？`);
+    }
   } catch (e) { console.error("懸浮聊天初始化失敗:", e); }
 }
 
