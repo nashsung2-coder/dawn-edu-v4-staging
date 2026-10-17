@@ -181,7 +181,7 @@ export async function renderTopbar(current) {
   }).join("");
   document.body.insertAdjacentHTML("afterbegin", `
     <header class="topbar">
-      <a class="brand" href="learn.html">\u66d9\u5149<span>\u5b78\u7fd2</span></a>
+      <a class="brand" href="learn.html">曙光<span>學習</span></a>
       <nav class="nav">${nav}</nav>
       <button class="nav-toggle" id="nav-toggle" aria-label="\u9078\u55ae">${ICO.menu}</button>
       <div class="user-chip">
