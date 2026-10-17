@@ -13,6 +13,7 @@ const NAV_GROUPS = [
     ["socratic.html", "\u8607\u683c\u62c9\u5e95\u5c0d\u8a71", "nav-sparkle.webp"],
     ["quiz.html", "\u77e5\u8b58\u5c0d\u6230", "nav-quiz.webp"],
     ["reading.html", "\u8de8\u8a9e\u8a00\u95b1\u8b80", "nav-quiz.webp"],
+    ["scenario.html", "\u60c5\u5883\u5b78\u7fd2", "nav-sparkle.webp"],
     ["arcade.html", "\u661f\u8266\u89e3\u78bc", "nav-quiz.webp"],
     ["review.html", "\u8907\u7fd2", "nav-review.webp"],
     ["bookshelf.html", "\u66f8\u67b6", "nav-bookshelf.webp"],
