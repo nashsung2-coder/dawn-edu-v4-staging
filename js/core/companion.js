@@ -18,6 +18,12 @@ export async function buildLearningContext(supabase, userId) {
     const dueCount = review.count ?? 0;
     lines.push(`到期複習任務：${dueCount} 個`);
     lines.push(`知識節點總數：${nodes.data?.length ?? 0}（最近：${(nodes.data || []).map(n => n.title).join("、") || "無"}）`);
+    // 實際存在的知識庫分類（AI 只能推薦這些，不能瞎編）
+    try {
+      const { data: allNodes } = await supabase.from("knowledge_nodes").select("category").eq("user_id", userId);
+      const cats = [...new Set((allNodes || []).map(n => n.category).filter(Boolean))];
+      lines.push(`現有知識庫分類（只能推薦這些）：${cats.length ? cats.join("、") : "（尚無任何分類）"}`);
+    } catch {}
     if (battles.data?.length) {
       const avg = battles.data.reduce((s, b) => s + (b.quiz_score || 0), 0) / battles.data.length;
       lines.push(`最近 10 次學習平均分：${Math.round(avg)}`);
@@ -143,7 +149,9 @@ ${toolDescriptions()}
 1. 簡短親切，一次不要講太多（150 字內）
 2. 主動但不囉嗦，建議要具體
 3. 用戶想偷懶要答案時，溫和地引導他自己想
-4. 提到具體行動時，直接調用工具幫他執行，不只用說的`;
+4. 提到具體行動時，直接調用工具幫他執行，不只用說的
+5. 推薦知識庫時，只能推薦「現有知識庫分類」列表中的名稱，絕對不能編造不存在的庫名
+6. 如果現有分類是「（尚無任何分類）」，要誠實說還沒有建立任何知識庫，引導用戶先建立，而不是假裝有`;
 }
 
 /* 帶工具調用的完整對話流程 */

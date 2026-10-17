@@ -1,5 +1,6 @@
 /* v4 \u6838\u5fc3\uff1a\u5171\u7528 UI\uff08\u9802\u6b04\u3001\u6642\u6bb5\u80cc\u666f\u3001toast\uff09 */
 import { getUser, getProfile, signOut } from "./supabase.js";
+import { buildLearningContext, companionChat } from "./companion.js";
 
 const NAV_GROUPS = [
   { label: "\u4e3b\u63a7\u53f0", items: [
@@ -181,7 +182,7 @@ export async function renderTopbar(current) {
   }).join("");
   document.body.insertAdjacentHTML("afterbegin", `
     <header class="topbar">
-      <a class="brand" href="learn.html">曙光<span>學習</span></a>
+      <a class="brand" href="dashboard.html">曙光<span>學習</span></a>
       <nav class="nav">${nav}</nav>
       <button class="nav-toggle" id="nav-toggle" aria-label="\u9078\u55ae">${ICO.menu}</button>
       <div class="user-chip">
@@ -231,6 +232,8 @@ export async function renderTopbar(current) {
       items.style.maxHeight = items.scrollHeight + "px";
     });
   }
+  // 非主控台頁面顯示懸浮聊天球
+  try { initFloatingChat(current); } catch (e) { console.error("懸浮球初始化失敗:", e); }
 }
 
 /* \u9700\u8981\u767b\u5165\u7684\u9801\u9762\u547c\u53eb\uff1b\u672a\u767b\u5165\u5c0e\u5411\u9996\u9801 */
@@ -256,4 +259,118 @@ export function once(key, renderFn) {
   el.querySelector("[data-close]")?.addEventListener("click", close);
   el.addEventListener("click", e => { if (e.target === el) close(); });
   document.body.appendChild(el);
+}
+
+/* ===== 懸浮小曙聊天球（非主控台頁面） ===== */
+let fcContext = "", fcNickname = "同學", fcMemory = "", fcHistory = [], fcUid = null;
+
+async function initFloatingChat(current) {
+  if (current === "dashboard.html") return; // 主控台已有完整對話區
+  if (document.getElementById("fc-ball")) return; // 避免重複
+
+  // 樣式
+  const style = document.createElement("style");
+  style.textContent = `
+    #fc-ball { position:fixed; right:18px; bottom:18px; width:56px; height:56px; border-radius:50%;
+      overflow:hidden; cursor:pointer; z-index:9999; box-shadow:0 4px 16px rgba(0,0,0,.4);
+      border:2px solid var(--brass-400); transition:transform .2s; }
+    #fc-ball:hover { transform:scale(1.08); }
+    #fc-ball img { width:100%; height:100%; object-fit:cover; }
+    #fc-panel { position:fixed; right:18px; bottom:86px; width:320px; max-width:calc(100vw - 36px);
+      height:440px; max-height:calc(100vh - 120px); z-index:9999; display:none; flex-direction:column;
+      background:var(--bg-1); border:1px solid var(--brass-500); border-radius:12px; overflow:hidden;
+      box-shadow:0 8px 32px rgba(0,0,0,.5); }
+    #fc-panel.open { display:flex; }
+    #fc-header { padding:10px 14px; background:var(--bg-3); display:flex; align-items:center; gap:8px;
+      border-bottom:1px solid var(--line); }
+    #fc-header img { width:28px; height:28px; border-radius:50%; object-fit:cover; }
+    #fc-msgs { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+    #fc-input-row { padding:10px; border-top:1px solid var(--line); display:flex; gap:8px; }
+    #fc-input { flex:1; }
+    .fc-msg { max-width:85%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
+    .fc-msg.user { align-self:flex-end; background:var(--brass-500); color:#000; }
+    .fc-msg.ai { align-self:flex-start; background:var(--bg-3); color:var(--paper-50); }
+  `;
+  document.head.appendChild(style);
+
+  // 球 + 面板 HTML
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="fc-ball" title="找小曙聊聊"><img src="../assets/icons/xiaoshu-avatar.webp" alt="小曙"></div>
+    <div id="fc-panel">
+      <div id="fc-header">
+        <img src="../assets/icons/xiaoshu-avatar.webp" alt="小曙">
+        <b style="flex:1;">小曙</b>
+        <button class="btn btn-ghost btn-sm" id="fc-close" style="padding:2px 8px;">✕</button>
+      </div>
+      <div id="fc-msgs"></div>
+      <div id="fc-input-row">
+        <input class="input" id="fc-input" placeholder="問小曙…" style="font-size:13px;">
+        <button class="btn btn-primary btn-sm" id="fc-send">送出</button>
+      </div>
+    </div>`);
+
+  $("fc-ball").onclick = () => {
+    $("fc-panel").classList.toggle("open");
+    if ($("fc-panel").classList.contains("open") && !fcUid) initFcChat();
+  };
+  $("fc-close").onclick = () => $("fc-panel").classList.remove("open");
+  $("fc-send").onclick = () => fcSend($("fc-input").value);
+  $("fc-input").addEventListener("keydown", e => { if (e.key === "Enter") fcSend($("fc-input").value); });
+}
+
+async function initFcChat() {
+  try {
+    const { getUser: _gu } = await import("./supabase.js");
+    const user = await _gu();
+    if (!user) return;
+    fcUid = user.id;
+    // 載入歷史
+    try {
+      const saved = localStorage.getItem(`xiaoshu_chat_${user.id}`);
+      if (saved) fcHistory = JSON.parse(saved).slice(-20);
+    } catch {}
+    // 暱稱 + context
+    try {
+      const { supabase } = await import("./supabase.js");
+      const { data: prof } = await supabase.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
+      if (prof?.nickname) fcNickname = prof.nickname;
+      fcContext = await buildLearningContext(supabase, user.id);
+      fcMemory = localStorage.getItem(`xiaoshu_memory_${user.id}`) || "";
+    } catch {}
+    fcAddMsg("ai", `嗨 ${fcNickname}！我是小曙，有什麼可以幫你的嗎？`);
+  } catch (e) { console.error("懸浮聊天初始化失敗:", e); }
+}
+
+function fcAddMsg(role, text) {
+  const box = $("fc-msgs");
+  const div = document.createElement("div");
+  div.className = `fc-msg ${role}`;
+  div.innerHTML = esc(text).replace(/\n/g, "<br>");
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function fcSend(text) {
+  if (!text.trim()) return;
+  $("fc-input").value = "";
+  fcAddMsg("user", text);
+  fcHistory.push({ role: "user", content: text });
+  fcAddMsg("ai", "…");
+  const typingEl = $("fc-msgs").lastChild;
+  try {
+    const reply = await companionChat(fcHistory, fcContext, null, fcNickname, fcMemory);
+    typingEl.remove();
+    // 移除工具標記後顯示
+    const display = reply.replace(/\[TOOL:[^\]]+\]/g, "").trim() || reply;
+    fcAddMsg("ai", display);
+    fcHistory.push({ role: "assistant", content: reply });
+    // 存檔
+    try {
+      const key = `xiaoshu_chat_${fcUid || "anon"}`;
+      localStorage.setItem(key, JSON.stringify(fcHistory.slice(-50)));
+    } catch {}
+  } catch (e) {
+    typingEl.remove();
+    fcAddMsg("ai", "抱歉，我恍神了，再說一次好嗎？");
+  }
 }
