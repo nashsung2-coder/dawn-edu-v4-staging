@@ -122,12 +122,92 @@ async function load() {
 }
 
 /* 模式 + 難度選擇 */
-function renderModeSelect() {
-  if (!cards.length) {
+/* 無到期卡片時：顯示各庫精熟度儀表板 */
+async function renderMasteryDashboard() {
+  view.innerHTML = `<div class="card" style="max-width:640px;margin:0 auto;text-align:center;">
+    <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">ALL CAUGHT UP</div>
+    <h2>今日無到期卡片</h2>
+    <p style="color:var(--paper-400);">載入各庫精熟度…</p></div>`;
+  try {
+    // 查所有知識節點（按分類統計）
+    const { data: nodes } = await supabase.from("knowledge_nodes")
+      .select("category").eq("user_id", user.id);
+    // 查所有複習卡片（含 FSRS 數據算精熟度）
+    const { data: allCards } = await supabase.from("review_cards")
+      .select("category, fsrs_stability, fsrs_difficulty").eq("user_id", user.id);
+
+    // 按分類聚合
+    const cats = {};
+    (nodes || []).forEach(n => {
+      const cat = n.category || "未分類";
+      if (!cats[cat]) cats[cat] = { nodes: 0, cards: 0, stabilitySum: 0, stabilityN: 0 };
+      cats[cat].nodes++;
+    });
+    (allCards || []).forEach(cd => {
+      const cat = cd.category || "未分類";
+      if (!cats[cat]) cats[cat] = { nodes: 0, cards: 0, stabilitySum: 0, stabilityN: 0 };
+      cats[cat].cards++;
+      if (cd.fsrs_stability) { cats[cat].stabilitySum += cd.fsrs_stability; cats[cat].stabilityN++; }
+    });
+
+    const catNames = Object.keys(cats);
+    if (!catNames.length) {
+      view.innerHTML = `<div class="card" style="text-align:center;max-width:520px;margin:0 auto;">
+        <h2>今日無到期卡片</h2>
+        <p style="color:var(--paper-400);">還沒有學習紀錄，去學點新東西吧！</p>
+        <div style="margin-top:16px;"><button class="btn btn-primary" onclick="location.href='learn.html'">去學習</button></div></div>`;
+      return;
+    }
+
+    // 精熟度 = 平均 stability 映射到 0-100（stability 上限 180 天）
+    const rows = catNames.map(cat => {
+      const d = cats[cat];
+      const avgStab = d.stabilityN ? d.stabilitySum / d.stabilityN : 0;
+      const mastery = Math.min(100, Math.round(avgStab / 180 * 100));
+      return { cat, ...d, mastery };
+    }).sort((a, b) => a.mastery - b.mastery); // 最不熟的排前面
+
+    // 找出最需要加強的
+    const weakest = rows[0];
+    const aiTip = weakest.mastery < 30
+      ? `「${weakest.cat}」還很不熟（精熟度 ${weakest.mastery}%），建議優先加強`
+      : weakest.mastery < 70
+      ? `「${weakest.cat}」正在進步中（精熟度 ${weakest.mastery}%），繼續保持`
+      : `各庫都掌握得不錯！可以挑戰新領域了`;
+
+    view.innerHTML = `<div class="card" style="max-width:640px;margin:0 auto;">
+      <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">MASTERY</div>
+      <h2 style="text-align:center;">各庫精熟度</h2>
+      <p style="text-align:center;color:var(--paper-400);font-size:13px;margin-bottom:16px;">${aiTip}</p>
+      ${rows.map(r => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-weight:600;">${esc(r.cat)}</span>
+              <span style="color:var(--brass-400);font-size:13px;">${r.mastery}%</span>
+            </div>
+            <div style="height:8px;background:var(--bg-3);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:${r.mastery}%;background:linear-gradient(90deg,var(--brass-500),var(--brass-300));border-radius:4px;transition:width .5s;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">${r.nodes} 個節點 · ${r.cards} 張卡片</div>
+          </div>
+          <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;flex-shrink:0;"
+            onclick="location.href='knowledge.html?cat=${encodeURIComponent(r.cat)}'">進入</button>
+        </div>`).join("")}
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn btn-primary" onclick="location.href='learn.html'">去學習新內容</button>
+      </div></div>`;
+  } catch (e) {
     view.innerHTML = `<div class="card" style="text-align:center;max-width:520px;margin:0 auto;">
       <h2>今日無到期卡片</h2>
       <p style="color:var(--paper-400);">去學習新內容，系統會自動產生複習卡片</p>
       <div style="margin-top:16px;"><button class="btn btn-primary" onclick="location.href='learn.html'">去學習</button></div></div>`;
+  }
+}
+
+function renderModeSelect() {
+  if (!cards.length) {
+    renderMasteryDashboard();
     return;
   }
   view.innerHTML = `
