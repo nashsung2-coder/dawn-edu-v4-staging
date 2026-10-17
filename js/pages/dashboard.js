@@ -66,8 +66,15 @@ async function init() {
     // 建立學習 context
     learningContext = await buildLearningContext(supabase, user.id);
 
+    // 先查數據（修 TDZ：review/nodes 必須先宣告才能用）
+    const now0 = new Date().toISOString();
+    const [review0, nodes0] = await Promise.all([
+      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).lte("next_review_at", now0),
+      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    ]);
+
     // 檢測是否為新用戶（無任何學習數據）
-    const isNewUser = (review.count ?? 0) === 0 && (nodes.count ?? 0) === 0;
+    const isNewUser = (review0.count ?? 0) === 0 && (nodes0.count ?? 0) === 0;
 
     // 小曙主動打招呼
     if (isNewUser) {
@@ -92,13 +99,11 @@ async function init() {
     $("cp-suggest").innerHTML = suggests.map(s => `<button class="chip">${esc(s)}</button>`).join("");
     $("cp-suggest").querySelectorAll(".chip").forEach(c => c.onclick = () => send(c.textContent));
 
-    // 學習統計
-    const now = new Date().toISOString();
-    const [review, nodes, profile] = await Promise.all([
-      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).lte("next_review_at", now),
-      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    // 學習統計（review/nodes 已在上方查過，只查 profile）
+    const [profile] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     ]);
+    const review = review0, nodes = nodes0;
     $("cp-stats").innerHTML = `
       <div class="stat"><div class="num">${review.count ?? 0}</div><div class="lbl">到期複習</div></div>
       <div class="stat"><div class="num">${nodes.count ?? 0}</div><div class="lbl">知識節點</div></div>
