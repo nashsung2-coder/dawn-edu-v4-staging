@@ -131,10 +131,11 @@ try {
   const badges = battles.filter(b => b.badge_name).slice(0, 6);
 
   const topicsHtml = topics.length
-    ? `<table><tr><th>主題</th><th style="width:40%">掌握度</th><th style="text-align:right;">對戰</th></tr>
+    ? `<table><tr><th>主題</th><th style="width:35%">掌握度</th><th style="text-align:right;">對戰</th><th style="text-align:right;width:70px;">加強</th></tr>
       ${topics.map(t => `<tr><td>${esc(t.topic)}</td>
         <td><div class="bar"><div style="width:${Math.min(100, t.mastery)}%"></div></div></td>
-        <td class="n">${t.count}</td></tr>`).join("")}</table>`
+        <td class="n">${t.count}</td>
+        <td style="text-align:right;"><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="location.href='quiz.html?topic='+encodeURIComponent('${esc(t.topic).replace(/'/g, "\\'")}')">加強</button></td></tr>`).join("")}</table>`
     : `<div class="state-empty" style="padding:24px;"><p>還沒有對戰紀錄</p></div>`;
 
   /* 學習總覽主體 */
@@ -212,7 +213,7 @@ try {
   <div id="ss-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;padding:20px;">
     <div class="card" style="width:100%;max-width:520px;max-height:90vh;overflow-y:auto;">
       <h2 style="margin-bottom:4px;"><img class="inline-ico" src="../assets/icons/icon-sparkle.webp" alt="" loading="lazy"> 星砂是什麼？</h2>
-      <p style="color:var(--paper-400);font-size:13px;margin-bottom:16px;">曙光教育的通用貨幣，學習就能賺</p>
+      <p style="color:var(--paper-400);font-size:13px;margin-bottom:16px;">曙光學習的通用貨幣，學習就能賺</p>
       <h3 style="font-size:14px;margin-bottom:8px;color:var(--brass-300);">怎麼賺</h3>
       <ul style="font-size:13px;line-height:2.4;margin-bottom:16px;padding-left:20px;list-style:none;">
         <li><img class="inline-ico" src="../assets/icons/nav-review.webp" alt="" loading="lazy"> <b>複習挑戰</b>：挑戰模式按分數給星砂</li>
