@@ -122,13 +122,86 @@ async function load() {
 }
 
 /* 模式 + 難度選擇 */
+/* 編輯學習目標 */
+window.editGoals = function(which) {
+  const g = getGoals();
+  const wN = prompt("本週新增知識節點目標", g.wNodes);
+  if (wN === null) return;
+  const wR = prompt("本週複習卡片目標", g.wReviews);
+  if (wR === null) return;
+  const mN = prompt("本月新增知識節點目標", g.mNodes);
+  if (mN === null) return;
+  const mR = prompt("本月複習卡片目標", g.mReviews);
+  if (mR === null) return;
+  saveGoals({ wNodes: Math.max(1, +wN || 5), wReviews: Math.max(1, +wR || 10), mNodes: Math.max(1, +mN || 20), mReviews: Math.max(1, +mR || 40) });
+  renderMasteryDashboard();
+};
+
 /* 無到期卡片時：顯示各庫精熟度儀表板 */
+/* 學習目標：localStorage 存設定，從 DB 算進度 */
+function getGoals() {
+  try {
+    const g = JSON.parse(localStorage.getItem(`review_goals_${user.id}`) || "{}");
+    return {
+      wNodes: g.wNodes || 5, wReviews: g.wReviews || 10,
+      mNodes: g.mNodes || 20, mReviews: g.mReviews || 40,
+    };
+  } catch { return { wNodes: 5, wReviews: 10, mNodes: 20, mReviews: 40 }; }
+}
+function saveGoals(g) {
+  try { localStorage.setItem(`review_goals_${user.id}`, JSON.stringify(g)); } catch {}
+}
+function goalBar(label, done, target) {
+  const pct = target ? Math.min(100, Math.round(done / target * 100)) : 0;
+  return `<div style="margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+      <span>${label}</span><span style="color:var(--brass-400);">${done}/${target}</span>
+    </div>
+    <div style="height:8px;background:var(--bg-3);border-radius:4px;overflow:hidden;">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--brass-500),var(--brass-300));border-radius:4px;"></div>
+    </div></div>`;
+}
+
 async function renderMasteryDashboard() {
   view.innerHTML = `<div class="card" style="max-width:640px;margin:0 auto;text-align:center;">
     <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">ALL CAUGHT UP</div>
     <h2>今日無到期卡片</h2>
-    <p style="color:var(--paper-400);">載入各庫精熟度…</p></div>`;
+    <p style="color:var(--paper-400);">載入學習目標與各庫精熟度…</p></div>`;
   try {
+    const goals = getGoals();
+    // 本週一 00:00、本月 1 日 00:00
+    const now = new Date();
+    const wStart = new Date(now); wStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); wStart.setHours(0,0,0,0);
+    const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [wNodesR, mNodesR, wRevR, mRevR] = await Promise.all([
+      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", wStart.toISOString()),
+      supabase.from("knowledge_nodes").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", mStart.toISOString()),
+      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("last_review_at", wStart.toISOString()),
+      supabase.from("review_cards").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("last_review_at", mStart.toISOString()),
+    ]);
+    const wNodes = wNodesR.count ?? 0, mNodes = mNodesR.count ?? 0;
+    const wRev = wRevR.count ?? 0, mRev = mRevR.count ?? 0;
+    const goalsHtml = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;text-align:left;">
+        <div style="background:var(--bg-3);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <b>本週目標</b>
+            <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="editGoals('w')">設定</button>
+          </div>
+          ${goalBar("新增知識節點", wNodes, goals.wNodes)}
+          ${goalBar("複習卡片", wRev, goals.wReviews)}
+        </div>
+        <div style="background:var(--bg-3);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <b>本月目標</b>
+            <button class="btn btn-ghost" style="padding:2px 10px;font-size:11px;" onclick="editGoals('m')">設定</button>
+          </div>
+          ${goalBar("新增知識節點", mNodes, goals.mNodes)}
+          ${goalBar("複習卡片", mRev, goals.mReviews)}
+        </div>
+      </div>`;
+    // 把目標區存起來，後面組裝時用
+    view.dataset.goalsHtml = goalsHtml;
     // 查所有知識節點（按分類統計）
     const { data: nodes } = await supabase.from("knowledge_nodes")
       .select("category").eq("user_id", user.id);
@@ -176,6 +249,7 @@ async function renderMasteryDashboard() {
       : `各庫都掌握得不錯！可以挑戰新領域了`;
 
     view.innerHTML = `<div class="card" style="max-width:640px;margin:0 auto;">
+      ${view.dataset.goalsHtml || ""}
       <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">MASTERY</div>
       <h2 style="text-align:center;">各庫精熟度</h2>
       <p style="text-align:center;color:var(--paper-400);font-size:13px;margin-bottom:16px;">${aiTip}</p>
