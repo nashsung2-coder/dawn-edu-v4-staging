@@ -179,9 +179,10 @@ async function doChoice(choice, isFree = false) {
     (data.newlyMastered || []).forEach(k => mastered.add(k));
     history.push({ role: "user", text: choice }, { role: "ai", text: data.story });
 
-    // 移除 "..." 並加上新劇情
+    // 移除 "..." 並加上新劇情（先把字面量 \n 轉成換行）
     storyEl.innerHTML = storyEl.innerHTML.replace(/<div style="margin-top:8px;color:var\(--paper-400\);">…<\/div>/, "");
-    storyEl.innerHTML += `<div style="margin-top:12px;">${md(data.story)}</div>`;
+    const cleanStory = data.story.replace(/\\n/g, "\n");
+    storyEl.innerHTML += `<div style="margin-top:12px;">${md(cleanStory)}</div>`;
     storyEl.scrollTop = storyEl.scrollHeight;
 
     // 檢查是否全部探索完
@@ -195,7 +196,7 @@ async function doChoice(choice, isFree = false) {
     if (sEl) {
       sEl.innerHTML = history.map(h => h.role === "user"
         ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
-        : `<div style="margin-top:12px;">${md(h.text)}</div>`).join("");
+        : `<div style="margin-top:12px;">${md(h.text.replace(/\\n/g, "\n"))}</div>`).join("");
     }
   } catch (e) {
     toast("AI 回應失敗，再試一次");
