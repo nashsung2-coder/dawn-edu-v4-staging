@@ -52,6 +52,7 @@ if (!nodeId) {
         <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:24px 0 16px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="node-verify">開始驗證對戰</button>
+          <button class="btn btn-ghost btn-sm" id="node-scenario">進入情境學習</button>
           <button class="btn btn-ghost btn-sm" id="node-fav">☆ 收藏</button>
           ${String(n.user_id) === String(user.id) ? `<a href="node-editor.html?id=${n.id}" class="btn btn-ghost btn-sm">編輯</a>` : ""}
         </div>
@@ -77,6 +78,9 @@ if (!nodeId) {
           favBtn.textContent = "★ 已收藏";
         }
       } catch (e) {}
+    };
+    document.getElementById("node-scenario").onclick = () => {
+      location.href = "scenario.html?concept=" + encodeURIComponent(n.title);
     };
     document.getElementById("node-verify").onclick = () => {
       try { sessionStorage.setItem("verify_content", blocksText(blocks).slice(0, 5000)); } catch {}

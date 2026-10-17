@@ -35,6 +35,11 @@ function renderSetup() {
         透過選擇和對話，你會親身經歷這個概念的運作邏輯。
       </p>
     </div>`;
+  // 從 URL 參數預填概念（從知識節點頁跳過來）
+  try {
+    const urlConcept = new URLSearchParams(location.search).get("concept");
+    if (urlConcept) $("sc-concept").value = urlConcept;
+  } catch {}
   // 載入知識庫選項（自己的 + 收藏的）
   (async () => {
     try {
