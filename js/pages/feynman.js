@@ -7,6 +7,7 @@ await renderTopbar("feynman.html");
 const user = await requireAuth();
 
 const topicEl = document.getElementById("fy-topic");
+initKbSelector("fy-kb", "fy-topic", supabase, user.id);
 // 知識庫選擇器（延遲初始化，等 user 確定）
 /* 從知識庫提問引導跳轉：預填主題 */
 try {
