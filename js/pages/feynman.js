@@ -1,4 +1,4 @@
-/* v4 費曼說服：解釋 → AI 評估 → 80+ 存入課本 */
+/* v4 費曼討論：解釋 → 與 AI 討論 → 整理存入課本 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask, MODELS } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed002";
@@ -7,6 +7,7 @@ await renderTopbar("feynman.html");
 const user = await requireAuth();
 
 const topicEl = document.getElementById("fy-topic");
+// 知識庫選擇器（延遲初始化，等 user 確定）
 /* 從知識庫提問引導跳轉：預填主題 */
 try {
   const _q = new URLSearchParams(location.search).get("q");
@@ -59,9 +60,9 @@ judgeBtn.onclick = async () => {
     `;
     if (pass) {
       document.getElementById("fy-save").onclick = saveToTextbook;
-      toast("達標！可以存入課本了");
+      toast("討論完成！可以整理存入課本了");
     } else {
-      toast("還差一點，看看 AI 的建議再試一次");
+      toast("繼續聊聊，把概念弄得更清楚");
     }
     // 蘇格拉底追問：無論分數高低，都提供深度挑戰
     await socraticChallenge(topic, text, lastScore, reply);
@@ -69,7 +70,7 @@ judgeBtn.onclick = async () => {
     resultEl.innerHTML = `<p style="color:var(--signal-red);font-size:14px;">評估失敗：${esc(e.message)}，請重試。</p>`;
   } finally {
     judgeBtn.disabled = false;
-    judgeBtn.textContent = "說服 AI";
+    judgeBtn.textContent = "與 AI 討論";
   }
 };
 
@@ -185,7 +186,7 @@ async function saveToTextbook() {
 resetBtn.onclick = () => {
   topicEl.value = "";
   textEl.value = "";
-  resultEl.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">在左邊寫下你的解釋，按「說服 AI」。</p>`;
+  resultEl.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">在左邊寫下你的理解，按「與 AI 討論」，一起把概念聊透。</p>`;
   lastScore = null;
   setStep(1);
 };
@@ -201,7 +202,7 @@ document.querySelectorAll("#fy-suggest button").forEach(b => {
   };
 });
 
-/* 歷史說服記錄 */
+/* 歷史討論記錄 */
 async function loadHistory() {
   const hEl = document.getElementById("fy-history");
   try {
@@ -213,7 +214,7 @@ async function loadHistory() {
       .limit(10);
     if (error) throw error;
     if (!data?.length) {
-      hEl.innerHTML = `<p style="color:var(--paper-400);font-size:13px;">還沒有說服記錄，完成一次說服就會出現在這裡</p>`;
+      hEl.innerHTML = `<p style="color:var(--paper-400);font-size:13px;">還沒有討論記錄，完成一次討論就會出現在這裡</p>`;
       return;
     }
     hEl.innerHTML = data.map(r => {
