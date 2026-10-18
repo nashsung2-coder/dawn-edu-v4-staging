@@ -96,6 +96,40 @@ export function esc(s) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/* ===== 強健的 AI JSON 解析 =====
+ * AI 回傳常夾雜 markdown code fence、多餘文字、trailing comma。
+ * 此函數：去 code fence → 括號平衡擷取 → 嘗試修復 → JSON.parse。
+ * 傳入期望的開括號 ('[' 或 '{')，回傳解析結果；失敗則 throw。 */
+export function parseAIJson(reply, open = "[") {
+  const close = open === "[" ? "]" : "}";
+  let text = String(reply ?? "");
+  // 1. 去掉 markdown code fence
+  text = text.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "");
+  // 2. 括號平衡擷取（處理字串內的括號與跳脫）
+  const start = text.indexOf(open);
+  if (start === -1) throw new Error("AI 回傳中找不到 JSON");
+  let depth = 0, inStr = false, escNext = false, end = -1;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escNext) { escNext = false; continue; }
+    if (ch === "\\" && inStr) { escNext = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === open) depth++;
+    else if (ch === close) { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end === -1) throw new Error("AI 回傳的 JSON 括號不完整");
+  const raw = text.slice(start, end + 1);
+  // 3. 直接解析
+  try { return JSON.parse(raw); } catch (e1) {
+    // 4. 修復常見瑕疵：trailing comma
+    const fixed = raw.replace(/,\s*([}\]])/g, "$1");
+    try { return JSON.parse(fixed); } catch (e2) {
+      throw new Error("AI 回傳的 JSON 格式錯誤");
+    }
+  }
+}
+
 /* \u78ba\u4fdd profiles \u6709\u9019\u7b46\u8cc7\u6599\uff08Google \u767b\u5165\u4e0d\u6703\u81ea\u52d5\u5efa\uff09 */
 export async function ensureProfile(supabase, user) {
   const { data } = await supabase.from("profiles").select("id").eq("id", user.id).single();
