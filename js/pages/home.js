@@ -1,6 +1,6 @@
 /* 我的家：個人學習小窩 — 統計、最近動態、快捷入口 */
 import { supabase, getProfile } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=fixed001";
+import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=fixed002";
 
 await renderTopbar("home.html");
 const user = await requireAuth();
@@ -117,8 +117,16 @@ try {
         <a class="btn btn-ghost" href="review.html">複習</a>
         <a class="btn btn-ghost" href="island.html">島嶼</a>
         <a class="btn btn-ghost" href="pet.html">靈獸</a>
+        <button class="btn btn-ghost" id="home-guide">平台導引</button>
       </div>
     </div>`;
+  /* 平台導引：隨時可以重開來看 */
+  try {
+    document.getElementById("home-guide").onclick = async () => {
+      const { showPlatformGuide } = await import("../core/guide.js");
+      showPlatformGuide();
+    };
+  } catch {}
 } catch (e) {
   view.innerHTML = `<div class="state-empty">
     <p>讀取失敗：${esc(e.message)}</p>
