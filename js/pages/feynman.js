@@ -3,14 +3,43 @@ import { supabase, getUser } from "../core/supabase.js";
 import { ask, MODELS } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed002";
 import { initKbSelector } from "../core/kb-selector.js";
+import { blocksText } from "../core/blocks.js";
 
 await renderTopbar("feynman.html");
 const user = await requireAuth();
 
 const topicEl = document.getElementById("fy-topic");
-initKbSelector("fy-kb", supabase, user.id, (sel) => {
-  if (!sel.length) return;
+/* 寶庫多選：標題合併為主題；節點內容快取起來，餵給 AI 當評估與追問的依據 */
+let fyKbCache = [];
+async function fyKbRef() {
+  const parts = fyKbCache.filter(k => k.text)
+    .map(k => `【${k.title}】\n${k.text.slice(0, 3000)}`).join("\n\n").slice(0, 6000);
+  return parts
+    ? `\n\n以下是曙光寶庫中使用者選取的節點內容。你的評估、追問、糾正都必須**以這份內容為準**，不要引入內容之外的知識：\n---\n${parts}\n---`
+    : "";
+}
+initKbSelector("fy-kb", supabase, user.id, async (sel) => {
+  if (!sel.length) { fyKbCache = []; return; }
   topicEl.value = sel.map(s => s.title).join("、");
+  const ids = new Set(sel.map(s => String(s.id)));
+  fyKbCache = fyKbCache.filter(k => ids.has(String(k.id)));
+  const missing = sel.filter(s => !fyKbCache.some(k => String(k.id) === String(s.id)));
+  if (missing.length) {
+    try {
+      const { data } = await supabase.from("knowledge_nodes").select("id,title,content").in("id", missing.map(s => s.id));
+      for (const s of missing) {
+        const row = (data || []).find(r => String(r.id) === String(s.id));
+        let txt = "";
+        if (row) {
+          try {
+            const parsed = JSON.parse(row.content || "{}");
+            txt = blocksText(parsed.blocks || (Array.isArray(parsed) ? parsed : []));
+          } catch { txt = row.content || ""; }
+        }
+        fyKbCache.push({ id: s.id, title: s.title, text: (txt || "").trim() });
+      }
+    } catch {}
+  }
 });
 // 寶庫選擇器（延遲初始化，等 user 確定）
 /* 從曙光寶庫提問引導跳轉：預填主題 */
@@ -59,7 +88,7 @@ judgeBtn.onclick = async () => {
   try {
     const reply = await ask(
       "你是嚴格的老師。用繁體中文評估學生的解釋。先給 0-100 的完整度分數（格式：分數：XX），再指出缺失與建議。簡潔，不超過 200 字。",
-      `主題：${topic}\n\n學生的解釋：\n${text}`
+      `主題：${topic}\n\n學生的解釋：\n${text}${await fyKbRef()}`
     ,
       { model: MODELS.reason }
     );
@@ -123,7 +152,7 @@ async function socraticChallenge(topic, text, score, feedback) {
 - 每個問題一行，前面加「Q1.」「Q2.」編號
 - 不要給答案，只提問
 - 不超過 150 字`,
-      `主題：${topic}\n\n學生的解釋：\n${text}\n\nAI 評估：${feedback}`,
+      `主題：${topic}\n\n學生的解釋：\n${text}\n\nAI 評估：${feedback}${await fyKbRef()}`,
       { model: MODELS.socratic }
     );
     socraticHistory.push({ questions });
@@ -154,7 +183,7 @@ async function answerSocratic(topic, questions) {
 - 如果還有漏洞，繼續追問 1-2 個更深的問題
 - 如果回答完全迴避問題，直接指出
 簡潔，不超過 180 字。`,
-      `主題：${topic}\n\n挑戰問題：\n${questions}\n\n學生的回答：\n${answer}`,
+      `主題：${topic}\n\n挑戰問題：\n${questions}\n\n學生的回答：\n${answer}${await fyKbRef()}`,
       { model: MODELS.socratic }
     );
     socraticHistory.push({ answer, reply });

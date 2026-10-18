@@ -593,182 +593,18 @@ window.addEventListener("beforeunload", e => {
 
 await loadInitial();
 
-/* ===== AI 建庫小幫手 ===== */
-let abTab = "socratic";
-let abSocraticQA = [];
-let abDifficulty = "normal"; // easy | normal | hard
-const AB_DIFF = {
-  easy: { nm: "簡單", prompt: "問題要淺顯易懂，從生活經驗出發，降低思考門檻" },
-  normal: { nm: "普通", prompt: "問題由淺入深，兼顧思考深度" },
-  hard: { nm: "困難", prompt: "問題要有挑戰性，需要深度思考和跨概念連結" },
-};
-
+/* ===== AI 建庫小幫手（只保留「資料建議」；互動式學習請到各功能頁用寶庫調用） ===== */
 function openBuilder() {
   $("ai-builder-panel").style.display = "flex";
-  renderBuilderTab();
+  renderAbSuggest($("ai-builder-content"));
 }
 $("btn-ai-builder").onclick = openBuilder;
 $("ai-builder-close").onclick = () => $("ai-builder-panel").style.display = "none";
-document.querySelectorAll(".ab-tab").forEach(t => {
-  t.onclick = () => {
-    document.querySelectorAll(".ab-tab").forEach(x => x.classList.remove("on"));
-    t.classList.add("on");
-    abTab = t.dataset.abtab;
-    renderBuilderTab();
-  };
-});
-
-function renderBuilderTab() {
-  const c = $("ai-builder-content");
-  if (abTab === "socratic") renderAbSocratic(c);
-  else if (abTab === "feynman") renderAbFeynman(c);
-  else if (abTab === "suggest") renderAbSuggest(c);
-}
 
 function getTopic() {
   const d = collectData();
   return d.title || d.question || "";
 }
-
-/* --- 蘇格拉底探索 --- */
-async function renderAbSocratic(c) {
-  const topic = getTopic();
-  if (!topic) {
-    c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">先在上方輸入標題或主題，AI 才能為你設計探索問題。</p>`;
-    return;
-  }
-  if (!abSocraticQA.length || abSocraticQA._topic !== topic) {
-    c.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在為「${esc(topic)}」準備問題…</p>`;
-    try {
-      const diff = AB_DIFF[abDifficulty];
-      const reply = await ask(
-        `你是蘇格拉底式的導師。用繁體中文，為「${topic}」設計 3 個引導思考的問題。難度：${diff.nm}（${diff.prompt}）。要求：不要出考試題（像「有什麼特點」「你了解多少」這種），要出情境代入題（用「如果你是…」「想像…」「你覺得為什麼…」開頭，讓人從某個角度去想，沒有標準答案）。由淺入深，每行一個，格式「Q1. 問題」。不超過 120 字。`,
-        `主題：${topic}`,
-        { model: MODELS.socratic }
-      );
-      abSocraticQA = reply.split("\n").map(l => l.replace(/^Q\d+[.、]\s*/, "").trim()).filter(Boolean).slice(0, 3).map(q => ({ q, a: "" }));
-      abSocraticQA._topic = topic;
-    } catch {
-      abSocraticQA = [{ q: `你對「${topic}」最了解什麼？`, a: "" }];
-      abSocraticQA._topic = topic;
-    }
-  }
-  c.innerHTML = `
-    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">回答完後，AI 會綜合評估你的思考、指出盲點並引導下一步學習。想要深入對話？</p>
-    <button class="btn btn-primary btn-sm" id="ab-socratic-chat" style="margin-bottom:12px;width:100%;">💬 開始 AI 蘇格拉底對話 →</button>
-    ${abSocraticQA.map((qa, i) => `
-      <div class="gc-q" style="margin-bottom:10px;">
-        <div class="q-label">問題 ${i + 1}</div>
-        <div class="q-text" style="font-size:14px;">${esc(qa.q)}</div>
-        <textarea class="input" id="ab-a${i}" rows="2" placeholder="你的回答…" style="width:100%;margin-top:8px;">${esc(qa.a || "")}</textarea>
-      </div>`).join("")}
-    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--paper-400);">難度：</span>
-      ${Object.entries(AB_DIFF).map(([k, d]) => `<button class="chip ${abDifficulty === k ? "on" : ""}" data-diff="${k}" style="font-size:12px;padding:4px 12px;">${d.nm}</button>`).join("")}
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      <button class="btn btn-ghost btn-sm" id="ab-easier">簡單一點</button>
-      <button class="btn btn-ghost btn-sm" id="ab-harder">難一點</button>
-      <button class="btn btn-ghost btn-sm" id="ab-regen">換一組</button>
-      <button class="btn btn-primary btn-sm" id="ab-eval">🤔 AI 綜合評估</button>
-      <button class="btn btn-ghost btn-sm" id="ab-insert-qa">插入問答 →</button>
-    </div>
-    <div id="ab-eval-result" style="margin-top:12px;display:none;"></div>`;
-  $("ab-socratic-chat").onclick = () => {
-    const t = getTopic();
-    // 把對話結果存回來：對話頁會把主題存在 sessionStorage
-    try { sessionStorage.setItem("socratic_topic", t); } catch {}
-    window.open("socratic.html", "_blank");
-  };
-  $("ab-regen").onclick = () => { abSocraticQA = []; renderBuilderTab(); };
-  c.querySelectorAll("[data-diff]").forEach(b => {
-    b.onclick = () => { abDifficulty = b.dataset.diff; abSocraticQA = []; renderBuilderTab(); };
-  });
-  $("ab-easier").onclick = () => {
-    abDifficulty = abDifficulty === "hard" ? "normal" : "easy";
-    abSocraticQA = []; renderBuilderTab();
-  };
-  $("ab-harder").onclick = () => {
-    abDifficulty = abDifficulty === "easy" ? "normal" : "hard";
-    abSocraticQA = []; renderBuilderTab();
-  };
-  $("ab-eval").onclick = async () => {
-    abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
-    const answered = abSocraticQA.filter(qa => qa.a);
-    if (!answered.length) { toast("先回答至少一個問題，AI 才能評估"); return; }
-    const btn = $("ab-eval"), resultEl = $("ab-eval-result");
-    btn.disabled = true; btn.textContent = "評估中…";
-    resultEl.style.display = "block";
-    resultEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">AI 正在分析你的回答…</p>`;
-    try {
-      const topic = getTopic();
-      const reply = await ask(
-        `你是蘇格拉底式的導師，用繁體中文。學生回答了關於「${topic}」的 ${answered.length} 個情境思考題。請綜合評估：
-1. 他的思考亮點（具體指出哪個回答好在哪）
-2. 思考盲點或漏洞（溫和指出）
-3. 下一步引導：給 1-2 個更深的問題，帶他繼續想
-語氣像朋友聊天，不要像改考卷。200 字以內。`,
-        answered.map((qa, i) => `問題${i + 1}：${qa.q}
-回答：${qa.a}`).join("\n\n"),
-        { model: MODELS.socratic }
-      );
-      resultEl.innerHTML = `<div style="background:oklch(0.74 0.14 80/0.07);border:1px solid oklch(0.74 0.14 80/0.25);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;">${esc(reply).replace(/\n/g, "<br>")}</div>`;
-    } catch (e) {
-      resultEl.innerHTML = `<p style="font-size:13px;color:var(--signal-red);">評估失敗：${esc(e.message)}</p>`;
-    }
-    btn.disabled = false; btn.textContent = "🤔 AI 綜合評估";
-  };
-  $("ab-insert-qa").onclick = () => {
-    abSocraticQA.forEach((qa, i) => qa.a = document.getElementById(`ab-a${i}`).value.trim());
-    const answered = abSocraticQA.filter(qa => qa.a);
-    if (!answered.length) { toast("先回答至少一個問題"); return; }
-    const blocks = answered.flatMap(qa => [
-      { type: "heading", data: { text: qa.q, level: 3 } },
-      { type: "paragraph", data: { text: qa.a } },
-    ]);
-    insertBlocksToEditor(blocks);
-    toast("已插入編輯器");
-  };
-}
-
-/* --- 費曼精煉 --- */
-function renderAbFeynman(c) {
-  c.innerHTML = `
-    <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">
-      貼上你的解釋草稿，AI 幫你精煉成更簡單、更完整的版本，可一鍵插入。
-    </p>
-    <textarea class="input" id="ab-feynman-in" rows="6" placeholder="貼上你的解釋…" style="width:100%;margin-bottom:12px;"></textarea>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button class="btn btn-primary btn-sm" id="ab-refine">AI 精煉</button>
-    </div>
-    <div id="ab-feynman-out"></div>`;
-  $("ab-refine").onclick = async () => {
-    const text = document.getElementById("ab-feynman-in").value.trim();
-    if (text.length < 10) { toast("先貼上你的解釋"); return; }
-    const out = document.getElementById("ab-feynman-out");
-    out.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">精煉中…</p>`;
-    try {
-      const topic = getTopic();
-      const reply = await ask(
-        `你是費曼學習法導師。用繁體中文，把學生的解釋改寫得更簡單、更完整、更有條理。保留學生的原意和語氣，補充缺失的關鍵細節。用段落呈現，不超過 300 字。`,
-        `主題：${topic}\n\n學生的解釋：\n${text}`,
-        { model: MODELS.chat }
-      );
-      out.innerHTML = `
-        <div style="background:oklch(1 0 0/0.03);border-radius:10px;padding:12px;margin-bottom:12px;">
-          <div style="font-size:14px;line-height:1.8;">${esc(reply)}</div>
-        </div>
-        <button class="btn btn-primary btn-sm" id="ab-insert-refined">插入精煉版 →</button>`;
-      document.getElementById("ab-insert-refined").onclick = () => {
-        insertBlocksToEditor([{ type: "paragraph", data: { text: reply } }]);
-        toast("已插入編輯器");
-      };
-    } catch (e) {
-      out.innerHTML = `<p style="color:var(--signal-red);font-size:13px;">失敗：${esc(e.message)}</p>`;
-    }
-  };
-}
-
 /* --- 資料建議 --- */
 async function renderAbSuggest(c) {
   const topic = getTopic();

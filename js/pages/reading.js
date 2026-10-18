@@ -2,6 +2,7 @@
 import { renderTopbar, requireAuth, esc, toast } from "../core/ui.js";
 import { renderTypeHistory } from "../core/learn-history.js";
 import { ask } from "../core/llm.js";
+import { blocksText } from "../core/blocks.js";
 
 const $ = id => document.getElementById(id);
 const view = $("rd-view");
@@ -233,9 +234,26 @@ async function generateArticle(topicHint) {
   const topic = topicHint || (userTopics.length ? userTopics[Math.floor(Math.random() * userTopics.length)].title : "科學");
   const qCount = 4;
   const shortQ = settings.shortAnswer ? "其中 1 題必須是簡答題（用目標語言寫 2-3 句回答）" : "全部為選擇題";
+  /* 若主題來自寶庫：抓該節點內容當素材，文章與題目嚴格根據素材 */
+  let srcRef = "";
+  try {
+    const { data } = await supabase.from("knowledge_nodes")
+      .select("id,title,content,user_id,is_public").eq("title", topic).limit(5);
+    const row = (data || []).find(r => String(r.user_id) === String(user.id) || r.is_public) || (data || [])[0];
+    if (row) {
+      let txt = "";
+      try {
+        const parsed = JSON.parse(row.content || "{}");
+        txt = blocksText(parsed.blocks || (Array.isArray(parsed) ? parsed : []));
+      } catch { txt = row.content || ""; }
+      if (txt.trim()) {
+        srcRef = `\n\n以下是曙光寶庫中「${topic}」的完整內容（繁體中文）。請嚴格根據這份素材、用${settings.langName}改寫成短文，不要加入素材之外的資訊：\n---\n${txt.trim().slice(0, 4000)}\n---`;
+      }
+    }
+  } catch {}
 
   const system = `你是一位${settings.langName}閱讀教材編寫專家。用繁體中文思考，但輸出${settings.langName}文章和題目。`;
-  const prompt = `主題：「${topic}」。寫一篇${settings.langName}短文（約 250-350 字），難度：${diffDesc}。
+  const prompt = `主題：「${topic}」。寫一篇${settings.langName}短文（約 250-350 字），難度：${diffDesc}。${srcRef}
 然後出 ${qCount} 道閱讀理解題：${shortQ}。
 選擇題每題 4 個選項，標明正確答案。
 輸出 JSON 格式：
