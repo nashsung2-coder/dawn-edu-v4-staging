@@ -24,8 +24,8 @@ if (!nodeId) {
     // 查詢作者暱稱
     let authorName = "未知作者";
     try {
-      const { data: prof } = await supabase.from("profiles").select("nickname").eq("id", n.user_id).maybeSingle();
-      if (prof?.nickname) authorName = prof.nickname;
+      const { data: prof } = await supabase.from("profiles").select("name").eq("id", n.user_id).maybeSingle();
+      if (prof?.name) authorName = prof.name;
     } catch {}
 
     let blocks = [];
