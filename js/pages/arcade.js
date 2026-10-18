@@ -1,6 +1,7 @@
 /* 星艦解碼：街機射擊答題遊戲（本地運行） */
 import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, esc, ensureProfile } from "../core/ui.js";
+import { renderTypeHistory } from "../core/learn-history.js";
 import { initKbSelector } from "../core/kb-selector.js";
 import { chat, MODELS } from "../core/llm.js";
 
@@ -400,6 +401,16 @@ async function endGame(completed) {
           });
         }
       }
+      // 寫入學習歷程
+      try {
+        const { logLearnHistory } = await import("../core/learn-history.js");
+        logLearnHistory(supabase, user.id, {
+          type: "街機",
+          topic: G.conquest?.name ? `征服 ${G.conquest.name}` : `星艦解碼・${G.mode === "survival" ? "生存" : "限時"}模式`,
+          detail: `得分 ${G.score}・答題 ${G.qIndex}・最高連擊 ${G.maxCombo}`,
+          link: "arcade.html",
+        });
+      } catch {}
     }
   } catch (e) { console.error("儲存失敗:", e); }
 
@@ -468,7 +479,8 @@ canvas.addEventListener("click", () => { if (G.running) shoot(); });
 /* ===== 初始化 ===== */
 async function init() {
   await renderTopbar("arcade.html");
-  await requireAuth();
+  const user = await requireAuth();
+  try { renderTypeHistory(supabase, user.id, "arcade-history", "街機"); } catch {}
   // 征服模式：從宇宙跳轉過來
   const params = new URLSearchParams(location.search);
   if (params.get("mode") === "conquest") {

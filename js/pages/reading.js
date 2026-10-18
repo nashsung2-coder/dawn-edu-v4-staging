@@ -1,5 +1,6 @@
 /* AI 跨語言閱讀：用學過的知識練想學的語言 */
 import { renderTopbar, requireAuth, esc, toast } from "../core/ui.js";
+import { renderTypeHistory } from "../core/learn-history.js";
 import { ask } from "../core/llm.js";
 
 const $ = id => document.getElementById(id);
@@ -33,6 +34,7 @@ async function init() {
     if (data) userTopics = data;
   } catch {}
   renderSetup();
+  try { renderTypeHistory(supabase, user.id, "rd-history", "AI閱讀"); } catch {}
 }
 
 function renderSetup() {
@@ -221,6 +223,18 @@ function renderResult() {
     h.push({ date: Date.now(), lang: settings.lang, wpm, acc });
     localStorage.setItem(`reading_history_${user.id}`, JSON.stringify(h.slice(-30)));
   } catch {}
+  /* 寫入學習歷程 */
+  (async () => {
+    try {
+      const { logLearnHistory } = await import("../core/learn-history.js");
+      logLearnHistory(supabase, user.id, {
+        type: "AI閱讀",
+        topic: article.title || `${settings.langName}閱讀`,
+        detail: `${settings.langName}・答對 ${score}/${questions.length} 題・正確率 ${acc}%`,
+        link: "reading.html",
+      });
+    } catch {}
+  })();
   view.innerHTML = `
     <div style="text-align:center;padding:40px 0;">
       <div style="font-size:48px;font-weight:700;color:var(--brass-300);">${acc}%</div>

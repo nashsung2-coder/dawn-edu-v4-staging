@@ -213,33 +213,10 @@ document.querySelectorAll("#fy-suggest button").forEach(b => {
   };
 });
 
-/* 歷史討論記錄 */
-async function loadHistory() {
-  const hEl = document.getElementById("fy-history");
+/* 歷史討論記錄：改用統一的學習歷程（思辨對話） */
+(async () => {
   try {
-    const { data, error } = await supabase.from("battle_records")
-      .select("question, feynman_score, created_at")
-      .eq("user_id", user.id)
-      .gt("feynman_score", 0)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    if (error) throw error;
-    if (!data?.length) {
-      hEl.innerHTML = `<p style="color:var(--paper-400);font-size:13px;">還沒有討論記錄，完成一次討論就會出現在這裡</p>`;
-      return;
-    }
-    hEl.innerHTML = data.map(r => {
-      const d = new Date(r.created_at);
-      const date = `${d.getMonth() + 1}/${d.getDate()}`;
-      const s = Number(r.feynman_score) || 0;
-      const color = s >= 80 ? "var(--signal-green)" : s >= 60 ? "var(--brass-300)" : "var(--paper-400)";
-      return `<div style="padding:8px 0;border-bottom:1px solid oklch(1 0 0 / 0.06);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:14px;">${esc(r.question || "未命名")}</span>
-        <span style="font-size:13px;"><span class="mono" style="color:${color};font-weight:700;">${s}</span> <span style="color:var(--paper-400);">· ${date}</span></span>
-      </div>`;
-    }).join("");
-  } catch (e) {
-    hEl.innerHTML = `<p style="color:var(--paper-400);font-size:13px;">載入失敗</p>`;
-  }
-}
-loadHistory();
+    const { renderTypeHistory } = await import("../core/learn-history.js");
+    renderTypeHistory(supabase, user.id, "fy-history", "思辨對話");
+  } catch {}
+})();

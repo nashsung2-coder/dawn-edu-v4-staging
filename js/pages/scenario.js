@@ -1,5 +1,6 @@
 /* 情境式學習：化身概念，用經歷去理解 */
 import { renderTopbar, requireAuth, esc, toast, md } from "../core/ui.js";
+import { renderTypeHistory } from "../core/learn-history.js";
 import { ask } from "../core/llm.js";
 
 const $ = id => document.getElementById(id);
@@ -16,6 +17,7 @@ async function init() {
   user = await requireAuth();
   ({ supabase } = await import("../core/supabase.js"));
   renderSetup();
+  try { renderTypeHistory(supabase, user.id, "sc-history", "情境學習"); } catch {}
 }
 
 function renderSetup() {
@@ -265,6 +267,17 @@ ${histText}
         is_public: false,
       });
       saveMsg = error ? "" : `<p style="font-size:13px;color:var(--signal-green);">✓ 已存為知識節點「${esc(data.saveNode.title)}」</p>`;
+    } catch {}
+
+    /* 寫入學習歷程 */
+    try {
+      const { logLearnHistory } = await import("../core/learn-history.js");
+      logLearnHistory(supabase, user.id, {
+        type: "情境學習",
+        topic: scenario.concept,
+        detail: `扮演${scenario.identity}・${turnCount} 回合・掌握度 ${data.mastery}%`,
+        link: "scenario.html",
+      });
     } catch {}
 
     view.innerHTML = `
