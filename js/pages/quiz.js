@@ -25,6 +25,7 @@ const MASTERY_STREAK = 3;
 let mode = "topic";       // topic | content
 let topic = "";
 let knowledgeContent = "";
+let kbCache = [];         // 寶庫多選快取 [{id, title, text}]：跨模式切換不遺失
 let level = 1;            // 起始：普通
 let streak = 0;           // 當前連對
 let hardStreak = 0;       // 困難以上連對（掌握度計數）
@@ -96,12 +97,12 @@ function renderSetup() {
     <div class="card qz-setup" style="max-width:560px;margin:0 auto;">
       <h2>知識對戰</h2>
       <p style="font-size:13px;color:var(--paper-400);margin-bottom:16px;">AI 會根據你的答題表現自動調整難度，直到你完全掌握</p>
+      <div id="qz-kb" style="margin-bottom:8px;"></div>
       <div style="display:flex;gap:8px;margin-bottom:16px;">
         <button class="btn ${mode === "topic" ? "btn-primary" : "btn-ghost"} mode-sel" data-m="topic" style="flex:1;">主題對戰</button>
         <button class="btn ${mode === "content" ? "btn-primary" : "btn-ghost"} mode-sel" data-m="content" style="flex:1;">知識驗證</button>
       </div>
       <div id="mode-topic" style="${mode === "topic" ? "" : "display:none;"}">
-        <div id="qz-kb" style="margin-bottom:8px;"></div>
         <input class="input" id="qz-topic" placeholder="例：光合作用" style="margin-bottom:8px;">
         <div style="margin-bottom:12px;">
           <span style="font-size:12px;color:var(--paper-400);">熱門主題：</span>
@@ -127,36 +128,50 @@ function renderSetup() {
   view.querySelectorAll("[data-t]").forEach(b => {
     b.onclick = () => { document.getElementById("qz-topic").value = b.dataset.t; };
   });
-  /* 寶庫多選：選中的節點標題合併為主題；知識驗證模式下合併內容餵給 AI */
-  async function fillKbContent(sel) {
-    try {
-      const ids = sel.map(s => s.id);
-      const { data } = await supabase.from("knowledge_nodes").select("id,title,content").in("id", ids);
-      if (!data?.length) return;
-      const parts = [];
-      for (const s of sel) {
-        const row = data.find(r => String(r.id) === String(s.id));
-        if (!row) continue;
-        let txt = "";
-        try {
-          const parsed = JSON.parse(row.content || "{}");
-          const blocks = parsed.blocks || (Array.isArray(parsed) ? parsed : []);
-          txt = blocksText(blocks);
-        } catch { txt = row.content || ""; }
-        if (txt.trim()) parts.push(`【${s.title}】\n${txt.trim().slice(0, 4000)}`);
-      }
-      const c = document.getElementById("qz-content");
-      if (c && parts.length) c.value = parts.join("\n\n");
-    } catch {}
-  }
-  initKbSelector("qz-kb", supabase, user.id, (sel) => {
-    if (!sel.length) return;
-    const titles = sel.map(s => s.title).join("、");
+  /* 寶庫多選：標題合併為主題；節點內容快取起來，兩種模式出題都餵給 AI */
+  async function refreshKbInputs() {
+    const titles = kbCache.map(s => s.title).join("、");
     const t = document.getElementById("qz-topic");
-    if (t) t.value = titles;
+    if (t && titles) t.value = titles;
     const t2 = document.getElementById("qz-topic2");
-    if (t2) t2.value = titles;
-    fillKbContent(sel);
+    if (t2 && titles) t2.value = titles;
+    const c = document.getElementById("qz-content");
+    if (c) {
+      const parts = kbCache.filter(s => s.text).map(s => `【${s.title}】\n${s.text.slice(0, 4000)}`);
+      if (parts.length) c.value = parts.join("\n\n");
+    }
+  }
+  async function onKbChange(sel) {
+    const ids = new Set(sel.map(s => String(s.id)));
+    kbCache = kbCache.filter(k => ids.has(String(k.id)));
+    const missing = sel.filter(s => !kbCache.some(k => String(k.id) === String(s.id)));
+    if (missing.length) {
+      try {
+        const { data } = await supabase.from("knowledge_nodes").select("id,title,content").in("id", missing.map(s => s.id));
+        for (const s of missing) {
+          const row = (data || []).find(r => String(r.id) === String(s.id));
+          let txt = "";
+          if (row) {
+            try {
+              const parsed = JSON.parse(row.content || "{}");
+              txt = blocksText(parsed.blocks || (Array.isArray(parsed) ? parsed : []));
+            } catch { txt = row.content || ""; }
+          }
+          kbCache.push({ id: s.id, title: s.title, text: (txt || "").trim() });
+        }
+      } catch {}
+    }
+    refreshKbInputs();
+  }
+  initKbSelector("qz-kb", supabase, user.id, onKbChange).then(h => {
+    /* 切換模式會重渲染：恢復之前的勾選 */
+    if (!h || !kbCache.length) return;
+    const box = document.getElementById("qz-kb");
+    const ids = new Set(kbCache.map(k => String(k.id)));
+    box?.querySelectorAll("input[type=checkbox][data-kb-id]").forEach(cb => {
+      if (ids.has(cb.dataset.kbId)) cb.checked = true;
+    });
+    refreshKbInputs();
   });
   renderTypeHistory(supabase, user.id, "qz-history", "知識對戰");
   try {
@@ -207,9 +222,13 @@ async function nextQuestion() {
       <p style="color:var(--paper-400);">AI 正在出題…</p>
     </div>`;
   try {
+    const kbRef = kbCache.filter(k => k.text)
+      .map(k => `【${k.title}】\n${k.text.slice(0, 2500)}`).join("\n\n").slice(0, 6000);
     const contextPrompt = knowledgeContent
       ? `以下是使用者要驗證的知識內容，請**嚴格根據此內容**出題，驗證他是否真正掌握：\n---\n${knowledgeContent.slice(0, 3000)}\n---\n`
-      : `主題：${topic}\n`;
+      : kbRef
+        ? `主題：${topic}\n以下是曙光寶庫中使用者選取的節點內容，請**優先根據這些內容**出題（可延伸，但不要偏離）：\n---\n${kbRef}\n---\n`
+        : `主題：${topic}\n`;
     const reply = await ask(
       `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。
 錯誤選項要是學生常見的錯誤想法，不要隨便編。
