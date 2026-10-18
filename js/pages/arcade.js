@@ -1,9 +1,10 @@
 /* 星艦解碼：街機射擊答題遊戲（本地運行） */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile } from "../core/ui.js";
+import { renderTopbar, requireAuth, esc, ensureProfile, parseAIJson } from "../core/ui.js";
 import { renderTypeHistory } from "../core/learn-history.js";
 import { initKbSelector } from "../core/kb-selector.js";
 import { chat, MODELS } from "../core/llm.js";
+import { blocksText } from "../core/blocks.js";
 
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
@@ -42,14 +43,30 @@ const G = {
 };
 
 /* ===== 題目生成（遊戲開始前批量，遊戲中不等待 AI） ===== */
+/* 寶庫多選：選中的節點內容快取起來，出題時嚴格根據內容 */
+let arcadeKbCache = [];
+async function arcadeKbRef() {
+  const parts = arcadeKbCache.filter(k => k.text)
+    .map(k => `【${k.title}】\n${k.text.slice(0, 2500)}`).join("\n\n").slice(0, 5000);
+  return parts
+    ? `\n以下是曙光寶庫中使用者選取的節點內容，請**嚴格根據這些內容**出題，不要引入內容之外的知識：\n---\n${parts}\n---`
+    : "";
+}
 async function fetchQuestions(topic, n = 20) {
-  const reply = await chat([
-    { role: "system", content: "你是用繁體中文的出題老師。只回 JSON，不要其他文字。" },
-    { role: "user", content: `主題「${topic}」，出 ${n} 題單選題，難度由淺入深。重要：每個選項必須在 8 個字以內（因為要顯示在遊戲隕石上）。格式：[{"q":"題目","opts":["A","B","C","D"],"ans":0,"hint":"一句話解析"}]` },
-  ], { model: MODELS.battle, max_tokens: 4000 });
-  const m = reply.match(/\[[\s\S]*\]/);
-  if (!m) throw new Error("題目解析失敗");
-  return JSON.parse(m[0]);
+  /* AI 偶發回傳壞 JSON，自動重試 3 次 */
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const reply = await chat([
+        { role: "system", content: "你是用繁體中文的出題老師。只回 JSON，不要其他文字。" },
+        { role: "user", content: `主題「${topic}」，出 ${n} 題單選題，難度由淺入深。${await arcadeKbRef()}重要：每個選項必須在 8 個字以內（因為要顯示在遊戲隕石上）。題目、選項、解析中不要使用半形雙引號 "，如需引號請用「」。格式：[{"q":"題目","opts":["A","B","C","D"],"ans":0,"hint":"一句話解析"}]` },
+      ], { model: MODELS.battle, max_tokens: 4000 });
+      const questions = parseAIJson(reply, "[");
+      if (!Array.isArray(questions) || !questions.length) throw new Error("題目解析失敗");
+      return questions;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
 }
 
 /* ===== 實體 ===== */
@@ -493,10 +510,29 @@ async function init() {
   try { renderTypeHistory(supabase, user.id, "arcade-history", "街機"); } catch {}
   /* 寶庫多選：之前 import 了但沒呼叫，導致選擇器空白 */
   try {
-    await initKbSelector("arcade-kb", supabase, user.id, (sel) => {
-      if (!sel.length) return;
+    await initKbSelector("arcade-kb", supabase, user.id, async (sel) => {
+      if (!sel.length) { arcadeKbCache = []; return; }
       const inp = document.getElementById("arcade-topic");
       if (inp) inp.value = sel.map(s => s.title).join("、");
+      const ids = new Set(sel.map(s => String(s.id)));
+      arcadeKbCache = arcadeKbCache.filter(k => ids.has(String(k.id)));
+      const missing = sel.filter(s => !arcadeKbCache.some(k => String(k.id) === String(s.id)));
+      if (missing.length) {
+        try {
+          const { data } = await supabase.from("knowledge_nodes").select("id,title,content").in("id", missing.map(s => s.id));
+          for (const s of missing) {
+            const row = (data || []).find(r => String(r.id) === String(s.id));
+            let txt = "";
+            if (row) {
+              try {
+                const parsed = JSON.parse(row.content || "{}");
+                txt = blocksText(parsed.blocks || (Array.isArray(parsed) ? parsed : []));
+              } catch { txt = row.content || ""; }
+            }
+            arcadeKbCache.push({ id: s.id, title: s.title, text: (txt || "").trim() });
+          }
+        } catch {}
+      }
     });
   } catch {}
   // 征服模式：從宇宙跳轉過來
