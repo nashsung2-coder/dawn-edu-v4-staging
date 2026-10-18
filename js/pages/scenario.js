@@ -14,6 +14,27 @@ let turnCount = 0;
 let sessionId = null;      // learn_sessions id（恢復進度用）
 let lastChoices = [];      // 上次 AI 給的選項（恢復用）
 
+/* JSON 模式請求：安全解析＋自動重試（AI 回傳偶爾被截斷導致 JSON 不完整） */
+async function askJson(system, user, validate, tries = 3) {
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const raw = await ask(system, user, { model: "fast", json: true, max_tokens: 3000 });
+      const text = typeof raw === "string" ? raw : JSON.stringify(raw);
+      let data;
+      try { data = JSON.parse(text); }
+      catch {
+        const m = text.match(/\{[\s\S]*\}/);
+        if (!m) throw new Error("JSON 解析失敗");
+        data = JSON.parse(m[0]);
+      }
+      if (validate && !validate(data)) throw new Error("回傳格式不完整");
+      return data;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
 /* 快照：邊玩邊存，歷史點開可恢復 */
 async function saveSnap(extra = {}) {
   if (!sessionId) return;
@@ -144,8 +165,8 @@ async function startScenario() {
   "firstChoices": ["選項 A（15 字內，代表一種知識視角）", "選項 B", "選項 C"]
 }
 只輸出 JSON。`;
-    const raw = await ask(system, `概念：${concept}`, { model: "fast", json: true, max_tokens: 3000 });
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+    const data = await askJson(system, `概念：${concept}`,
+      d => d && d.opening && Array.isArray(d.firstChoices) && Array.isArray(d.knowledgePoints));
     scenario = { concept, ...data };
     history = [];
     mastered = new Set();
@@ -240,10 +261,9 @@ async function doChoice(choice, isFree = false) {
 }
 只輸出 JSON。`;
     const histText = history.slice(-4).map(h => `${h.role}: ${h.text}`).join("\n");
-    const raw = await ask(system,
+    const data = await askJson(system,
       `歷史：\n${histText}\n\n用戶選擇：${choice}${isFree ? "（自由輸入）" : ""}`,
-      { model: "fast", json: true, max_tokens: 3000 });
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+      d => d && d.story && Array.isArray(d.choices));
 
     (data.newlyMastered || []).forEach(k => mastered.add(k));
     history.push({ role: "user", text: choice }, { role: "ai", text: data.story });
