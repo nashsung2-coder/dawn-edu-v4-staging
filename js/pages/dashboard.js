@@ -82,13 +82,21 @@ async function send(text) {
   saveChatHistory();
   showTyping();
   $("cp-send").disabled = true;
+  // 安全超時：90 秒強制清除轉圈
+  const safetyTimer = setTimeout(() => {
+    hideTyping();
+    $("cp-send").disabled = false;
+    addMsg("ai", "抱歉，我剛才想太久了，再說一次好嗎？");
+  }, 90000);
   try {
     const reply = await companionChat(chatHistory, learningContext, null, nickname, userMemory);
+    clearTimeout(safetyTimer);
     hideTyping();
     addMsg("ai", reply);
     chatHistory.push({ role: "assistant", content: reply });
     saveChatHistory();
   } catch (e) {
+    clearTimeout(safetyTimer);
     hideTyping();
     console.error("小曙回應失敗:", e);
     addMsg("ai", `抱歉，我剛才恍神了（${e.message || "連線問題"}），再說一次好嗎？`);
