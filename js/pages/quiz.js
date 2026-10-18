@@ -1,7 +1,7 @@
 /* v4 知識對戰 v2：自適應難度 + 知識內容驗證 + 掌握度追蹤 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, parseAIJson} from "../core/ui.js?v=fixed002";
 import { initKbSelector } from "../core/kb-selector.js";
 import { renderTypeHistory } from "../core/learn-history.js";
 import { blocksText } from "../core/blocks.js";
@@ -227,20 +227,27 @@ async function nextQuestion() {
     const contextPrompt = knowledgeContent
       ? `以下是使用者要驗證的知識內容，請**嚴格根據此內容**出題，驗證他是否真正掌握：\n---\n${knowledgeContent.slice(0, 3000)}\n---\n`
       : kbRef
-        ? `主題：${topic}\n以下是曙光寶庫中使用者選取的節點內容，請**優先根據這些內容**出題（可延伸，但不要偏離）：\n---\n${kbRef}\n---\n`
+        ? `主題：${topic}\n以下是曙光寶庫中使用者選取的節點內容，請**嚴格根據這些內容**出題，不要引入內容之外的知識：\n---\n${kbRef}\n---\n`
         : `主題：${topic}\n`;
-    const reply = await ask(
-      `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。
+    /* 出題＋解析：AI 偶發回傳壞 JSON，自動重試 3 次 */
+    let q = null, lastErr = null;
+    for (let attempt = 0; attempt < 3 && !q; attempt++) {
+      try {
+        const reply = await ask(
+          `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。
 錯誤選項要是學生常見的錯誤想法，不要隨便編。
-只回 JSON，不要其他文字。格式：
+只回 JSON，不要其他文字。題目、選項、解析中不要使用半形雙引號 "，如需引號請用「」。
+格式：
 {"question":"題目","options":["選項1","選項2","選項3","選項4"],"answer_index":0,"explanation":"解析（50字內）","misconceptions":{"1":"一句話說明此選項的迷思","2":"…","3":"…"}}
 注意：options 不要加 A/B/C/D 前綴；misconceptions 的 key 是選項索引（0起算），只列錯誤選項，每個迷思一句話就好`,
-      contextPrompt,
-      { model: "fast" }
-    );
-    const m = reply.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error("出題格式錯誤");
-    currentQ = JSON.parse(m[0]);
+          contextPrompt,
+          { model: "fast" }
+        );
+        q = parseAIJson(reply, "{");
+      } catch (e) { lastErr = e; }
+    }
+    if (!q) throw lastErr || new Error("出題格式錯誤");
+    currentQ = q;
     saveSnap();
     renderQuestion();
   } catch (e) {
