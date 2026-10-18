@@ -47,9 +47,11 @@ export async function getRecentHistory(supabase, userId, days = 5, type = null) 
 
 /**
  * 渲染歷史列表 HTML（共用樣式）
+ * @param {Array} items
+ * @param {string} emptyText - 無紀錄時的提示文字
  */
-export function renderHistoryList(items) {
-  if (!items.length) return `<p style="color:var(--paper-400);font-size:13px;">近 5 天還沒有學習紀錄，去學點東西吧！</p>`;
+export function renderHistoryList(items, emptyText) {
+  if (!items.length) return `<p style="color:var(--paper-400);font-size:13px;">${emptyText || "近 5 天還沒有學習紀錄，去學點東西吧！"}</p>`;
   // 按日期分組
   const groups = {};
   items.forEach(it => {
@@ -84,12 +86,50 @@ export async function renderTypeHistory(supabase, userId, containerId, type) {
   el.innerHTML = `<p style="color:var(--paper-400);font-size:13px;">載入中…</p>`;
   try {
     const items = await getRecentHistory(supabase, userId, 0, type);
-    el.innerHTML = renderHistoryList(items);
+    el.innerHTML = renderHistoryList(items, "還沒有學習紀錄，完成一次就會出現在這裡");
   } catch {
     el.innerHTML = "";
   }
 }
 
+/* 各頁歷史容器的類型對照（給 refreshHistoryUI 用） */
+const HISTORY_CONTAINER_TYPE = {
+  "qz-history": "知識對戰",
+  "fy-history": "思辨對話",
+  "sc-history": "情境學習",
+  "rd-history": "AI閱讀",
+  "arcade-history": "街機",
+  "cp-history": null, /* 主控台：近 5 天綜合 */
+};
+
+/**
+ * 重新整理頁面上所有歷史區塊（寫入新紀錄後呼叫，不用重整頁面）
+ */
+export async function refreshHistoryUI(supabase, userId) {
+  try {
+    if (!supabase || !userId) return;
+    const emptyTypeText = "還沒有學習紀錄，完成一次就會出現在這裡";
+    for (const [id, type] of Object.entries(HISTORY_CONTAINER_TYPE)) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const items = type
+        ? await getRecentHistory(supabase, userId, 0, type)
+        : await getRecentHistory(supabase, userId, 5);
+      el.innerHTML = renderHistoryList(items, type ? emptyTypeText : undefined);
+    }
+    const pl = document.getElementById("page-history-list");
+    if (pl) {
+      const page = (location.pathname.split("/").pop() || "").replace(/\.html.*$/, "");
+      const type = PAGE_HISTORY_TYPE[page];
+      const items = type
+        ? await getRecentHistory(supabase, userId, 0, type)
+        : await getRecentHistory(supabase, userId, 5);
+      pl.innerHTML = renderHistoryList(items, type ? emptyTypeText : undefined);
+    }
+  } catch (e) {
+    console.warn("重整歷史顯示失敗:", e.message);
+  }
+}
 /**
  * 頁面檔名 → 學習歷史類型的對照（有對應的頁面顯示該類型的無限歷史，
  * 沒有對應的頁面顯示近 5 天全部類型的綜合歷史）
@@ -133,7 +173,7 @@ export async function mountPageHistory(supabase, user) {
       ? await getRecentHistory(supabase, user.id, 0, type)
       : await getRecentHistory(supabase, user.id, 5);
     const listEl = document.getElementById("page-history-list");
-    if (listEl) listEl.innerHTML = renderHistoryList(items);
+    if (listEl) listEl.innerHTML = renderHistoryList(items, type ? "還沒有學習紀錄，完成一次就會出現在這裡" : undefined);
   } catch (e) {
     console.warn("掛載頁面歷史失敗:", e.message);
   }
