@@ -2,6 +2,7 @@
 import { renderTopbar, requireAuth, esc, toast, md } from "../core/ui.js";
 import { renderTypeHistory } from "../core/learn-history.js";
 import { ask } from "../core/llm.js";
+import { blocksText } from "../core/blocks.js";
 
 const $ = id => document.getElementById(id);
 const view = $("sc-view");
@@ -13,6 +14,22 @@ let mastered = new Set();  // 已掌握的知識點
 let turnCount = 0;
 let sessionId = null;      // learn_sessions id（恢復進度用）
 let lastChoices = [];      // 上次 AI 給的選項（恢復用）
+let kbTitle = "";         // 選中的寶庫節點標題
+let kbContent = "";       // 選中的寶庫節點內容（餵給 AI 當設計依據）
+
+/* 依標題抓寶庫節點內容（自己的優先，否則公開的） */
+async function fetchKbContentByTitle(title) {
+  try {
+    const { data } = await supabase.from("knowledge_nodes")
+      .select("id,title,content,user_id,is_public").eq("title", title).limit(5);
+    const row = (data || []).find(r => String(r.user_id) === String(user.id) || r.is_public) || (data || [])[0];
+    if (!row) return "";
+    try {
+      const parsed = JSON.parse(row.content || "{}");
+      return blocksText(parsed.blocks || (Array.isArray(parsed) ? parsed : []));
+    } catch { return row.content || ""; }
+  } catch { return ""; }
+}
 
 /* JSON 模式請求：安全解析＋自動重試（AI 回傳偶爾被截斷導致 JSON 不完整） */
 async function askJson(system, user, validate, tries = 3) {
@@ -108,11 +125,19 @@ function renderSetup() {
         透過選擇和對話，你會親身經歷這個概念的運作邏輯。
       </p>
     </div>`;
-  // 從 URL 參數預填概念（從知識節點頁跳過來）
+  // 從 URL 參數預填概念（從知識節點頁跳過來）：同時抓該節點內容餵給 AI
   try {
     const urlConcept = new URLSearchParams(location.search).get("concept");
-    if (urlConcept) $("sc-concept").value = urlConcept;
+    if (urlConcept) {
+      $("sc-concept").value = urlConcept;
+      kbTitle = urlConcept;
+      fetchKbContentByTitle(urlConcept).then(t => { kbContent = t; });
+    }
   } catch {}
+  // 手動改輸入框且與選中標題不符時，清除快取內容（避免文不對題）
+  $("sc-concept").addEventListener("input", e => {
+    if (e.target.value.trim() !== kbTitle) { kbTitle = ""; kbContent = ""; }
+  });
   // 載入寶庫選項（自己的 + 收藏的）
   (async () => {
     try {
@@ -133,7 +158,14 @@ function renderSetup() {
         const ownOpts = ownTitles.map(t => `<option value="${esc(t)}">${esc(t)}（我的）</option>`).join("");
         const favOpts = favTitles.filter(t => !ownTitles.includes(t)).map(t => `<option value="${esc(t)}">${esc(t)}（收藏）</option>`).join("");
         $("sc-kb").innerHTML = `<option value="">— 直接輸入上面 —</option><optgroup label="我的寶庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
-        $("sc-kb").onchange = e => { if (e.target.value) $("sc-concept").value = e.target.value; };
+        $("sc-kb").onchange = e => {
+          if (e.target.value) {
+            $("sc-concept").value = e.target.value;
+            kbTitle = e.target.value;
+            kbContent = "";
+            fetchKbContentByTitle(e.target.value).then(t => { kbContent = t; });
+          } else { kbTitle = ""; kbContent = ""; }
+        };
       }
     } catch {}
   })();
@@ -145,8 +177,11 @@ async function startScenario() {
   if (!concept) { toast("請輸入或選擇一個概念"); return; }
   view.innerHTML = `<p style="color:var(--paper-400);">AI 正在為你打造世界…</p>`;
   try {
+    const kbRef = kbContent.trim()
+      ? `\n\n以下是曙光寶庫中「${kbTitle}」的完整內容。請嚴格根據這份內容設計情境——身份、背景、知識點都必須出自這份內容，可以改寫成親身經歷的視角，但不要編造內容裡沒有的事實：\n---\n${kbContent.trim().slice(0, 5000)}\n---`
+      : "";
     const system = `你是情境式學習的編劇。用繁體中文。
-用戶想透過「親身經歷」來理解「${concept}」。
+用戶想透過「親身經歷」來理解「${concept}」。${kbRef}
 你的任務：設計一個高密度、高抉擇的沉浸式情境，讓用戶化身為與這個概念相關的角色。
 
 設計原則（嚴格遵守）：
