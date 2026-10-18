@@ -226,14 +226,15 @@ function renderResult() {
   /* 寫入學習歷程 */
   (async () => {
     try {
-      const { logLearnHistory } = await import("../core/learn-history.js");
-      logLearnHistory(supabase, user.id, {
+      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      await logLearnHistory(supabase, user.id, {
         type: "AI閱讀",
         topic: article.title || `${settings.langName}閱讀`,
         detail: `${settings.langName}・答對 ${score}/${questions.length} 題・正確率 ${acc}%`,
         link: "reading.html",
       });
-    } catch {}
+        await refreshHistoryUI(supabase, user.id);
+  } catch {}
   })();
   view.innerHTML = `
     <div style="text-align:center;padding:40px 0;">

@@ -271,14 +271,15 @@ ${histText}
 
     /* 寫入學習歷程 */
     try {
-      const { logLearnHistory } = await import("../core/learn-history.js");
-      logLearnHistory(supabase, user.id, {
+      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      await logLearnHistory(supabase, user.id, {
         type: "情境學習",
         topic: scenario.concept,
         detail: `扮演${scenario.identity}・${turnCount} 回合・掌握度 ${data.mastery}%`,
         link: "scenario.html",
       });
-    } catch {}
+        await refreshHistoryUI(supabase, user.id);
+  } catch {}
 
     view.innerHTML = `
       <div class="card" style="max-width:640px;margin:0 auto;text-align:center;padding:32px;">

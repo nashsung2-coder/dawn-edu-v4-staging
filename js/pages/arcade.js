@@ -403,14 +403,15 @@ async function endGame(completed) {
       }
       // 寫入學習歷程
       try {
-        const { logLearnHistory } = await import("../core/learn-history.js");
-        logLearnHistory(supabase, user.id, {
+        const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+        await logLearnHistory(supabase, user.id, {
           type: "街機",
           topic: G.conquest?.name ? `征服 ${G.conquest.name}` : `星艦解碼・${G.mode === "survival" ? "生存" : "限時"}模式`,
           detail: `得分 ${G.score}・答題 ${G.qIndex}・最高連擊 ${G.maxCombo}`,
           link: "arcade.html",
         });
-      } catch {}
+          await refreshHistoryUI(supabase, user.id);
+  } catch {}
     }
   } catch (e) { console.error("儲存失敗:", e); }
 

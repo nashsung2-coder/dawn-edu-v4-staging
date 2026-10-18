@@ -159,14 +159,15 @@ async function saveToTextbook() {
     if (error) throw error;
     /* 記錄到學習歷程 */
     try {
-      const { logLearnHistory } = await import("../core/learn-history.js");
-      logLearnHistory(supabase, user.id, {
+      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      await logLearnHistory(supabase, user.id, {
         type: "思辨對話",
         topic,
         detail: textEl.value.trim().slice(0, 200),
         link: "feynman.html",
       });
-    } catch {}
+        await refreshHistoryUI(supabase, user.id);
+  } catch {}
     /* 同時寫入知識庫：費曼是知識庫的附加品，產出滋養群島 */
     try {
       await supabase.from("knowledge_nodes").insert({
