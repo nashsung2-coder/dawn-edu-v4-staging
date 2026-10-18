@@ -1,6 +1,7 @@
 /* 星艦解碼：街機射擊答題遊戲（本地運行） */
 import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, esc, ensureProfile } from "../core/ui.js";
+import { initKbSelector } from "../core/kb-selector.js";
 import { chat, MODELS } from "../core/llm.js";
 
 const canvas = document.getElementById("game-canvas");
