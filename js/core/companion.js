@@ -191,7 +191,8 @@ export async function companionChat(messages, learningContext, onUpdate, nicknam
     // 導航類工具：顯示訊息後延遲跳轉，不再調用 AI（避免跳頁中斷）
     const navTools = ["goto_page", "review_nudge", "start_socratic"];
     if (navTools.includes(call.tool)) {
-      displayText = (displayText ? displayText + "\n" : "") + `（${result}）`;
+      // 導航時不顯示內部註記，只保留 AI 的自然語言
+      if (!displayText) displayText = "正在帶你過去…";
       // 立即跳轉（存 target 避免閉包問題）
       const navTarget = COMPANION_TOOLS[call.tool]?._navTarget;
       if (navTarget) {
