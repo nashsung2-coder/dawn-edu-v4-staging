@@ -4,6 +4,7 @@ import { ask } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
 import { initKbSelector } from "../core/kb-selector.js";
 import { renderTypeHistory } from "../core/learn-history.js";
+import { blocksText } from "../core/blocks.js";
 
 await renderTopbar("quiz.html");
 const user = await requireAuth();
@@ -100,7 +101,7 @@ function renderSetup() {
         <button class="btn ${mode === "content" ? "btn-primary" : "btn-ghost"} mode-sel" data-m="content" style="flex:1;">知識驗證</button>
       </div>
       <div id="mode-topic" style="${mode === "topic" ? "" : "display:none;"}">
-        <select class="input" id="qz-kb" style="margin-bottom:8px;display:none;"></select>
+        <div id="qz-kb" style="margin-bottom:8px;"></div>
         <input class="input" id="qz-topic" placeholder="例：光合作用" style="margin-bottom:8px;">
         <div style="margin-bottom:12px;">
           <span style="font-size:12px;color:var(--paper-400);">熱門主題：</span>
@@ -126,7 +127,37 @@ function renderSetup() {
   view.querySelectorAll("[data-t]").forEach(b => {
     b.onclick = () => { document.getElementById("qz-topic").value = b.dataset.t; };
   });
-  initKbSelector("qz-kb", "qz-topic", supabase, user.id);
+  /* 寶庫多選：選中的節點標題合併為主題；知識驗證模式下合併內容餵給 AI */
+  async function fillKbContent(sel) {
+    try {
+      const ids = sel.map(s => s.id);
+      const { data } = await supabase.from("knowledge_nodes").select("id,title,content").in("id", ids);
+      if (!data?.length) return;
+      const parts = [];
+      for (const s of sel) {
+        const row = data.find(r => String(r.id) === String(s.id));
+        if (!row) continue;
+        let txt = "";
+        try {
+          const parsed = JSON.parse(row.content || "{}");
+          const blocks = parsed.blocks || (Array.isArray(parsed) ? parsed : []);
+          txt = blocksText(blocks);
+        } catch { txt = row.content || ""; }
+        if (txt.trim()) parts.push(`【${s.title}】\n${txt.trim().slice(0, 4000)}`);
+      }
+      const c = document.getElementById("qz-content");
+      if (c && parts.length) c.value = parts.join("\n\n");
+    } catch {}
+  }
+  initKbSelector("qz-kb", supabase, user.id, (sel) => {
+    if (!sel.length) return;
+    const titles = sel.map(s => s.title).join("、");
+    const t = document.getElementById("qz-topic");
+    if (t) t.value = titles;
+    const t2 = document.getElementById("qz-topic2");
+    if (t2) t2.value = titles;
+    fillKbContent(sel);
+  });
   renderTypeHistory(supabase, user.id, "qz-history", "知識對戰");
   try {
     const _t = new URLSearchParams(location.search).get("topic");

@@ -8,7 +8,10 @@ await renderTopbar("feynman.html");
 const user = await requireAuth();
 
 const topicEl = document.getElementById("fy-topic");
-initKbSelector("fy-kb", "fy-topic", supabase, user.id);
+initKbSelector("fy-kb", supabase, user.id, (sel) => {
+  if (!sel.length) return;
+  topicEl.value = sel.map(s => s.title).join("、");
+});
 // 寶庫選擇器（延遲初始化，等 user 確定）
 /* 從曙光寶庫提問引導跳轉：預填主題 */
 try {

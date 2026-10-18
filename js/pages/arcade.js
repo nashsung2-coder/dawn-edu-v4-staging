@@ -491,6 +491,14 @@ async function init() {
   await renderTopbar("arcade.html");
   const user = await requireAuth();
   try { renderTypeHistory(supabase, user.id, "arcade-history", "街機"); } catch {}
+  /* 寶庫多選：之前 import 了但沒呼叫，導致選擇器空白 */
+  try {
+    await initKbSelector("arcade-kb", supabase, user.id, (sel) => {
+      if (!sel.length) return;
+      const inp = document.getElementById("arcade-topic");
+      if (inp) inp.value = sel.map(s => s.title).join("、");
+    });
+  } catch {}
   // 征服模式：從宇宙跳轉過來
   const params = new URLSearchParams(location.search);
   if (params.get("mode") === "conquest") {
