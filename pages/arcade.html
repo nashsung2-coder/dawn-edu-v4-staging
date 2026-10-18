@@ -25,7 +25,7 @@
     <p class="sub">駕駛星艦，射擊正確答案的隕石！知識＋反應的街機挑戰。</p>
     <div style="margin-bottom:20px;">
       <label style="font-size:13px;display:block;margin-bottom:8px;">選擇主題</label>
-      <select class="input" id="arcade-kb" style="max-width:320px;margin-bottom:8px;display:none;"></select>
+      <div id="arcade-kb" style="max-width:480px;margin-bottom:8px;"></div>
       <input class="input" id="arcade-topic" placeholder="例如：光合作用、宋朝歷史…" style="max-width:320px;">
     </div>
     <button class="btn btn-primary mode-btn" data-mode="timed">⏱️ 限時模式（60 秒）</button>
@@ -40,6 +40,10 @@
       <div class="hud" id="hud-hp">❤️❤️❤️</div>
       <div class="hud" id="hud-time"></div>
     </div>
+  </div>
+  <div style="margin-top:32px;max-width:800px;margin-left:auto;margin-right:auto;padding:0 16px;">
+    <h2 style="font-size:16px;margin-bottom:12px;">歷史紀錄</h2>
+    <div id="arcade-history"></div>
   </div>
 </main>
 <script src="../js/vendor/supabase.min.js"></script>
