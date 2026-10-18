@@ -299,6 +299,16 @@ async function initFloatingChat(current) {
     .fc-msg { max-width:85%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
     .fc-msg.user { align-self:flex-end; background:var(--brass-500); color:#000; }
     .fc-msg.ai { align-self:flex-start; background:var(--bg-3); color:var(--paper-50); }
+    /* 手機優化：面板改為近全寬底部浮層、輸入框 16px 防 iOS 自動縮放 */
+    @media (max-width:480px) {
+      #fc-ball { right:14px; bottom:14px; width:52px; height:52px; }
+      #fc-panel { left:12px; right:12px; width:auto; bottom:78px;
+        height:min(62vh,520px); height:min(62dvh,520px);
+        max-height:calc(100vh - 150px); max-height:calc(100dvh - 150px);
+        border-radius:16px; }
+      .fc-msg { font-size:14px; }
+      #fc-input { font-size:16px; }
+    }
   `;
   document.head.appendChild(style);
 
@@ -364,6 +374,15 @@ async function initFloatingChat(current) {
   document.getElementById("fc-input").addEventListener("keydown", e => {
     if (e.key === "Enter") fcSend(document.getElementById("fc-input").value);
   });
+
+  // 小曙協助跳轉後，預設自動開啟懸浮對話窗（flag 用完即刪，只觸發一次）
+  try {
+    if (sessionStorage.getItem("fc_auto_open") === "1") {
+      sessionStorage.removeItem("fc_auto_open");
+      panel.classList.add("open");
+      if (!fcUid) initFcChat();
+    }
+  } catch {}
 }
 
 async function initFcChat() {

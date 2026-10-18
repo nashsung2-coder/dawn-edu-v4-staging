@@ -195,6 +195,8 @@ export async function companionChat(messages, learningContext, onUpdate, nicknam
       // 立即跳轉（存 target 避免閉包問題）
       const navTarget = COMPANION_TOOLS[call.tool]?._navTarget;
       if (navTarget) {
+        // 跳轉後目標頁預設自動開啟懸浮 AI 對話窗
+        try { sessionStorage.setItem("fc_auto_open", "1"); } catch {}
         setTimeout(() => { location.href = navTarget; }, 800);
       }
       continue;
