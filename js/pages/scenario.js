@@ -11,13 +11,63 @@ let scenario = null;       // { concept, identity, background, goal, knowledgePo
 let history = [];          // 對話歷史
 let mastered = new Set();  // 已掌握的知識點
 let turnCount = 0;
+let sessionId = null;      // learn_sessions id（恢復進度用）
+let lastChoices = [];      // 上次 AI 給的選項（恢復用）
+
+/* 快照：邊玩邊存，歷史點開可恢復 */
+async function saveSnap(extra = {}) {
+  if (!sessionId) return;
+  try {
+    const { saveLearnSession } = await import("../core/learn-history.js");
+    saveLearnSession(supabase, sessionId, {
+      scenario, history,
+      mastered: [...mastered],
+      turnCount, choices: lastChoices,
+      done: false, ...extra,
+    });
+  } catch {}
+}
+
+function storyHtmlFromHistory() {
+  return history.map(h => h.role === "user"
+    ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
+    : `<div style="margin-top:12px;">${md(h.text.replace(/\\n/g, "\n"))}</div>`).join("");
+}
 
 async function init() {
   await renderTopbar("scenario");
   user = await requireAuth();
   ({ supabase } = await import("../core/supabase.js"));
+  /* 從歷史點開：恢復當時進度 */
+  try {
+    const sid = new URLSearchParams(location.search).get("session");
+    if (sid) {
+      const ok = await restoreSession(sid);
+      if (ok) { try { renderTypeHistory(supabase, user.id, "sc-history", "情境學習"); } catch {} return; }
+    }
+  } catch {}
   renderSetup();
   try { renderTypeHistory(supabase, user.id, "sc-history", "情境學習"); } catch {}
+}
+
+/* 從快照恢復：回到當時的對話進度；已結束的顯示結算 */
+async function restoreSession(sid) {
+  try {
+    const { loadLearnSession } = await import("../core/learn-history.js");
+    const row = await loadLearnSession(supabase, sid, user.id);
+    const st = row?.state;
+    if (!st?.scenario) return false;
+    sessionId = sid;
+    scenario = st.scenario;
+    history = st.history || [];
+    mastered = new Set(st.mastered || []);
+    turnCount = st.turnCount || 0;
+    lastChoices = st.choices || [];
+    if (st.done && st.result) { renderResultCard(st.result, ""); return true; }
+    renderStory(storyHtmlFromHistory(), lastChoices);
+    toast("已回到上次的進度，繼續吧");
+    return true;
+  } catch { return false; }
 }
 
 function renderSetup() {
@@ -94,13 +144,20 @@ async function startScenario() {
     history = [];
     mastered = new Set();
     turnCount = 0;
-    renderStory(data.opening, data.firstChoices, true);
+    /* 建立學習會話：之後每回合存快照，歷史可點開恢復 */
+    try {
+      const { createLearnSession } = await import("../core/learn-history.js");
+      sessionId = await createLearnSession(supabase, user.id, "情境學習", concept);
+    } catch {}
+    renderStory(md(data.opening), data.firstChoices);
+    saveSnap();
   } catch (e) {
     view.innerHTML = `<p style="color:var(--signal-red);">情境生成失敗：${esc(e.message)}</p><button class="sc-btn ghost" onclick="location.reload()">重來</button>`;
   }
 }
 
-function renderStory(text, choices, isOpening = false) {
+function renderStory(storyHtml, choices) {
+  lastChoices = choices || [];
   const progress = scenario.knowledgePoints.length
     ? Math.round(mastered.size / scenario.knowledgePoints.length * 100) : 0;
   const masteredList = [...mastered].map(m => `✓ ${esc(m)}`).join("<br>");
@@ -112,7 +169,7 @@ function renderStory(text, choices, isOpening = false) {
       <div style="margin-top:6px;font-size:12px;">探索進度 ${progress}%（${mastered.size}/${scenario.knowledgePoints.length} 個知識點）</div>
       ${mastered.size ? `<div class="sc-mastered">${masteredList}</div>` : ""}
     </div>
-    <div class="sc-story" id="sc-story">${md(text)}</div>
+    <div class="sc-story" id="sc-story">${storyHtml}</div>
     <div class="sc-opts" id="sc-opts">
       ${choices.map((c, i) => `<button class="sc-opt" data-i="${i}">${esc(c)}</button>`).join("")}
     </div>
@@ -185,6 +242,7 @@ async function doChoice(choice, isFree = false) {
 
     (data.newlyMastered || []).forEach(k => mastered.add(k));
     history.push({ role: "user", text: choice }, { role: "ai", text: data.story });
+    saveSnap();
 
     // 移除 "..." 並加上新劇情（先把字面量 \n 轉成換行）
     storyEl.innerHTML = storyEl.innerHTML.replace(/<div style="margin-top:8px;color:var\(--paper-400\);">…<\/div>/, "");
@@ -197,19 +255,29 @@ async function doChoice(choice, isFree = false) {
       endScenario();
       return;
     }
-    renderStory(data.story, data.choices);
-    // 把歷史加回去（renderStory 會重建，先保存）
-    const sEl = $("sc-story");
-    if (sEl) {
-      sEl.innerHTML = history.map(h => h.role === "user"
-        ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
-        : `<div style="margin-top:12px;">${md(h.text.replace(/\\n/g, "\n"))}</div>`).join("");
-    }
+    renderStory(storyHtmlFromHistory(), data.choices);
   } catch (e) {
     toast("AI 回應失敗，再試一次");
     document.querySelectorAll(".sc-opt").forEach(b => b.disabled = false);
     $("sc-send").disabled = false;
   }
+}
+
+function renderResultCard(data, saveMsg) {
+  view.innerHTML = `
+      <div class="card" style="max-width:640px;margin:0 auto;text-align:center;padding:32px;">
+        <div class="en" style="font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">JOURNEY COMPLETE</div>
+        <h2>旅程結束</h2>
+        <div style="font-size:48px;font-weight:700;color:var(--brass-300);margin:16px 0;">${data.mastery}%</div>
+        <p style="color:var(--paper-300);line-height:1.8;margin-bottom:16px;">${esc(data.summary)}</p>
+        ${data.strengths?.length ? `<div style="text-align:left;margin-bottom:12px;"><b style="color:var(--signal-green);">做得好的：</b><ul style="padding-left:20px;color:var(--paper-300);font-size:14px;">${data.strengths.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+        ${data.toImprove?.length ? `<div style="text-align:left;margin-bottom:16px;"><b style="color:var(--brass-300);">可以再深入：</b><ul style="padding-left:20px;color:var(--paper-300);font-size:14px;">${data.toImprove.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+        ${saveMsg}
+        <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+          <button class="sc-btn" onclick="location.reload()">再來一次</button>
+          <button class="sc-btn ghost" onclick="location.href='dashboard.html'">回主控台</button>
+        </div>
+      </div>`;
 }
 
 async function endScenario() {
@@ -269,32 +337,20 @@ ${histText}
       saveMsg = error ? "" : `<p style="font-size:13px;color:var(--signal-green);">✓ 已存為知識節點「${esc(data.saveNode.title)}」</p>`;
     } catch {}
 
-    /* 寫入學習歷程 */
+    /* 寫入學習歷程（帶 session，點開可回到這次旅程） */
     try {
-      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      await saveSnap({ done: true, result: data });
       await logLearnHistory(supabase, user.id, {
         type: "情境學習",
         topic: scenario.concept,
         detail: `扮演${scenario.identity}・${turnCount} 回合・掌握度 ${data.mastery}%`,
-        link: "scenario.html",
+        link: sessionLink("scenario.html", sessionId),
       });
         await refreshHistoryUI(supabase, user.id);
   } catch {}
 
-    view.innerHTML = `
-      <div class="card" style="max-width:640px;margin:0 auto;text-align:center;padding:32px;">
-        <div class="en" style="font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">JOURNEY COMPLETE</div>
-        <h2>旅程結束</h2>
-        <div style="font-size:48px;font-weight:700;color:var(--brass-300);margin:16px 0;">${data.mastery}%</div>
-        <p style="color:var(--paper-300);line-height:1.8;margin-bottom:16px;">${esc(data.summary)}</p>
-        ${data.strengths?.length ? `<div style="text-align:left;margin-bottom:12px;"><b style="color:var(--signal-green);">做得好的：</b><ul style="padding-left:20px;color:var(--paper-300);font-size:14px;">${data.strengths.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
-        ${data.toImprove?.length ? `<div style="text-align:left;margin-bottom:16px;"><b style="color:var(--brass-300);">可以再深入：</b><ul style="padding-left:20px;color:var(--paper-300);font-size:14px;">${data.toImprove.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
-        ${saveMsg}
-        <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
-          <button class="sc-btn" onclick="location.reload()">再來一次</button>
-          <button class="sc-btn ghost" onclick="location.href='dashboard.html'">回主控台</button>
-        </div>
-      </div>`;
+    renderResultCard(data, saveMsg);
   } catch (e) {
     view.innerHTML = `<p style="color:var(--signal-red);">總結生成失敗</p><button class="sc-btn ghost" onclick="location.href='dashboard.html'">回主控台</button>`;
   }

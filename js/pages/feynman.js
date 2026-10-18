@@ -2,6 +2,7 @@
 import { supabase, getUser } from "../core/supabase.js";
 import { ask, MODELS } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed002";
+import { initKbSelector } from "../core/kb-selector.js";
 
 await renderTopbar("feynman.html");
 const user = await requireAuth();
@@ -26,6 +27,20 @@ function setStep(n) {
 
 let lastScore = null;
 let lastFeedback = "";
+let sessionId = null;   // learn_sessions id（恢復進度用）
+
+/* 快照：每次 AI 回覆後存，歷史點開可回到當時的討論 */
+async function saveSnap(extra = {}) {
+  if (!sessionId) return;
+  try {
+    const { saveLearnSession } = await import("../core/learn-history.js");
+    saveLearnSession(supabase, sessionId, {
+      topic: topicEl.value.trim(), text: textEl.value.trim(),
+      lastScore, lastFeedback, socratic: socraticHistory,
+      done: false, ...extra,
+    });
+  } catch {}
+}
 
 judgeBtn.onclick = async () => {
   const topic = topicEl.value.trim();
@@ -48,6 +63,14 @@ judgeBtn.onclick = async () => {
     const m = reply.match(/分數[：:]\s*(\d+)/);
     lastScore = m ? Math.min(100, Math.max(0, Number(m[1]))) : null;
     lastFeedback = reply;
+    /* 建立學習會話：之後每次回覆存快照，歷史可點開回到當時的討論 */
+    if (!sessionId) {
+      try {
+        const { createLearnSession } = await import("../core/learn-history.js");
+        sessionId = await createLearnSession(supabase, user.id, "思辨對話", topic);
+      } catch {}
+    }
+    saveSnap();
 
     const pass = lastScore !== null && lastScore >= 80;
     resultEl.innerHTML = `
@@ -132,6 +155,7 @@ async function answerSocratic(topic, questions) {
       { model: MODELS.socratic }
     );
     socraticHistory.push({ answer, reply });
+    saveSnap();
     feedbackEl.innerHTML = `<div style="font-size:14px;line-height:1.8;color:var(--paper-200);white-space:pre-wrap;">${esc(reply)}</div>`;
     toast("蘇格拉底回應了");
   } catch (e) {
@@ -157,14 +181,15 @@ async function saveToTextbook() {
       key_points: [],
     });
     if (error) throw error;
-    /* 記錄到學習歷程 */
+    /* 記錄到學習歷程（帶 session，點開可回到這次討論） */
     try {
-      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      await saveSnap({ done: true });
       await logLearnHistory(supabase, user.id, {
         type: "思辨對話",
         topic,
         detail: textEl.value.trim().slice(0, 200),
-        link: "feynman.html",
+        link: sessionLink("feynman.html", sessionId),
       });
         await refreshHistoryUI(supabase, user.id);
   } catch {}
@@ -214,8 +239,67 @@ document.querySelectorAll("#fy-suggest button").forEach(b => {
   };
 });
 
+/* 從歷史點開：回到當時的討論（可繼續回應蘇格拉底的挑戰） */
+async function restoreFeynman(sid) {
+  try {
+    const { loadLearnSession } = await import("../core/learn-history.js");
+    const row = await loadLearnSession(supabase, sid, user.id);
+    const st = row?.state;
+    if (!st?.topic || !st?.text) return false;
+    sessionId = sid;
+    topicEl.value = st.topic;
+    textEl.value = st.text;
+    lastScore = st.lastScore ?? null;
+    lastFeedback = st.lastFeedback || "";
+    socraticHistory = st.socratic || [];
+    setStep(3);
+    const pass = lastScore !== null && lastScore >= 80;
+    resultEl.innerHTML = `
+      <div class="score-ring"><span class="v">${lastScore ?? "?"}</span><span class="l">完整度</span></div>
+      <div class="feedback">${md(lastFeedback)}</div>
+      ${pass ? `<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input class="input" id="fy-cat" placeholder="分類（例：物理）" style="width:140px;" maxlength="12">
+        <button class="btn btn-primary" id="fy-save">存入課本＋曙光寶庫</button>
+      </div>
+      <p style="font-size:12px;color:var(--paper-400);margin-top:6px;">同時寫入個人課本與曙光寶庫（滋養你的群島）</p>` : ""}
+    `;
+    if (pass) document.getElementById("fy-save").onclick = saveToTextbook;
+    const qEntry = socraticHistory.find(h => h.questions);
+    if (qEntry?.questions) {
+      const pairs = socraticHistory.filter(h => h.answer);
+      const box = document.createElement("div");
+      box.id = "socratic-box";
+      box.style.cssText = "margin-top:20px;padding:16px;border-radius:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);";
+      box.innerHTML = `
+        <div style="font-size:14px;font-weight:700;color:#c4b5fd;margin-bottom:12px;">蘇格拉底的挑戰（上次的討論）</div>
+        <div style="font-size:14px;line-height:1.8;color:var(--paper-200);white-space:pre-wrap;margin-bottom:16px;">${esc(qEntry.questions)}</div>
+        ${pairs.map(p => `
+          <div style="margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);">
+            <div style="font-size:13px;color:var(--brass-300);margin-bottom:6px;">你的回應：${esc(p.answer)}</div>
+            <div style="font-size:13px;line-height:1.7;color:var(--paper-200);white-space:pre-wrap;">${esc(p.reply)}</div>
+          </div>`).join("")}
+        <textarea id="socratic-answer" class="input" rows="4" placeholder="繼續回答挑戰…" style="width:100%;margin-bottom:12px;"></textarea>
+        <button class="btn btn-primary btn-sm" id="socratic-submit">回應挑戰</button>
+        <div id="socratic-feedback" style="margin-top:12px;"></div>
+      `;
+      resultEl.appendChild(box);
+      document.getElementById("socratic-submit").onclick = () => answerSocratic(st.topic, qEntry.questions);
+    }
+    toast("已回到上次的討論");
+    return true;
+  } catch { return false; }
+}
+
 /* 歷史討論記錄：改用統一的學習歷程（思辨對話） */
 (async () => {
+  try {
+    const sid = new URLSearchParams(location.search).get("session");
+    if (sid && await restoreFeynman(sid)) {
+      const { renderTypeHistory } = await import("../core/learn-history.js");
+      renderTypeHistory(supabase, user.id, "fy-history", "思辨對話");
+      return;
+    }
+  } catch {}
   try {
     const { renderTypeHistory } = await import("../core/learn-history.js");
     renderTypeHistory(supabase, user.id, "fy-history", "思辨對話");

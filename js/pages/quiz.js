@@ -30,8 +30,65 @@ let hardStreak = 0;       // 困難以上連對（掌握度計數）
 let totalQ = 0, totalCorrect = 0;
 let history = [];         // 答題紀錄
 let currentQ = null;
+let sessionId = null;     // learn_sessions id（恢復進度用）
 
-renderSetup();
+/* 快照：每出一題、每答一題都存，歷史點開可回到當時的題目 */
+async function saveSnap(extra = {}) {
+  if (!sessionId) return;
+  try {
+    const { saveLearnSession } = await import("../core/learn-history.js");
+    saveLearnSession(supabase, sessionId, {
+      mode, topic, knowledgeContent, level, streak, hardStreak,
+      totalQ, totalCorrect, history, currentQ,
+      done: false, ...extra,
+    });
+  } catch {}
+}
+
+/* 從歷史點開：回到當時的對戰進度 */
+async function restoreQuizSession(sid) {
+  try {
+    const { loadLearnSession } = await import("../core/learn-history.js");
+    const row = await loadLearnSession(supabase, sid, user.id);
+    const st = row?.state;
+    if (!st?.topic) { renderSetup(); return; }
+    sessionId = sid;
+    mode = st.mode || "topic"; topic = st.topic; knowledgeContent = st.knowledgeContent || "";
+    level = st.level ?? 1; streak = st.streak || 0; hardStreak = st.hardStreak || 0;
+    totalQ = st.totalQ || 0; totalCorrect = st.totalCorrect || 0;
+    history = st.history || [];
+    renderTypeHistory(supabase, user.id, "qz-history", "知識對戰");
+    if (st.done) { renderRestoredSummary(st); return; }
+    if (st.currentQ) { currentQ = st.currentQ; renderQuestion(); }
+    else { await nextQuestion(); }
+    toast("已回到上次的進度");
+  } catch { renderSetup(); }
+}
+
+/* 已結束的對戰：顯示當時成績（不再重記一次） */
+function renderRestoredSummary(st) {
+  const score = st.score ?? (totalQ ? Math.round(totalCorrect / totalQ * 100) : 0);
+  view.innerHTML = `
+    <div class="card" style="text-align:center;max-width:520px;margin:0 auto;">
+      <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">HISTORY</div>
+      <h2>「${esc(topic)}」的對戰紀錄</h2>
+      <div class="q-score">${score}</div>
+      <p style="color:var(--paper-400);margin:8px 0;">答對 ${totalCorrect} / ${totalQ} 題${st.mastered ? "・已掌握" : ""}</p>
+      <div style="text-align:left;margin:16px 0;max-height:200px;overflow-y:auto;border:1px solid oklch(1 0 0 / 0.08);border-radius:8px;padding:12px;">
+        ${history.map((h, i) => `<div style="font-size:12px;margin-bottom:6px;"><span style="color:${h.ok ? "var(--leaf-green)" : "var(--signal-red)"};">${h.ok ? "✓" : "✗"}</span> ${esc(h.q.slice(0, 40))}… <span style="color:var(--paper-400);">[${h.level}]</span></div>`).join("")}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="qz-again">再戰一場</button>
+        <button class="btn btn-ghost" id="qz-home">回總覽</button>
+      </div>
+    </div>`;
+  document.getElementById("qz-again").onclick = renderSetup;
+  document.getElementById("qz-home").onclick = () => location.href = "learn.html";
+}
+
+const _sessParam = new URLSearchParams(location.search).get("session");
+if (_sessParam) restoreQuizSession(_sessParam);
+else renderSetup();
 
 function renderSetup() {
   view.innerHTML = `
@@ -99,6 +156,11 @@ async function startBattle() {
   }
   level = 1; streak = 0; hardStreak = 0;
   totalQ = 0; totalCorrect = 0; history = [];
+  /* 建立學習會話：每題存快照，歷史可點開回到當時的題目 */
+  try {
+    const { createLearnSession } = await import("../core/learn-history.js");
+    sessionId = await createLearnSession(supabase, user.id, "知識對戰", topic);
+  } catch {}
   await nextQuestion();
 }
 
@@ -129,6 +191,7 @@ async function nextQuestion() {
     const m = reply.match(/\{[\s\S]*\}/);
     if (!m) throw new Error("出題格式錯誤");
     currentQ = JSON.parse(m[0]);
+    saveSnap();
     renderQuestion();
   } catch (e) {
     view.innerHTML = `<div class="card" style="max-width:560px;margin:0 auto;"><p style="color:var(--signal-red);">出題失敗：${esc(e.message)}</p>
@@ -196,6 +259,7 @@ function answer(pick) {
     }
   }
   history.push({ q: q.question, ok, level: LEVELS[level].nm });
+  saveSnap();
   // 顯示解析（含迷思診斷）
   const exEl = document.getElementById("qz-explain");
   if (q.explanation || !ok) {
@@ -283,14 +347,15 @@ async function finish(mastered) {
   } catch (e) {
     console.warn("戰績存檔失敗:", e.message);
   }
-  /* 記錄到學習歷程 */
+  /* 記錄到學習歷程（帶 session，點開可回到這場對戰） */
   try {
-    const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+    const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+    await saveSnap({ done: true, mastered, score });
     await logLearnHistory(supabase, user.id, {
       type: "知識對戰",
       topic,
       detail: `得分 ${score}，${history.filter(h => h.ok).length}/${history.length} 題答對`,
-      link: "quiz.html",
+      link: sessionLink("quiz.html", sessionId),
     });
       await refreshHistoryUI(supabase, user.id);
   } catch {}

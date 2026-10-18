@@ -9,7 +9,21 @@ const view = $("rd-view");
 let supabase, user;
 let settings = { lang: "en", langName: "英文", difficulty: "auto", shortAnswer: false };
 let article = null, questions = [], currentQ = 0, score = 0, startTime = 0;
-let userTopics = [];
+let userTopics = [], userOwnTopics = [], userFavTopics = [];
+let sessionId = null;   // learn_sessions id（恢復進度用）
+let answers = [];       // 每題作答紀錄
+
+/* 快照：每答一題存一次，歷史點開可回到當時的題目 */
+async function saveSnap(extra = {}) {
+  if (!sessionId) return;
+  try {
+    const { saveLearnSession } = await import("../core/learn-history.js");
+    saveLearnSession(supabase, sessionId, {
+      settings, article, questions, currentQ, score, answers,
+      done: false, ...extra,
+    });
+  } catch {}
+}
 
 /* 語言選項 */
 const LANGS = [
@@ -27,14 +41,64 @@ async function init() {
     const s = JSON.parse(localStorage.getItem(`reading_settings_${user.id}`) || "{}");
     Object.assign(settings, s);
   } catch {}
-  // 載入用戶的知識主題
+  // 載入用戶的知識主題（自己的＋收藏的）
   try {
     const { data } = await supabase.from("knowledge_nodes")
-      .select("title,category").eq("user_id", user.id).eq("is_public", true).limit(20);
-    if (data) userTopics = data;
+      .select("title,category").eq("user_id", user.id).eq("is_public", true).limit(30);
+    userOwnTopics = data || [];
+    userFavTopics = [];
+    try {
+      const { data: favRows } = await supabase.from("node_favorites").select("node_id").eq("user_id", user.id);
+      if (favRows?.length) {
+        const ids = favRows.map(f => f.node_id);
+        const { data: favNodes } = await supabase.from("knowledge_nodes")
+          .select("title,category").in("id", ids).eq("is_public", true).limit(30);
+        if (favNodes) userFavTopics = favNodes.filter(n => !userOwnTopics.some(o => o.title === n.title));
+      }
+    } catch {}
+    userTopics = [...userOwnTopics, ...userFavTopics];
+  } catch {}
+  /* 從歷史點開：恢復當時的作答進度 */
+  try {
+    const sid = new URLSearchParams(location.search).get("session");
+    if (sid) {
+      const { loadLearnSession } = await import("../core/learn-history.js");
+      const row = await loadLearnSession(supabase, sid, user.id);
+      const st = row?.state;
+      if (st?.article && st?.questions?.length) {
+        sessionId = sid;
+        settings = { ...settings, ...st.settings };
+        article = st.article; questions = st.questions;
+        currentQ = st.currentQ || 0; score = st.score || 0;
+        answers = st.answers || [];
+        startTime = Date.now();
+        if (st.done) renderRestoredResult(st);
+        else if (currentQ > 0 || answers.length) renderQuestion();
+        else renderArticle();
+        toast("已回到上次的進度");
+        try { renderTypeHistory(supabase, user.id, "rd-history", "AI閱讀"); } catch {}
+        return;
+      }
+    }
   } catch {}
   renderSetup();
   try { renderTypeHistory(supabase, user.id, "rd-history", "AI閱讀"); } catch {}
+}
+
+/* 從快照恢復已完成的結果（不重跑記分） */
+function renderRestoredResult(st) {
+  const acc = st.acc ?? (questions.length ? Math.round(score / questions.length * 100) : 0);
+  view.innerHTML = `
+    <div style="text-align:center;padding:40px 0;">
+      <div style="font-size:13px;color:var(--paper-400);margin-bottom:8px;">上次的閱讀紀錄・${esc(article.title || "")}</div>
+      <div style="font-size:48px;font-weight:700;color:var(--brass-300);">${acc}%</div>
+      <p style="color:var(--paper-400);">答對 ${score}/${questions.length} 題</p>
+      <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+        <button class="rd-btn" id="rd-again">再讀一篇</button>
+        <button class="rd-btn ghost" onclick="location.href='dashboard.html'">回主控台</button>
+      </div>
+    </div>`;
+  $("rd-again").onclick = () => { renderSetup(); };
 }
 
 function renderSetup() {
@@ -66,7 +130,12 @@ function renderSetup() {
         <label>主題（從你的曙光寶庫選，或讓 AI 決定）</label>
         <select id="rd-topic">
           <option value="">AI 自動選擇</option>
-          ${userTopics.map(t => `<option value="${esc(t.title)}">${esc(t.title)}（${esc(t.category || "未分類")}）</option>`).join("")}
+          <optgroup label="我的寶庫">
+          ${userOwnTopics.map(t => `<option value="${esc(t.title)}">${esc(t.title)}（${esc(t.category || "未分類")}）</option>`).join("")}
+          </optgroup>
+          ${userFavTopics.length ? `<optgroup label="收藏的">
+          ${userFavTopics.map(t => `<option value="${esc(t.title)}">${esc(t.title)}（${esc(t.category || "未分類")}）</option>`).join("")}
+          </optgroup>` : ""}
         </select>
       </div>` : ""}
       <button class="rd-btn" id="rd-start">開始閱讀</button>
@@ -89,7 +158,14 @@ async function startReading() {
     article = result.article;
     questions = result.questions;
     currentQ = 0; score = 0; startTime = Date.now();
+    answers = [];
+    /* 建立學習會話：每答一題存快照，歷史可點開回到當時的題目 */
+    try {
+      const { createLearnSession } = await import("../core/learn-history.js");
+      sessionId = await createLearnSession(supabase, user.id, "AI閱讀", article.title || article.topic);
+    } catch {}
     renderArticle();
+    saveSnap();
   } catch (e) {
     view.innerHTML = `<p style="color:var(--signal-red);">生成失敗：${esc(e.message)}，請重試。</p><button class="rd-btn ghost" onclick="location.reload()">重來</button>`;
   }
@@ -170,6 +246,8 @@ function answerChoice(idx) {
   const q = questions[currentQ];
   const correct = idx === q.answer;
   if (correct) score++;
+  answers.push({ ok: correct });
+  saveSnap();
   view.querySelectorAll(".rd-opt").forEach((btn, i) => {
     btn.disabled = true;
     if (i === q.answer) btn.classList.add("correct");
@@ -195,6 +273,8 @@ async function answerShort() {
     const r = typeof raw === "string" ? JSON.parse(raw) : raw;
     const correct = r.score >= 60;
     if (correct) score++;
+    answers.push({ ok: correct, score: r.score });
+    saveSnap();
     $("rd-feedback").innerHTML = `
       <div class="rd-explain">得分：${r.score}/100<br>${esc(r.feedback)}<br><br>參考答案：${esc(q.sample)}<br>${esc(q.explain || "")}</div>
       <button class="rd-btn" style="margin-top:12px;" id="rd-next">${currentQ + 1 < questions.length ? "下一題" : "看結果"}</button>`;
@@ -208,6 +288,7 @@ async function answerShort() {
 
 function nextQuestion() {
   currentQ++;
+  saveSnap();
   if (currentQ < questions.length) renderQuestion();
   else renderResult();
 }
@@ -223,15 +304,16 @@ function renderResult() {
     h.push({ date: Date.now(), lang: settings.lang, wpm, acc });
     localStorage.setItem(`reading_history_${user.id}`, JSON.stringify(h.slice(-30)));
   } catch {}
-  /* 寫入學習歷程 */
+  /* 寫入學習歷程（帶 session，點開可回到這次閱讀） */
   (async () => {
     try {
-      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      await saveSnap({ done: true, acc, mins });
       await logLearnHistory(supabase, user.id, {
         type: "AI閱讀",
         topic: article.title || `${settings.langName}閱讀`,
         detail: `${settings.langName}・答對 ${score}/${questions.length} 題・正確率 ${acc}%`,
-        link: "reading.html",
+        link: sessionLink("reading.html", sessionId),
       });
         await refreshHistoryUI(supabase, user.id);
   } catch {}

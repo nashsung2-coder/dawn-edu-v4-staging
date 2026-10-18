@@ -32,7 +32,7 @@ const sfx = {
 
 /* ===== 遊戲狀態 ===== */
 const G = {
-  running: false, paused: false, mode: "timed", conquest: null,
+  running: false, paused: false, mode: "timed", conquest: null, topic: "",
   score: 0, combo: 0, maxCombo: 0, hp: 3,
   timeLeft: 60, level: 1, qIndex: 0,
   questions: [], current: null,
@@ -349,7 +349,7 @@ async function startGame(mode, topic) {
 
   // 重置
   Object.assign(G, {
-    running: true, mode,
+    running: true, mode, topic: topic.trim(),
     score: 0, combo: 0, maxCombo: 0, hp: 3,
     timeLeft: 60, level: 1, qIndex: 0,
     bullets: [], asteroids: [], particles: [], floaters: [],
@@ -401,14 +401,23 @@ async function endGame(completed) {
           });
         }
       }
-      // 寫入學習歷程
+      // 寫入學習歷程（帶 session，點開可看戰績、用相同主題再玩）
       try {
-        const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+        const { logLearnHistory, refreshHistoryUI, createLearnSession, saveLearnSession, sessionLink } = await import("../core/learn-history.js");
+        const sid = await createLearnSession(supabase, user.id, "街機", G.conquest?.name || G.topic || "星艦解碼");
+        if (sid) {
+          saveLearnSession(supabase, sid, {
+            mode: G.mode, topic: G.topic || "",
+            conquest: G.conquest?.name || "",
+            score: G.score, qIndex: G.qIndex, maxCombo: G.maxCombo,
+            done: true,
+          });
+        }
         await logLearnHistory(supabase, user.id, {
           type: "街機",
           topic: G.conquest?.name ? `征服 ${G.conquest.name}` : `星艦解碼・${G.mode === "survival" ? "生存" : "限時"}模式`,
           detail: `得分 ${G.score}・答題 ${G.qIndex}・最高連擊 ${G.maxCombo}`,
-          link: "arcade.html",
+          link: sessionLink("arcade.html", sid),
         });
           await refreshHistoryUI(supabase, user.id);
   } catch {}
@@ -506,6 +515,37 @@ async function init() {
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.onclick = () => startGame(btn.dataset.mode, document.getElementById("arcade-topic").value);
   });
+  /* 從歷史點開：顯示上次戰績，可一鍵用相同主題再玩 */
+  try {
+    const sid = new URLSearchParams(location.search).get("session");
+    if (sid) {
+      const { loadLearnSession } = await import("../core/learn-history.js");
+      const row = await loadLearnSession(supabase, sid, user.id);
+      const st = row?.state;
+      if (st && st.done) {
+        const menu = document.getElementById("game-menu");
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.cssText = "max-width:560px;margin:0 auto 16px;padding:16px;text-align:center;";
+        card.innerHTML = `
+          <div style="font-size:12px;color:var(--paper-400);margin-bottom:6px;">上次的街機戰績${st.conquest ? `・征服 ${esc(st.conquest)}` : ""}</div>
+          <div style="font-size:28px;font-weight:700;color:var(--brass-300);">${st.score} 分</div>
+          <div style="font-size:13px;color:var(--paper-400);margin:6px 0 12px;">答題 ${st.qIndex}・最高連擊 ${st.maxCombo}${st.topic ? `・主題：${esc(st.topic)}` : ""}</div>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <button class="btn btn-primary btn-sm" id="arcade-replay">用相同主題再玩一次</button>
+            <button class="btn btn-ghost btn-sm" id="arcade-dismiss">關閉</button>
+          </div>`;
+        menu.parentNode.insertBefore(card, menu);
+        document.getElementById("arcade-replay").onclick = () => {
+          const inp = document.getElementById("arcade-topic");
+          if (inp && st.topic) inp.value = st.topic;
+          card.remove();
+          startGame(st.mode || "timed", st.topic || (inp ? inp.value : ""));
+        };
+        document.getElementById("arcade-dismiss").onclick = () => card.remove();
+      }
+    }
+  } catch {}
 }
 // 導覽列加上街機入口（如果還沒有）
 init();
