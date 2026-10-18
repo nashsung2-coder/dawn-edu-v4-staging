@@ -53,7 +53,7 @@ async function requestHtmlExplain(originalText) {
     // 確保有 [HTML] 標記，沒有的話直接包起來
     let final = reply;
     if (!reply.includes("[HTML]")) {
-      final = `[HTML]<div style="padding:20px;line-height:1.8;">${esc(reply).replace(/\n/g, "<br>")}</div>[/HTML]`;
+      final = `[HTML]<div style="padding:24px;line-height:1.9;font-size:15px;">${md(reply)}</div>[/HTML]`;
     }
     addMsg("ai", final);
     try { chatHistory.push({ role: "assistant", content: final }); saveChatHistory(); } catch {}
