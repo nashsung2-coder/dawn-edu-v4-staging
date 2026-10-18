@@ -1,5 +1,5 @@
 /* v4 \u6838\u5fc3\uff1a\u5171\u7528 UI\uff08\u9802\u6b04\u3001\u6642\u6bb5\u80cc\u666f\u3001toast\uff09 */
-import { getUser, getProfile, signOut } from "./supabase.js";
+import { getUser, getProfile, signOut, supabase } from "./supabase.js";
 import { buildLearningContext, companionChat } from "./companion.js";
 
 const NAV_GROUPS = [
@@ -236,6 +236,11 @@ export async function renderTopbar(current) {
   }
   // 非主控台頁面顯示懸浮聊天球
   try { initFloatingChat(current); } catch (e) { console.error("懸浮球初始化失敗:", e); }
+  /* 每一頁底部自動掛載歷史紀錄（已有獨立歷史區塊的頁面會跳過） */
+  try {
+    const { mountPageHistory } = await import("./learn-history.js");
+    mountPageHistory(supabase, user);
+  } catch (e) { console.warn("歷史區塊掛載失敗:", e.message); }
 }
 
 /* \u9700\u8981\u767b\u5165\u7684\u9801\u9762\u547c\u53eb\uff1b\u672a\u767b\u5165\u5c0e\u5411\u9996\u9801 */
