@@ -5,9 +5,24 @@ import { createEditor, renderBlocks, blocksText, newBlock } from "../core/blocks
 
 await renderTopbar("knowledge.html");
 const user = await requireAuth();
+window._kbUser = user;
 await ensureProfile(supabase, user);
 
 const v = document.getElementById("v");
+
+window.delNode = async (id, btn) => {
+  if (!confirm("確定要刪除這個知識節點嗎？")) return;
+  btn.disabled = true;
+  try {
+    const { error } = await supabase.from("knowledge_nodes").delete().eq("id", id).eq("user_id", window._kbUser.id);
+    if (error) throw error;
+    toast("已刪除");
+    location.reload();
+  } catch (err) {
+    toast("刪除失敗：" + err.message);
+    btn.disabled = false;
+  }
+};
 const qEl = document.getElementById("q");
 let mode = "all"; // all | mine
 let activeCat = "全部";
@@ -239,7 +254,7 @@ function render() {
           <button class="btn btn-ghost upbtn" style="padding:3px 8px;font-size:12px;" data-up="${n.id}">讚</button>
           <button class="btn btn-ghost hide-mobile" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>
           ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : ""}
-          ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" data-del="${n.id}">刪除</button>` : ""}
+          ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" onclick="delNode('${n.id}', this)">刪除</button>` : ""}
         </div>
       </div>
     </div>`;
@@ -286,25 +301,7 @@ function render() {
       el.classList.toggle("open");
     });
   });
-  // 用事件委派處理刪除（避免動態渲染時監聽器遺失）
-  v.onclick = async e => {
-    const btn = e.target.closest("[data-del]");
-    if (!btn) return;
-    e.stopPropagation();
-    if (!confirm("確定要刪除這個知識節點嗎？")) return;
-    btn.disabled = true;
-    try {
-      const { error } = await supabase.from("knowledge_nodes")
-        .delete().eq("id", btn.dataset.del).eq("user_id", user.id);
-      if (error) throw error;
-      cache = cache.filter(n => String(n.id) !== String(btn.dataset.del));
-      toast("已刪除");
-      render();
-    } catch (err) {
-      toast("刪除失敗：" + err.message);
-      btn.disabled = false;
-    }
-  };
+  // 刪除改用 inline onclick (delNode)
   // 讀取已按讚記錄
   let likedIds = [];
   try { likedIds = JSON.parse(localStorage.getItem("dawn_liked") || "[]"); } catch {}
