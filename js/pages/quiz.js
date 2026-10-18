@@ -2,6 +2,8 @@
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
+import { initKbSelector } from "../core/kb-selector.js";
+import { renderTypeHistory } from "../core/learn-history.js";
 
 await renderTopbar("quiz.html");
 const user = await requireAuth();
@@ -19,14 +21,14 @@ const LEVELS = [
 /* 掌握度門檻：在「困難」以上連對 3 題即視為掌握 */
 const MASTERY_STREAK = 3;
 
-let mode = "topic";       // topic | content
+let mode = "topic";
 let topic = "";
 let knowledgeContent = "";
-let level = 1;            // 起始：普通
-let streak = 0;           // 當前連對
-let hardStreak = 0;       // 困難以上連對（掌握度計數）
+let level = 1;
+let streak = 0;
+let hardStreak = 0;
 let totalQ = 0, totalCorrect = 0;
-let history = [];         // 答題紀錄
+let history = [];
 let currentQ = null;
 
 renderSetup();
@@ -53,7 +55,7 @@ function renderSetup() {
       </div>
       <div id="mode-content" style="${mode === "content" ? "" : "display:none;"}">
         <input class="input" id="qz-topic2" placeholder="知識標題（例：光合作用筆記）" style="margin-bottom:8px;">
-        <textarea class="input" id="qz-content" placeholder="貼上你要驗證的知識內容…&#10;&#10;AI 會根據這份內容出題，確認你是否真正掌握。內容越詳細，出題越精準。" style="min-height:140px;margin-bottom:8px;resize:vertical;"></textarea>
+        <textarea class="input" id="qz-content" placeholder="貼上你要驗證的知識內容…" style="min-height:140px;margin-bottom:8px;resize:vertical;"></textarea>
         <div style="font-size:11px;color:var(--paper-400);margin-bottom:12px;">💡 小技巧：可以直接從知識庫節點複製內容過來</div>
       </div>
       <button class="btn btn-primary" id="qz-go" style="width:100%;">開戰</button>
@@ -66,15 +68,15 @@ function renderSetup() {
   });
   view.querySelectorAll("[data-t]").forEach(b => {
     b.onclick = () => { document.getElementById("qz-topic").value = b.dataset.t; };
-    initKbSelector("qz-kb", "qz-topic", supabase, user.id);
   });
+  initKbSelector("qz-kb", "qz-topic", supabase, user.id);
+  renderTypeHistory(supabase, user.id, "qz-history", "知識對戰");
   try {
     const _t = new URLSearchParams(location.search).get("topic");
     if (_t) document.getElementById("qz-topic").value = _t;
     const _c = new URLSearchParams(location.search).get("content");
     const _from = new URLSearchParams(location.search).get("from");
     if (_from === "verify") {
-      // 從知識庫驗證跳轉：內容在 sessionStorage
       try {
         const sc = sessionStorage.getItem("verify_content");
         if (sc) { mode = "content"; renderSetup(); document.getElementById("qz-content").value = sc; sessionStorage.removeItem("verify_content"); }
@@ -107,19 +109,14 @@ async function nextQuestion() {
         <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:oklch(0.75 0.15 80 / 0.15);color:var(--brass-300);">難度：${lv.nm}</span>
         <span style="font-size:12px;color:var(--paper-400);">已答 ${totalQ} 題 · 答對 ${totalCorrect}</span>
       </div>
-      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div style="height:100%;width:${(hardStreak / MASTERY_STREAK) * 100}%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transition:width .4s;"></div></div></div>` : ""}
       <p style="color:var(--paper-400);">AI 正在出題…</p>
     </div>`;
   try {
     const contextPrompt = knowledgeContent
-      ? `以下是使用者要驗證的知識內容，請**嚴格根據此內容**出題，驗證他是否真正掌握：\n---\n${knowledgeContent.slice(0, 3000)}\n---\n`
+      ? `以下是使用者要驗證的知識內容，請嚴格根據此內容出題：\n---\n${knowledgeContent.slice(0, 3000)}\n---\n`
       : `主題：${topic}\n`;
     const reply = await ask(
-      `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。
-錯誤選項要是學生常見的錯誤想法，不要隨便編。
-只回 JSON，不要其他文字。格式：
-{"question":"題目","options":["選項1","選項2","選項3","選項4"],"answer_index":0,"explanation":"解析（50字內）","misconceptions":{"1":"一句話說明此選項的迷思","2":"…","3":"…"}}
-注意：options 不要加 A/B/C/D 前綴；misconceptions 的 key 是選項索引（0起算），只列錯誤選項，每個迷思一句話就好`,
+      `你是出題老師。用繁體中文出 1 題單選題（4 個選項）。${lv.prompt}。只回 JSON，不要其他文字。格式：{"question":"題目","options":["選項1","選項2","選項3","選項4"],"answer_index":0,"explanation":"解析（50字內）"}`,
       contextPrompt,
       { model: "fast" }
     );
@@ -147,7 +144,6 @@ function renderQuestion() {
       ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div style="height:100%;width:${(hardStreak / MASTERY_STREAK) * 100}%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transition:width .4s;"></div></div></div>` : ""}
       <h2 style="margin-bottom:16px;font-size:17px;">${esc(q.question)}</h2>
       <div id="qz-opts">${q.options.map((o, i) => {
-        // 去除 AI 可能自帶的 "A:" "B." "C、" 等前綴，避免跟字母徽章重複
         const clean = String(o).replace(/^[A-D][:\.、\s]+/, "").trim();
         return `<button class="opt-btn" data-i="${i}"><span class="opt-key">${keys[i]}</span>${esc(clean)}</button>`;
       }).join("")}</div>
@@ -173,9 +169,7 @@ function answer(pick) {
     totalCorrect++;
     streak++;
     if (validAi) btns[ai].classList.add("correct");
-    // 困難以上答對才計入掌握進度
     if (level >= 2) hardStreak++;
-    // 連對 2 題升難度
     if (streak >= 2 && level < LEVELS.length - 1) {
       level++;
       streak = 0;
@@ -186,29 +180,17 @@ function answer(pick) {
     hardStreak = 0;
     if (!ok && pick >= 0 && pick < btns.length) btns[pick].classList.add("wrong");
     if (validAi) btns[ai].classList.add("correct");
-    // 答錯降難度
     if (level > 0) {
       level--;
       toast(`難度調整 → ${LEVELS[level].nm}，先打好基礎`);
     }
   }
   history.push({ q: q.question, ok, level: LEVELS[level].nm });
-  // 顯示解析（含迷思診斷）
   const exEl = document.getElementById("qz-explain");
   if (q.explanation || !ok) {
     exEl.style.display = "";
-    let html = `<strong>${ok ? "答對了！" : "答錯了。"}</strong> `;
-    // 答錯時顯示對應的迷思診斷（pick 是用戶選的索引）
-    if (!ok && q.misconceptions && typeof pick === "number") {
-      const mis = q.misconceptions[String(pick)] || q.misconceptions[pick];
-      if (mis) {
-        html += `<div style="background:var(--bg-3);padding:10px 14px;border-radius:8px;border-left:3px solid var(--signal-red);margin:8px 0;"><b>診斷：</b>${esc(mis)}</div>`;
-      }
-    }
-    html += esc(q.explanation || "");
-    exEl.innerHTML = html;
+    exEl.innerHTML = `<strong>${ok ? "答對了！" : "答錯了。"}</strong> ${esc(q.explanation || "")}`;
   }
-  // 檢查是否掌握
   if (hardStreak >= MASTERY_STREAK) {
     setTimeout(() => finish(true), 1500);
   } else {
@@ -280,4 +262,13 @@ async function finish(mastered) {
   } catch (e) {
     console.warn("戰績存檔失敗:", e.message);
   }
+  try {
+    const { logLearnHistory } = await import("../core/learn-history.js");
+    logLearnHistory(supabase, user.id, {
+      type: "知識對戰",
+      topic,
+      detail: `得分 ${score}，${history.filter(h => h.ok).length}/${history.length} 題答對`,
+      link: "quiz.html",
+    });
+  } catch {}
 }
