@@ -15,7 +15,12 @@ function addMsg(role, text) {
   const div = document.createElement("div");
   div.className = `cp-msg ${role}`;
   // 檢查是否有 [HTML]...[/HTML] 標記
-  const htmlMatch = text.match(/\[HTML\]([\s\S]*?)\[\/HTML\]/);
+  let htmlMatch = text.match(/\[HTML\]([\s\S]*?)\[\/HTML\]/);
+  // 容錯：只有 [HTML] 開標籤沒有閉標籤時，也嘗試渲染
+  if (!htmlMatch && role === "ai" && text.includes("[HTML]")) {
+    const idx = text.indexOf("[HTML]") + 6;
+    htmlMatch = [text.slice(idx - 6), text.slice(idx).trim()];
+  }
   if (htmlMatch && role === "ai") {
     // 渲染 HTML 到 sandboxed iframe
     const htmlContent = htmlMatch[1].trim();
