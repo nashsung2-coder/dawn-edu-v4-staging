@@ -254,7 +254,7 @@ function render() {
           <button class="btn btn-ghost upbtn" style="padding:3px 8px;font-size:12px;" data-up="${n.id}">讚</button>
           <button class="btn btn-ghost hide-mobile" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>
           ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : ""}
-          ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" onclick="delNode('${n.id}', this)">刪除</button>` : ""}
+          ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" onclick="alert('按鈕有反應'); delNode('${n.id}', this)">刪除</button>` : ""}
         </div>
       </div>
     </div>`;
