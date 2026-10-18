@@ -48,25 +48,65 @@ export async function getRecentHistory(supabase, userId, days = 5, type = null) 
 /**
  * 渲染歷史列表 HTML（共用樣式）
  * @param {Array} items
- * @param {string} emptyText - 無紀錄時的提示文字
+ * @param {string|object} emptyTextOrOpts - 空文字，或 { emptyText, groupBy: 'date'|'topic' }
  */
-export function renderHistoryList(items, emptyText) {
-  if (!items.length) return `<p style="color:var(--paper-400);font-size:13px;">${emptyText || "近 5 天還沒有學習紀錄，去學點東西吧！"}</p>`;
-  // 按日期分組
+export function renderHistoryList(items, emptyTextOrOpts) {
+  let emptyText = "近 5 天還沒有學習紀錄，去學點東西吧！";
+  let groupBy = "topic";
+  if (typeof emptyTextOrOpts === "string") emptyText = emptyTextOrOpts;
+  else if (emptyTextOrOpts) {
+    if (emptyTextOrOpts.emptyText) emptyText = emptyTextOrOpts.emptyText;
+    if (emptyTextOrOpts.groupBy) groupBy = emptyTextOrOpts.groupBy;
+  }
+  if (!items.length) return `<p style="color:var(--paper-400);font-size:13px;">${emptyText}</p>`;
+  const escH = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmtDate = iso => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" });
+    } catch { return ""; }
+  };
+  const badge = t => `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(139,92,246,0.15);color:#c4b5fd;white-space:nowrap;">${escH(t)}</span>`;
+
+  if (groupBy === "date") {
+    // 按日期分組
+    const groups = {};
+    items.forEach(it => {
+      const d = fmtDate(it.created_at);
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(it);
+    });
+    return Object.entries(groups).map(([date, list]) => `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;color:var(--paper-400);margin-bottom:6px;">${escH(date)}</div>
+        ${list.map(it => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
+            ${badge(it.type)}
+            <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(it.topic || it.detail || "學習活動")}</span>
+            ${it.link ? `<a href="${escH(it.link)}" style="font-size:11px;color:var(--brass-300);white-space:nowrap;">查看</a>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    `).join("");
+  }
+
+  // 按主題分組：同一個主題的各種學習整理在一起
   const groups = {};
+  const order = [];
   items.forEach(it => {
-    const d = new Date(it.created_at).toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" });
-    if (!groups[d]) groups[d] = [];
-    groups[d].push(it);
+    const key = (it.topic || "").trim() || `（${it.type}）`;
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(it);
   });
-  return Object.entries(groups).map(([date, list]) => `
-    <div style="margin-bottom:12px;">
-      <div style="font-size:12px;color:var(--paper-400);margin-bottom:6px;">${date}</div>
-      ${list.map(it => `
+  return order.map(k => `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:8px;">${escH(k)}</div>
+      ${groups[k].map(it => `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
-          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(139,92,246,0.15);color:#c4b5fd;white-space:nowrap;">${it.type}</span>
-          <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.topic || it.detail || "學習活動"}</span>
-          ${it.link ? `<a href="${it.link}" style="font-size:11px;color:var(--brass-300);">查看</a>` : ""}
+          ${badge(it.type)}
+          <span style="font-size:11px;color:var(--paper-400);white-space:nowrap;">${escH(fmtDate(it.created_at))}</span>
+          <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(it.detail || "學習活動")}</span>
+          ${it.link ? `<a href="${escH(it.link)}" style="font-size:11px;color:var(--brass-300);white-space:nowrap;">查看</a>` : ""}
         </div>
       `).join("")}
     </div>
@@ -143,7 +183,53 @@ const PAGE_HISTORY_TYPE = {
   "review": "複習",
 };
 
-/* 不掛載歷史區塊的頁面（非學習頁） */
+/* ===== 學習進度快照（learn_sessions）：點開歷史可恢復當時進度 ===== */
+
+/**
+ * 建立一次學習會話，之後用 saveLearnSession 持續存快照
+ * @returns {string|null} session id（表不存在或失敗時回 null，呼叫端要能優雅降級）
+ */
+export async function createLearnSession(supabase, userId, type, topic) {
+  try {
+    if (!supabase || !userId) return null;
+    const { data, error } = await supabase.from("learn_sessions")
+      .insert({ user_id: userId, type, topic: topic || "" })
+      .select("id").single();
+    if (error) throw error;
+    return data?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 存快照（fire-and-forget 即可，內部已吞掉錯誤） */
+export async function saveLearnSession(supabase, sessionId, state) {
+  if (!supabase || !sessionId) return;
+  try {
+    await supabase.from("learn_sessions").update({
+      state: state || {},
+      updated_at: new Date().toISOString(),
+    }).eq("id", sessionId);
+  } catch {}
+}
+
+/** 讀取快照（會驗證 user_id，避免看到別人的） */
+export async function loadLearnSession(supabase, sessionId, userId) {
+  try {
+    if (!supabase || !sessionId || !userId) return null;
+    const { data, error } = await supabase.from("learn_sessions")
+      .select("*").eq("id", sessionId).eq("user_id", userId).single();
+    if (error) throw error;
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 歷史連結：有 session 就帶上，沒有就回功能首頁 */
+export function sessionLink(page, sessionId) {
+  return sessionId ? `${page}?session=${sessionId}` : page;
+}
 const PAGE_HISTORY_SKIP = ["index", "onboarding", "privacy", "terms", "socratic", "node-editor"];
 
 /**
