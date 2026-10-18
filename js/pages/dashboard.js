@@ -27,9 +27,10 @@ function addMsg(role, text) {
   } else {
     div.innerHTML = md(text);
   }
-  // AI 訊息加 HTML 解釋按鈕
-  if (role === "ai" && !htmlMatch) {
+  // AI 訊息加 HTML 解釋按鈕（避免重複）
+  if (role === "ai" && !htmlMatch && !div.querySelector(".html-explain-btn")) {
     const btn = document.createElement("button");
+    btn.className = "html-explain-btn";
     btn.textContent = "HTML 圖解";
     btn.style.cssText = "margin-top:8px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid oklch(1 0 0 / 0.15);background:transparent;color:var(--brass-300);cursor:pointer;";
     btn.onclick = () => requestHtmlExplain(text);

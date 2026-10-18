@@ -286,24 +286,25 @@ function render() {
       el.classList.toggle("open");
     });
   });
-  v.querySelectorAll("[data-del]").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      if (!confirm("確定要刪除這個知識節點嗎？")) return;
-      btn.disabled = true;
-      try {
-        const { error } = await supabase.from("knowledge_nodes")
-          .delete().eq("id", btn.dataset.del).eq("user_id", user.id);
-        if (error) throw error;
-        cache = cache.filter(n => String(n.id) !== String(btn.dataset.del));
-        toast("已刪除");
-        render();
-      } catch (err) {
-        toast("刪除失敗：" + err.message);
-        btn.disabled = false;
-      }
-    });
-  });
+  // 用事件委派處理刪除（避免動態渲染時監聽器遺失）
+  v.onclick = async e => {
+    const btn = e.target.closest("[data-del]");
+    if (!btn) return;
+    e.stopPropagation();
+    if (!confirm("確定要刪除這個知識節點嗎？")) return;
+    btn.disabled = true;
+    try {
+      const { error } = await supabase.from("knowledge_nodes")
+        .delete().eq("id", btn.dataset.del).eq("user_id", user.id);
+      if (error) throw error;
+      cache = cache.filter(n => String(n.id) !== String(btn.dataset.del));
+      toast("已刪除");
+      render();
+    } catch (err) {
+      toast("刪除失敗：" + err.message);
+      btn.disabled = false;
+    }
+  };
   // 讀取已按讚記錄
   let likedIds = [];
   try { likedIds = JSON.parse(localStorage.getItem("dawn_liked") || "[]"); } catch {}
