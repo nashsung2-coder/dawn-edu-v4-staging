@@ -27,7 +27,7 @@ function renderEntries() {
   if (!entries.length) {
     v.innerHTML = `<div class="state-empty">
       <p>${searchQ ? "沒有符合的條目" : "書架是空的"}</p>
-      ${!searchQ ? `<a class="btn btn-primary" style="margin-top:12px;" href="feynman.html">去費曼</a>` : ""}
+      ${!searchQ ? `<a class="btn btn-primary" style="margin-top:12px;" href="feynman.html">去學習</a>` : ""}
     </div>`;
     return;
   }
@@ -97,8 +97,8 @@ async function load() {
     if (!allEntries.length) {
       v.innerHTML = `<div class="state-empty">
         <img class="empty-img" src="../assets/media-generation-dawn-v4-empty-library-0-41c0436d-9294-463c-9aaf-34d458cb7df2.webp" alt="空書架">
-        <p>書架是空的。去費曼說服完成一次，AI 會幫你寫成課本條目。</p>
-        <a class="btn btn-primary" style="margin-top:12px;" href="feynman.html">去費曼</a>
+        <p>書架是空的。去學習（思辨對話、知識對戰、情境學習、AI 閱讀），AI 會幫你整理成書架條目。</p>
+        <a class="btn btn-primary" style="margin-top:12px;" href="feynman.html">去學習</a>
       </div>`;
       return;
     }
