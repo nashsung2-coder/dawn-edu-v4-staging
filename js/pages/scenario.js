@@ -28,7 +28,7 @@ function renderSetup() {
         <input type="text" id="sc-concept" placeholder="例：光合作用、牛頓第二定律、均田制、二次函數">
       </div>
       <div class="sc-field">
-        <label>或從知識庫選</label>
+        <label>或從曙光寶庫選</label>
         <select id="sc-kb"><option value="">— 直接輸入上面 —</option></select>
       </div>
       <button class="sc-btn" id="sc-start">進入情境</button>
@@ -42,7 +42,7 @@ function renderSetup() {
     const urlConcept = new URLSearchParams(location.search).get("concept");
     if (urlConcept) $("sc-concept").value = urlConcept;
   } catch {}
-  // 載入知識庫選項（自己的 + 收藏的）
+  // 載入寶庫選項（自己的 + 收藏的）
   (async () => {
     try {
       const { data: own } = await supabase.from("knowledge_nodes")
@@ -61,7 +61,7 @@ function renderSetup() {
       if (allTitles.length) {
         const ownOpts = ownTitles.map(t => `<option value="${esc(t)}">${esc(t)}（我的）</option>`).join("");
         const favOpts = favTitles.filter(t => !ownTitles.includes(t)).map(t => `<option value="${esc(t)}">${esc(t)}（收藏）</option>`).join("");
-        $("sc-kb").innerHTML = `<option value="">— 直接輸入上面 —</option><optgroup label="我的知識庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
+        $("sc-kb").innerHTML = `<option value="">— 直接輸入上面 —</option><optgroup label="我的寶庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
         $("sc-kb").onchange = e => { if (e.target.value) $("sc-concept").value = e.target.value; };
       }
     } catch {}

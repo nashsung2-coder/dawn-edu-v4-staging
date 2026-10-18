@@ -14,7 +14,7 @@ const params = new URLSearchParams(location.search);
 const nodeId = params.get("id");
 
 if (!nodeId) {
-  view.innerHTML = `<div class="state-empty"><p>找不到節點 ID</p><a href="knowledge.html" class="btn btn-primary">返回知識庫</a></div>`;
+  view.innerHTML = `<div class="state-empty"><p>找不到節點 ID</p><a href="knowledge.html" class="btn btn-primary">返回曙光寶庫</a></div>`;
 } else {
   try {
     const { data: n, error } = await supabase.from("knowledge_nodes")
@@ -99,6 +99,6 @@ if (!nodeId) {
       view.querySelector("article").appendChild(expEl);
     } catch {}
   } catch (e) {
-    view.innerHTML = `<div class="state-empty"><p>${htmlEsc(e.message)}</p><a href="knowledge.html" class="btn btn-primary">返回知識庫</a></div>`;
+    view.innerHTML = `<div class="state-empty"><p>${htmlEsc(e.message)}</p><a href="knowledge.html" class="btn btn-primary">返回曙光寶庫</a></div>`;
   }
 }

@@ -245,7 +245,7 @@ async function init() {
 
     // 建議快捷問題（新用戶走 aha 流程，不覆蓋）
     if (!(isNewUser && !hasHistory)) {
-      const suggests = ["我今天該複習什麼？", "推薦一個知識庫給我", "幫我安排這週的學習計畫"];
+      const suggests = ["我今天該複習什麼？", "推薦一個寶庫分類給我", "幫我安排這週的學習計畫"];
       $("cp-suggest").innerHTML = suggests.map(s => `<button class="chip">${esc(s)}</button>`).join("");
       $("cp-suggest").querySelectorAll(".chip").forEach(x => x.onclick = () => send(x.textContent));
     }
@@ -282,7 +282,7 @@ async function init() {
       const nodeCount = nodes.count ?? 0;
       let suggest = "";
       if (dueCount > 0) suggest += `<div style="margin-bottom:8px;">📝 有 ${dueCount} 張卡片到期了，先去複習吧</div>`;
-      if (nodeCount < 5) suggest += `<div style="margin-bottom:8px;">📚 知識庫只有 ${nodeCount} 個節點，去建立你的第一個知識庫吧</div>`;
+      if (nodeCount < 5) suggest += `<div style="margin-bottom:8px;">📚 曙光寶庫只有 ${nodeCount} 個節點，去建立你的第一個寶庫分類吧</div>`;
       else suggest += `<div style="margin-bottom:8px;">📚 你有 ${nodeCount} 個知識節點，試試用情境學習來體驗它們</div>`;
       suggest += `<div style="font-size:12px;color:var(--paper-400);margin-top:8px;">跟小曙聊聊，他會給你更個人化的建議</div>`;
       $("cp-suggestions-list").innerHTML = suggest;
@@ -303,7 +303,7 @@ async function init() {
 
     // 快捷入口
     const links = [
-      ["socratic.html", "蘇格拉底對話"], ["review.html", "複習"], ["knowledge.html", "知識庫"],
+      ["socratic.html", "蘇格拉底對話"], ["review.html", "複習"], ["knowledge.html", "曙光寶庫"],
       ["feynman.html", "費曼"], ["quiz.html", "對戰"], ["universe.html", "宇宙"],
       ["island.html", "群島"], ["pet.html", "靈獸"],
     ];

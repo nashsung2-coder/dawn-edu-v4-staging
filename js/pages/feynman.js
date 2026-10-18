@@ -8,8 +8,8 @@ const user = await requireAuth();
 
 const topicEl = document.getElementById("fy-topic");
 initKbSelector("fy-kb", "fy-topic", supabase, user.id);
-// 知識庫選擇器（延遲初始化，等 user 確定）
-/* 從知識庫提問引導跳轉：預填主題 */
+// 寶庫選擇器（延遲初始化，等 user 確定）
+/* 從曙光寶庫提問引導跳轉：預填主題 */
 try {
   const _q = new URLSearchParams(location.search).get("q");
   if (_q) topicEl.value = _q;
@@ -55,9 +55,9 @@ judgeBtn.onclick = async () => {
       <div class="feedback">${md(reply)}</div>
       ${pass ? `<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input class="input" id="fy-cat" placeholder="分類（例：物理）" style="width:140px;" maxlength="12">
-        <button class="btn btn-primary" id="fy-save">存入課本＋知識庫</button>
+        <button class="btn btn-primary" id="fy-save">存入課本＋曙光寶庫</button>
       </div>
-      <p style="font-size:12px;color:var(--paper-400);margin-top:6px;">同時寫入個人課本與知識庫（滋養你的群島）</p>` : ""}
+      <p style="font-size:12px;color:var(--paper-400);margin-top:6px;">同時寫入個人課本與曙光寶庫（滋養你的群島）</p>` : ""}
     `;
     if (pass) {
       document.getElementById("fy-save").onclick = saveToTextbook;
@@ -168,7 +168,7 @@ async function saveToTextbook() {
       });
         await refreshHistoryUI(supabase, user.id);
   } catch {}
-    /* 同時寫入知識庫：費曼是知識庫的附加品，產出滋養群島 */
+    /* 同時寫入曙光寶庫：思辨對話是曙光寶庫的附加品，產出滋養群島 */
     try {
       await supabase.from("knowledge_nodes").insert({
         user_id: user.id,
@@ -178,7 +178,7 @@ async function saveToTextbook() {
         category: cat,
         is_public: false,
       });
-    } catch (e) { console.warn("知識庫寫入失敗", e); }
+    } catch (e) { console.warn("曙光寶庫寫入失敗", e); }
     /* 寫入 battle_records：讓學習頁今日任務能偵測到完成 */
     try {
       await supabase.from("battle_records").insert({
@@ -188,7 +188,7 @@ async function saveToTextbook() {
         quiz_score: 0,
       });
     } catch (e) { console.warn("戰績寫入失敗", e); }
-    toast("已存入個人課本＋知識庫（預設不公開，可到知識庫改為公開）");
+    toast("已存入個人課本＋曙光寶庫（預設不公開，可到曙光寶庫改為公開）");
     btn.textContent = "已存入 ✓";
   } catch (e) {
     toast("存入失敗：" + e.message);

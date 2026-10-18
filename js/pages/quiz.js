@@ -56,7 +56,7 @@ function renderSetup() {
       <div id="mode-content" style="${mode === "content" ? "" : "display:none;"}">
         <input class="input" id="qz-topic2" placeholder="知識標題（例：光合作用筆記）" style="margin-bottom:8px;">
         <textarea class="input" id="qz-content" placeholder="貼上你要驗證的知識內容…&#10;&#10;AI 會根據這份內容出題，確認你是否真正掌握。內容越詳細，出題越精準。" style="min-height:140px;margin-bottom:8px;resize:vertical;"></textarea>
-        <div style="font-size:11px;color:var(--paper-400);margin-bottom:12px;">💡 小技巧：可以直接從知識庫節點複製內容過來</div>
+        <div style="font-size:11px;color:var(--paper-400);margin-bottom:12px;">💡 小技巧：可以直接從曙光寶庫的節點複製內容過來</div>
       </div>
       <button class="btn btn-primary" id="qz-go" style="width:100%;">開戰</button>
     </div>`;
@@ -77,7 +77,7 @@ function renderSetup() {
     const _c = new URLSearchParams(location.search).get("content");
     const _from = new URLSearchParams(location.search).get("from");
     if (_from === "verify") {
-      // 從知識庫驗證跳轉：內容在 sessionStorage
+      // 從曙光寶庫驗證跳轉：內容在 sessionStorage
       try {
         const sc = sessionStorage.getItem("verify_content");
         if (sc) { mode = "content"; renderSetup(); document.getElementById("qz-content").value = sc; sessionStorage.removeItem("verify_content"); }

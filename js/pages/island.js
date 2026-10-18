@@ -1,5 +1,5 @@
-/* 島嶼 v6：知識庫群島 — 每個知識分類長出一座專屬島嶼。
-   費曼說服與知識對戰是知識庫的附加品：它們的產出化為知識節點，滋養群島。 */
+/* 島嶼 v6：曙光寶庫群島 — 每個寶庫分類長出一座專屬島嶼。
+   思辨對話與知識對戰是曙光寶庫的附加品：它們的產出化為知識節點，滋養群島。 */
 import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
 
@@ -51,7 +51,7 @@ async function load() {
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
           <a class="btn btn-primary" href="feynman.html">費曼說服</a>
           <a class="btn btn-ghost" href="quiz.html">知識對戰</a>
-          <a class="btn btn-ghost" href="knowledge.html">知識庫</a>
+          <a class="btn btn-ghost" href="knowledge.html">曙光寶庫</a>
         </div>
       </div></div>`;
       return;
@@ -65,7 +65,7 @@ async function load() {
           ${cats.length} 座島嶼 · ${totalNodes} 個知識節點 · 群島等級 <b class="mono" style="color:var(--brass-300);">${totalLv}</b>
         </div>
         <div style="font-size:12px;color:var(--paper-400);margin-top:8px;">
-          費曼說服與知識對戰都是知識庫的附加品 — 它們的產出化為節點，滋養你的群島
+          思辨對話與知識對戰都是曙光寶庫的附加品 — 它們的產出化為節點，滋養你的群島
         </div>
       </div>
       <div class="archipelago">
@@ -104,7 +104,7 @@ async function load() {
         }).join("")}
       </div>
       <p style="text-align:center;font-size:12px;color:var(--paper-400);margin-top:16px;">
-        點擊島嶼進入該知識庫 · 新分類會自動長出新島
+        點擊島嶼進入該寶庫分類 · 新分類會自動長出新島
       </p>`;
   } catch (err) {
     v.innerHTML = `<div class="state-empty">

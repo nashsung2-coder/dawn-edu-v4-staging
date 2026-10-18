@@ -1,4 +1,4 @@
-/* 知識庫 v4：公開節點瀏覽 + 我的節點 + 搜尋 + 按讚 */
+/* 曙光寶庫 v4：公開節點瀏覽 + 我的節點 + 搜尋 + 按讚 */
 import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js?v=fixed002";
 import { createEditor, renderBlocks, blocksText, newBlock } from "../core/blocks.js?v=fixed002";
@@ -212,7 +212,7 @@ function render() {
 
   if (!list.length && !drafts.length) {
     v.innerHTML = catTabs + `<div class="state-empty">
-      <p>${q ? "沒有符合的節點" : (mode === "mine" ? "你還沒有建立知識節點" : "知識庫是空的")}</p>
+      <p>${q ? "沒有符合的節點" : (mode === "mine" ? "你還沒有建立知識節點" : "曙光寶庫是空的")}</p>
     </div>`;
     bindCatTabs();
     return;
@@ -397,7 +397,7 @@ qEl.addEventListener("keydown", e => { if (e.key === "Enter") render(); });
   function startAsk(question) {
     question = (question || "").trim();
     if (!question) { toast("請先輸入一個問題"); return; }
-    /* 1. 用問題關鍵字搜尋知識庫 */
+    /* 1. 用問題關鍵字搜尋曙光寶庫 */
     qEl.value = question;
     render();
     /* 2. 顯示學習行動 */

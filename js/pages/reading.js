@@ -63,7 +63,7 @@ function renderSetup() {
       </div>
       ${userTopics.length ? `
       <div class="rd-field">
-        <label>主題（從你的知識庫選，或讓 AI 決定）</label>
+        <label>主題（從你的曙光寶庫選，或讓 AI 決定）</label>
         <select id="rd-topic">
           <option value="">AI 自動選擇</option>
           ${userTopics.map(t => `<option value="${esc(t.title)}">${esc(t.title)}（${esc(t.category || "未分類")}）</option>`).join("")}

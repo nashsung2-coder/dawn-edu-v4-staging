@@ -144,7 +144,7 @@ async function generateGoalPlan(monthlyGoal, categories, existingNodes) {
   const nodeSummary = existingNodes.slice(0, 20).map(n => n.title || n.id).join("、") || "（尚無）";
   const reply = await ask("你是學習規劃師。用繁體中文，只回 JSON。",
     `用戶本月學習目標：「${monthlyGoal}」
-他現有的知識庫分類：${catList}
+他現有的寶庫分類：${catList}
 他已有的部分知識節點：${nodeSummary}
 
 請規劃：
