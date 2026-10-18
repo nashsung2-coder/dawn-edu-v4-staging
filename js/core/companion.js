@@ -18,11 +18,17 @@ export async function buildLearningContext(supabase, userId) {
     const dueCount = review.count ?? 0;
     lines.push(`到期複習任務：${dueCount} 個`);
     lines.push(`知識節點總數：${nodes.data?.length ?? 0}（最近：${(nodes.data || []).map(n => n.title).join("、") || "無"}）`);
-    // 實際存在的寶庫分類（AI 只能推薦這些，不能瞎編）
+    // 實際存在的寶庫分類（AI 只能推薦這些，不能瞎編）：自己的＋全站公開的
     try {
-      const { data: allNodes } = await supabase.from("knowledge_nodes").select("category").eq("user_id", userId);
-      const cats = [...new Set((allNodes || []).map(n => n.category).filter(Boolean))];
-      lines.push(`現有寶庫分類（只能推薦這些）：${cats.length ? cats.join("、") : "（尚無任何分類）"}`);
+      const [{ data: ownNodes }, { data: pubNodes }] = await Promise.all([
+        supabase.from("knowledge_nodes").select("category").eq("user_id", userId),
+        supabase.from("knowledge_nodes").select("category").eq("is_public", true).neq("user_id", userId),
+      ]);
+      const ownCats = [...new Set((ownNodes || []).map(n => n.category).filter(Boolean))];
+      const pubCats = [...new Set((pubNodes || []).map(n => n.category).filter(Boolean))].filter(c => !ownCats.includes(c));
+      lines.push(`我的寶庫分類：${ownCats.length ? ownCats.join("、") : "（尚無）"}`);
+      lines.push(`全站公開分類：${pubCats.length ? pubCats.join("、") : "（尚無）"}`);
+      lines.push(`推薦寶庫分類時只能從以上兩組選擇，不能瞎編；公開分類的節點在曙光寶庫頁都看得到`);
     } catch {}
     if (battles.data?.length) {
       const avg = battles.data.reduce((s, b) => s + (b.quiz_score || 0), 0) / battles.data.length;
