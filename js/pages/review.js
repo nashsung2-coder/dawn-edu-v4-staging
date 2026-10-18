@@ -315,7 +315,7 @@ async function renderMasteryDashboard() {
             <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">${r.nodes} 個節點 · ${r.cards} 張卡片</div>
           </div>
           <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;flex-shrink:0;"
-            onclick="location.href='knowledge.html?cat=${encodeURIComponent(r.cat)}'">進入</button>
+            onclick="location.href='knowledge.html?cat=${encodeURIComponent(r.cat)}'">去學習</button>
         </div>`).join("")}
       <div style="text-align:center;margin-top:20px;">
         <button class="btn btn-primary" onclick="location.href='learn.html'">去學習新內容</button>
