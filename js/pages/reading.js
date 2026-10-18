@@ -26,11 +26,63 @@ async function saveSnap(extra = {}) {
 }
 
 /* 語言選項 */
+const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+/* 各語言的主流評測標準：英文/歐語系 CEFR、日文 JLPT、韓文 TOPIK */
 const LANGS = [
-  ["en", "英文"], ["ja", "日文"], ["ko", "韓文"], ["fr", "法文"],
-  ["de", "德文"], ["es", "西班牙文"], ["it", "義大利文"], ["pt", "葡萄牙文"],
-  ["ru", "俄文"], ["ar", "阿拉伯文"], ["th", "泰文"], ["vi", "越南文"],
+  { code: "en", name: "英文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "ja", name: "日文", fw: "JLPT", levels: ["N5", "N4", "N3", "N2", "N1"] },
+  { code: "ko", name: "韓文", fw: "TOPIK", levels: ["1級", "2級", "3級", "4級", "5級", "6級"] },
+  { code: "fr", name: "法文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "de", name: "德文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "es", name: "西班牙文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "it", name: "義大利文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "pt", name: "葡萄牙文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "ru", name: "俄文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "ar", name: "阿拉伯文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "th", name: "泰文", fw: "CEFR", levels: CEFR_LEVELS },
+  { code: "vi", name: "越南文", fw: "CEFR", levels: CEFR_LEVELS },
 ];
+const LEVEL_DESC = {
+  CEFR: {
+    A1: "入門：最基礎的日常單字、短句", A2: "初級：日常生活常用表達、簡單句",
+    B1: "中級：熟悉主題的連貫敘述、複合句", B2: "中高級：抽象議題論述、長難句",
+    C1: "高級：學術與專業文本、細膩表達", C2: "精通：近母語者的精確度與文體掌握",
+  },
+  JLPT: {
+    N5: "入門：五十音、基礎單字、です・ます體短句", N4: "初級：日常會話、て形・ない形等基本變化",
+    N3: "中級：日常加部分抽象話題、複合句", N2: "中高級：新聞與論說文、敬語與複雜文法",
+    N1: "高級：學術文學文本、細膩語感與慣用語",
+  },
+  TOPIK: {
+    "1級": "入門：基礎單字、簡單句", "2級": "初級：日常生活對話",
+    "3級": "中級：熟悉主題的完整敘述", "4級": "中高級：社會議題、正式文體",
+    "5級": "高級：專業領域、抽象論述", "6級": "精通：近母語者水準",
+  },
+};
+const langOf = code => LANGS.find(l => l.code === code) || LANGS[0];
+/* 難度下拉選項：AI 自動調整＋該語言評測標準的級別 */
+function diffOptions(langCode, current) {
+  const L = langOf(langCode);
+  const cur = ["auto", ...L.levels].includes(current) ? current : "auto";
+  const opts = [`<option value="auto" ${cur === "auto" ? "selected" : ""}>AI 自動調整</option>`];
+  for (const lv of L.levels) {
+    const short = (LEVEL_DESC[L.fw]?.[lv] || "").split("：")[0];
+    opts.push(`<option value="${lv}" ${cur === lv ? "selected" : ""}>${L.fw} ${lv}（${short}）</option>`);
+  }
+  return opts.join("");
+}
+/* 難度描述（餵給 AI 的 prompt 用） */
+function diffDescFor(level, langCode) {
+  const L = langOf(langCode);
+  if (level === "auto") {
+    const stats = getStats();
+    const avgAcc = stats.total ? stats.correct / stats.total : 0.7;
+    const lv = avgAcc > 0.85 ? L.levels[L.levels.length - 2]
+      : avgAcc > 0.6 ? L.levels[Math.floor(L.levels.length / 2)] : L.levels[1];
+    return `${L.fw} ${lv}（${LEVEL_DESC[L.fw]?.[lv] || ""}）`;
+  }
+  return `${L.fw} ${level}（${LEVEL_DESC[L.fw]?.[level] || ""}）`;
+}
 
 async function init() {
   await renderTopbar("reading");
@@ -102,8 +154,9 @@ function renderRestoredResult(st) {
 }
 
 function renderSetup() {
-  const langOpts = LANGS.map(([code, name]) =>
-    `<option value="${code}" ${settings.lang === code ? "selected" : ""}>${name}</option>`).join("");
+  const langOpts = LANGS.map(l =>
+    `<option value="${l.code}" ${settings.lang === l.code ? "selected" : ""}>${l.name}</option>`).join("");
+  const curLang = langOf(settings.lang);
   view.innerHTML = `
     <div class="rd-setup">
       <div class="rd-field">
@@ -111,13 +164,8 @@ function renderSetup() {
         <select id="rd-lang">${langOpts}</select>
       </div>
       <div class="rd-field">
-        <label>難度</label>
-        <select id="rd-diff">
-          <option value="auto" ${settings.difficulty === "auto" ? "selected" : ""}>AI 自動調整</option>
-          <option value="easy" ${settings.difficulty === "easy" ? "selected" : ""}>簡單</option>
-          <option value="medium" ${settings.difficulty === "medium" ? "selected" : ""}>中等</option>
-          <option value="hard" ${settings.difficulty === "hard" ? "selected" : ""}>困難</option>
-        </select>
+        <label id="rd-diff-label">程度（${curLang.fw}）</label>
+        <select id="rd-diff">${diffOptions(settings.lang, settings.difficulty)}</select>
       </div>
       <div class="rd-field">
         <label class="rd-toggle">
@@ -141,11 +189,19 @@ function renderSetup() {
       <button class="rd-btn" id="rd-start">開始閱讀</button>
     </div>`;
   $("rd-start").onclick = startReading;
+  /* 切換語言時重建該語言評測標準的級別選項 */
+  $("rd-lang").onchange = (e) => {
+    settings.lang = e.target.value;
+    const L = langOf(settings.lang);
+    $("rd-diff-label").textContent = `程度（${L.fw}）`;
+    $("rd-diff").innerHTML = diffOptions(settings.lang, "auto");
+    settings.difficulty = "auto";
+  };
 }
 
 async function startReading() {
   settings.lang = $("rd-lang").value;
-  settings.langName = LANGS.find(([c]) => c === settings.lang)?.[1] || settings.lang;
+  settings.langName = langOf(settings.lang).name;
   settings.difficulty = $("rd-diff").value;
   settings.shortAnswer = $("rd-short").checked;
   const topicSel = $("rd-topic");
@@ -172,13 +228,8 @@ async function startReading() {
 }
 
 async function generateArticle(topicHint) {
-  // 決定難度描述
-  let diffDesc = { easy: "簡單（基礎單字、短句）", medium: "中等（常見單字、複合句）", hard: "困難（進階單字、長難句）" }[settings.difficulty] || "";
-  if (settings.difficulty === "auto") {
-    const stats = getStats();
-    const avgAcc = stats.total ? stats.correct / stats.total : 0.7;
-    diffDesc = avgAcc > 0.85 ? "困難（進階單字、長難句）" : avgAcc > 0.6 ? "中等（常見單字、複合句）" : "簡單（基礎單字、短句）";
-  }
+  // 決定難度描述：依該語言的主流評測標準（CEFR / JLPT / TOPIK）
+  const diffDesc = diffDescFor(settings.difficulty, settings.lang);
   const topic = topicHint || (userTopics.length ? userTopics[Math.floor(Math.random() * userTopics.length)].title : "科學");
   const qCount = 4;
   const shortQ = settings.shortAnswer ? "其中 1 題必須是簡答題（用目標語言寫 2-3 句回答）" : "全部為選擇題";
