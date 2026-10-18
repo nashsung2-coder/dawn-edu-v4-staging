@@ -7,7 +7,7 @@ const NAV_GROUPS = [
     ["dashboard.html", "\u4e3b\u63a7\u53f0", "nav-learn.webp"],
   ]},
   { label: "\u5b78\u7fd2", items: [
-    ["knowledge.html", "\u77e5\u8b58\u5eab", "nav-knowledge.webp"],
+    ["knowledge.html", "\u66d9\u5149\u5bf6\u5eab", "nav-knowledge.webp"],
     ["scenario.html", "\u60c5\u5883\u5b78\u7fd2", "nav-island.webp"],
     ["reading.html", "\u8de8\u8a9e\u8a00\u95b1\u8b80", "nav-quiz.webp"],
     ["feynman.html", "\u601d\u8faf\u5c0d\u8a71", "nav-feynman.webp"],

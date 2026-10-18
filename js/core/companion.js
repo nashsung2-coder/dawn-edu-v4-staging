@@ -18,11 +18,11 @@ export async function buildLearningContext(supabase, userId) {
     const dueCount = review.count ?? 0;
     lines.push(`到期複習任務：${dueCount} 個`);
     lines.push(`知識節點總數：${nodes.data?.length ?? 0}（最近：${(nodes.data || []).map(n => n.title).join("、") || "無"}）`);
-    // 實際存在的知識庫分類（AI 只能推薦這些，不能瞎編）
+    // 實際存在的寶庫分類（AI 只能推薦這些，不能瞎編）
     try {
       const { data: allNodes } = await supabase.from("knowledge_nodes").select("category").eq("user_id", userId);
       const cats = [...new Set((allNodes || []).map(n => n.category).filter(Boolean))];
-      lines.push(`現有知識庫分類（只能推薦這些）：${cats.length ? cats.join("、") : "（尚無任何分類）"}`);
+      lines.push(`現有寶庫分類（只能推薦這些）：${cats.length ? cats.join("、") : "（尚無任何分類）"}`);
     } catch {}
     if (battles.data?.length) {
       const avg = battles.data.reduce((s, b) => s + (b.quiz_score || 0), 0) / battles.data.length;
@@ -47,11 +47,11 @@ export async function buildLearningContext(supabase, userId) {
 /* 工具定義：AI 可以調用的平台功能 */
 export const COMPANION_TOOLS = {
   goto_page: {
-    desc: "導航到指定頁面。page 可選：review(複習), knowledge(知識庫), socratic(蘇格拉底對話), feynman(費曼), quiz(對戰), universe(宇宙), island(群島), pet(靈獸), bookshelf(書架)。若 page 是 knowledge，可加 cat 參數直接進入特定分類的庫（例如 cat=\"物理\"）",
+    desc: "導航到指定頁面。page 可選：review(複習), knowledge(曙光寶庫), socratic(蘇格拉底對話), feynman(費曼), quiz(對戰), universe(宇宙), island(群島), pet(靈獸), bookshelf(書架)。若 page 是 knowledge，可加 cat 參數直接進入特定分類的庫（例如 cat=\"物理\"）",
     exec: (args) => {
       const map = { review: "review.html", knowledge: "knowledge.html", socratic: "socratic.html", feynman: "feynman.html", quiz: "quiz.html", universe: "universe.html", island: "island.html", pet: "pet.html", bookshelf: "bookshelf.html" };
       let target = map[args.page] || "dashboard.html";
-      // 知識庫支援直接跳入特定分類（用絕對路徑避免相對路徑問題）
+      // 曙光寶庫支援直接跳入特定分類（用絕對路徑避免相對路徑問題）
       if (args.page === "knowledge" && args.cat) {
         target = `/pages/knowledge.html?cat=${encodeURIComponent(args.cat)}`;
       } else {
@@ -60,7 +60,7 @@ export const COMPANION_TOOLS = {
       }
       COMPANION_TOOLS.goto_page._navTarget = target;
       const friendly = args.page === "knowledge" && args.cat ? `${args.cat}庫` :
-        { review: "複習頁", knowledge: "知識庫", socratic: "蘇格拉底對話", feynman: "費曼", quiz: "對戰", universe: "宇宙", island: "群島", pet: "靈獸", bookshelf: "書架" }[args.page] || "主控台";
+        { review: "複習頁", knowledge: "曙光寶庫", socratic: "蘇格拉底對話", feynman: "費曼", quiz: "對戰", universe: "宇宙", island: "群島", pet: "靈獸", bookshelf: "書架" }[args.page] || "主控台";
       return `正在前往${friendly}`;
     }
   },
@@ -125,11 +125,11 @@ export function companionSystemPrompt(learningContext, nickname = "同學", memo
 用戶的暱稱是「${nickname}」，對話中要親切地叫他，不要叫「同學」或「用戶」。
 
 你是他的專屬學習管家，負責管理他的整個學習循環：
-知識庫（累積）→ 情境式學習（體驗思考）→ 知識對戰（檢驗成果）→ 複習（鞏固）→ 街機遊戲（樂趣）
+曙光寶庫（累積）→ 情境式學習（體驗思考）→ 知識對戰（檢驗成果）→ 複習（鞏固）→ 街機遊戲（樂趣）
 
 你會：
 - 主動問候，關心今日學習目標的進度
-- 根據學習狀態推薦：該去哪個知識庫、該體驗哪個情境、該複習什麼
+- 根據學習狀態推薦：該去寶庫的哪個分類、該體驗哪個情境、該複習什麼
 - 提醒到期複習（FSRS），叮囑學習計畫
 - 幫用戶建立學習計畫、安排複習進度
 - 不直接給答案，用蘇格拉底式引導讓用戶自己想通
@@ -140,14 +140,14 @@ ${memory ? `\n你記得關於他的事：\n${memory}\n（對話中可以自然�
 
 你可以調用以下工具來幫助用戶。當你想用工具時，必須在回覆中插入 [TOOL:工具名 參數="值"]，例如 [TOOL:goto_page page="review"]。工具執行結果會再餵給你，你再回覆用戶。
 
-重要：當用戶想去某個功能（如複習、對話、知識庫），不要只用說的，一定要調用對應工具幫他跳轉。
+重要：當用戶想去某個功能（如複習、對話、曙光寶庫），不要只用說的，一定要調用對應工具幫他跳轉。
 
 絕對不要在回覆中顯示原始 URL、檔案路徑或內部動作註記（如「（正在前往xxx.html）」）。工具會自動處理跳轉，你只需要用自然的語言告訴用戶，例如「正在帶你去物理庫看看」。
 
 範例：
 - 用戶說「我想複習」→ 回覆「好，我們去複習！[TOOL:review_nudge]」
 - 用戶說「我想學光合作用」→ 回覆「來，我們用蘇格拉底對話搞懂它！[TOOL:start_socratic topic="光合作用"]」
-- 用戶說「帶我去知識庫」→ 回覆「走！[TOOL:goto_page page="knowledge"]」
+- 用戶說「帶我去曙光寶庫」→ 回覆「走！[TOOL:goto_page page="knowledge"]」
 - 用戶說「帶我去物理庫」→ 回覆「走，去物理庫！[TOOL:goto_page page="knowledge" cat="物理"]」
 - 用戶說「我想看數學的庫」→ 回覆「來！[TOOL:goto_page page="knowledge" cat="數學"]」
 
@@ -159,8 +159,8 @@ ${toolDescriptions()}
 2. 主動但不囉嗦，建議要具體
 3. 用戶想偷懶要答案時，溫和地引導他自己想
 4. 提到具體行動時，直接調用工具幫他執行，不只用說的
-5. 推薦知識庫時，只能推薦「現有知識庫分類」列表中的名稱，絕對不能編造不存在的庫名
-6. 如果現有分類是「（尚無任何分類）」，要誠實說還沒有建立任何知識庫，引導用戶先建立，而不是假裝有
+5. 推薦寶庫分類時，只能推薦「現有寶庫分類」列表中的名稱，絕對不能編造不存在的庫名
+6. 如果現有分類是「（尚無任何分類）」，要誠實說還沒有建立任何寶庫分類，引導用戶先建立，而不是假裝有
 
 HTML 圖解能力：
 當用戶點擊「HTML 解釋」按鈕（或要求用 HTML/圖解說明）時，你可以用 [HTML]...[/HTML] 包住一段完整的 HTML 來回答。

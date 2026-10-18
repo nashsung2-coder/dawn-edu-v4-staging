@@ -1,8 +1,8 @@
-/* 知識庫選擇器共用元件：讓各功能頁可以從知識庫選主題，而非只能手動輸入 */
+/* 曙光寶庫選擇器共用元件：讓各功能頁可以從曙光寶庫選主題，而非只能手動輸入 */
 import { esc } from "./ui.js";
 
 /**
- * 建立知識庫下拉選單
+ * 建立寶庫下拉選單
  * @param {string} selectId - select 元素的 id
  * @param {string} inputId - 要填入的 input 元素 id（選了之後自動填）
  * @param {object} supabase - supabase client
@@ -28,7 +28,7 @@ export async function initKbSelector(selectId, inputId, supabase, userId) {
     if (allTitles.length) {
       const ownOpts = ownTitles.map(t => `<option value="${esc(t)}">${esc(t)}（我的）</option>`).join("");
       const favOpts = favTitles.filter(t => !ownTitles.includes(t)).map(t => `<option value="${esc(t)}">${esc(t)}（收藏）</option>`).join("");
-      sel.innerHTML = `<option value="">— 從知識庫選 —</option><optgroup label="我的知識庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
+      sel.innerHTML = `<option value="">— 從曙光寶庫選 —</option><optgroup label="我的寶庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
       sel.onchange = e => {
         if (e.target.value && inputId) {
           const inp = document.getElementById(inputId);
