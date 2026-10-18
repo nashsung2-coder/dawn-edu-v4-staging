@@ -41,6 +41,7 @@ function renderSetup() {
         <button class="btn ${mode === "content" ? "btn-primary" : "btn-ghost"} mode-sel" data-m="content" style="flex:1;">知識驗證</button>
       </div>
       <div id="mode-topic" style="${mode === "topic" ? "" : "display:none;"}">
+        <select class="input" id="qz-kb" style="margin-bottom:8px;display:none;"></select>
         <input class="input" id="qz-topic" placeholder="例：光合作用" style="margin-bottom:8px;">
         <div style="margin-bottom:12px;">
           <span style="font-size:12px;color:var(--paper-400);">熱門主題：</span>
@@ -65,6 +66,7 @@ function renderSetup() {
   });
   view.querySelectorAll("[data-t]").forEach(b => {
     b.onclick = () => { document.getElementById("qz-topic").value = b.dataset.t; };
+    initKbSelector("qz-kb", "qz-topic", supabase, user.id);
   });
   try {
     const _t = new URLSearchParams(location.search).get("topic");
