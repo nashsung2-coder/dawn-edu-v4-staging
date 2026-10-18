@@ -183,6 +183,76 @@ function loadChatHistory() {
   return false;
 }
 
+/* 新用戶完整平台導引：作為小曙的第一句開場白，一步步帶他認識平台 */
+const GUIDE_STEPS = [
+`嗨，我是**小曙**，你的學習陪伴者！歡迎來到**曙光學習**。
+
+這裡跟其他學習 App 不一樣：我不會直接丟答案給你，而是陪你走完一整個學習循環——從好奇，到想通，到真正記住。
+
+花一分鐘，我帶你認識這個地方。`,
+`先認識四個地方：
+
+**曙光寶庫**——你的知識老家。課本的、文化的、好玩的，什麼都可以收藏。以後的學習都從這裡出發。
+
+**情境式學習**——化身成某個角色，親身經歷一個概念。比如當唐朝農民學租庸調，用身體記住知識。
+
+**知識對戰＋複習**——AI 出題考你，答錯會告訴你卡在哪個迷思；再用間隔重複，在你快忘記時提醒複習。
+
+**街機**——學累了就去打電動，射擊答題，玩著玩著就複習了。`,
+`而我，就住在**主控台**。
+
+你隨時可以直接跟我說話：問我問題、讓我推薦今天學什麼、幫你安排這週的學習計畫。我還會主動提醒你該複習的東西。
+
+對了，每一頁的最下面都有**學習歷程**，點開可以看到當時的完整紀錄、回到當時的進度。`,
+`準備好了嗎？選一個開局吧——`,
+];
+let guideStep = 0;
+
+function guideSay(text) {
+  addMsg("ai", text);
+  chatHistory.push({ role: "assistant", content: text });
+  saveChatHistory();
+}
+
+function finishGuide() {
+  try { localStorage.setItem(`xiaoshu_guide_done_${window._uid}`, "1"); } catch {}
+  try { saveChatHistory(); } catch {}
+}
+
+function showGuideStep() {
+  guideSay(GUIDE_STEPS[guideStep]);
+  if (guideStep < GUIDE_STEPS.length - 1) {
+    $("cp-suggest").innerHTML = `<button class="chip" id="cp-g-next">下一步 →</button><button class="chip" id="cp-g-skip" style="opacity:.6;">跳過導引</button>`;
+    $("cp-g-next").onclick = () => { guideStep++; showGuideStep(); };
+    $("cp-g-skip").onclick = () => {
+      finishGuide();
+      $("cp-suggest").innerHTML = "";
+      guideSay("好，那你先逛逛！想學什麼的時候跟我說，我都在。");
+    };
+  } else {
+    $("cp-suggest").innerHTML = `
+      <button class="chip" data-go="knowledge.html">去曙光寶庫逛逛</button>
+      <button class="chip" data-go="scenario.html">來一場情境學習</button>
+      <button class="chip" id="cp-g-aha">先體驗 1 分鐘</button>
+      <button class="chip" id="cp-g-browse" style="opacity:.6;">我先自己逛逛</button>`;
+    $("cp-suggest").querySelectorAll("[data-go]").forEach(b => {
+      b.onclick = () => { finishGuide(); location.href = b.dataset.go; };
+    });
+    $("cp-g-aha").onclick = () => { finishGuide(); startAha(); };
+    $("cp-g-browse").onclick = () => {
+      finishGuide();
+      $("cp-suggest").innerHTML = "";
+      guideSay("沒問題！想學什麼的時候直接跟我說，我都在。");
+    };
+  }
+}
+
+function startGuide() {
+  $("cp-greeting").style.display = "none";
+  guideStep = 0;
+  showGuideStep();
+}
+
 /* 新用戶 1 分鐘 aha 體驗：天空為什麼是藍的 */
 async function startAha() {
   $("cp-suggest").innerHTML = "";
@@ -224,11 +294,16 @@ async function init() {
 
     // 檢測是否為新用戶（無任何學習數據）
     const isNewUser = (review0.count ?? 0) === 0 && (nodes0.count ?? 0) === 0;
+    // 是否已看過完整平台導引
+    let guideDone = false;
+    try { guideDone = !!localStorage.getItem(`xiaoshu_guide_done_${user.id}`); } catch {}
 
-    // 小曙主動打招呼（有對話紀錄就不用重新引導）
-    if (isNewUser && !hasHistory) {
-      $("cp-greeting").innerHTML = `嗨，我是小曙，你的學習陪伴者！<br><br>我跟其他 AI 不一樣——我不會直接給你答案，而是用問題帶你自己想通。<br><br>要不要體驗 1 分鐘看看？👇`;
-      $("cp-suggest").innerHTML = `<button class="chip" id="cp-aha">✨ 體驗 1 分鐘</button><button class="chip">先逛逛就好</button>`;
+    // 小曙主動打招呼：全新用戶先走完整平台導引（有對話紀錄或已導引過就不用）
+    if (isNewUser && !hasHistory && !guideDone) {
+      startGuide();
+    } else if (isNewUser && !hasHistory) {
+      $("cp-greeting").innerHTML = `嗨，我是小曙，你的學習陪伴者！<br><br>我跟其他 AI 不一樣——我不會直接給你答案，而是用問題帶你自己想通。<br><br>要不要體驗 1 分鐘看看？`;
+      $("cp-suggest").innerHTML = `<button class="chip" id="cp-aha">體驗 1 分鐘</button><button class="chip">先逛逛就好</button>`;
       $("cp-suggest").querySelector("#cp-aha").onclick = startAha;
       $("cp-suggest").querySelectorAll(".chip")[1].onclick = () => {
         $("cp-suggest").innerHTML = "";
@@ -282,8 +357,8 @@ async function init() {
       const nodeCount = nodes.count ?? 0;
       let suggest = "";
       if (dueCount > 0) suggest += `<div style="margin-bottom:8px;">📝 有 ${dueCount} 張卡片到期了，先去複習吧</div>`;
-      if (nodeCount < 5) suggest += `<div style="margin-bottom:8px;">📚 曙光寶庫只有 ${nodeCount} 個節點，去建立你的第一個寶庫分類吧</div>`;
-      else suggest += `<div style="margin-bottom:8px;">📚 你有 ${nodeCount} 個知識節點，試試用情境學習來體驗它們</div>`;
+      if (nodeCount < 5) suggest += `<div style="margin-bottom:8px;">曙光寶庫只有 ${nodeCount} 個節點，去建立你的第一個寶庫分類吧</div>`;
+      else suggest += `<div style="margin-bottom:8px;">你有 ${nodeCount} 個知識節點，試試用情境學習來體驗它們</div>`;
       suggest += `<div style="font-size:12px;color:var(--paper-400);margin-top:8px;">跟小曙聊聊，他會給你更個人化的建議</div>`;
       $("cp-suggestions-list").innerHTML = suggest;
     } catch {
