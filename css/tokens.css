@@ -368,3 +368,14 @@ td.n { font-family: var(--font-mono); text-align: right; color: var(--brass-300)
 }
 
 @media (max-width:640px){.hide-mobile{display:none!important;}}
+
+/* AI 生成免責聲明（各互動功能頁共用，ui.js 自動掛載） */
+.ai-disclaimer {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--paper-400); opacity: 0.85;
+  margin: 8px 0 0; line-height: 1.6;
+}
+.ai-disclaimer::before {
+  content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--brass-400); opacity: 0.7;
+}
