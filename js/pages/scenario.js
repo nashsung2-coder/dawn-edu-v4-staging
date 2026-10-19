@@ -14,6 +14,7 @@ let mastered = new Set();  // 已掌握的知識點
 let turnCount = 0;
 let sessionId = null;      // learn_sessions id（恢復進度用）
 let lastChoices = [];      // 上次 AI 給的選項（恢復用）
+let historyId = null;      // learn_history id（開局寫入，結算時更新）
 let kbTitle = "";         // 選中的寶庫節點標題
 let kbContent = "";       // 選中的寶庫節點內容（餵給 AI 當設計依據）
 
@@ -218,6 +219,7 @@ async function startScenario() {
     history = [];
     mastered = new Set();
     turnCount = 0;
+    historyId = null;
     /* 建立學習會話：之後每回合存快照，歷史可點開恢復 */
     try {
       const { createLearnSession } = await import("../core/learn-history.js");
@@ -225,6 +227,17 @@ async function startScenario() {
     } catch {}
     renderStory(md(data.opening), data.firstChoices);
     saveSnap();
+    /* 開局即寫歷史（進行中）：沒完成離開也有紀錄，點開可回來繼續 */
+    try {
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      historyId = await logLearnHistory(supabase, user.id, {
+        type: "情境學習",
+        topic: concept,
+        detail: `扮演${data.identity}・進行中`,
+        link: sessionLink("scenario.html", sessionId),
+      });
+      await refreshHistoryUI(supabase, user.id);
+    } catch {}
   } catch (e) {
     view.innerHTML = `<p style="color:var(--signal-red);">情境生成失敗：${esc(e.message)}</p><button class="sc-btn ghost" onclick="location.reload()">重來</button>`;
   }
@@ -410,16 +423,21 @@ ${histText}
       saveMsg = error ? "" : `<p style="font-size:13px;color:var(--signal-green);">✓ 已存為知識節點「${esc(data.saveNode.title)}」</p>`;
     } catch {}
 
-    /* 寫入學習歷程（帶 session，點開可回到這次旅程） */
+    /* 寫入學習歷程（帶 session，點開可回到這次旅程）：開局已寫過就更新同一筆 */
     try {
-      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      const { logLearnHistory, updateLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
       await saveSnap({ done: true, result: data });
-      await logLearnHistory(supabase, user.id, {
-        type: "情境學習",
-        topic: scenario.concept,
-        detail: `扮演${scenario.identity}・${turnCount} 回合・掌握度 ${data.mastery}%`,
-        link: sessionLink("scenario.html", sessionId),
-      });
+      const detail = `扮演${scenario.identity}・${turnCount} 回合・掌握度 ${data.mastery}%`;
+      if (historyId) {
+        await updateLearnHistory(supabase, historyId, { detail });
+      } else {
+        await logLearnHistory(supabase, user.id, {
+          type: "情境學習",
+          topic: scenario.concept,
+          detail,
+          link: sessionLink("scenario.html", sessionId),
+        });
+      }
         await refreshHistoryUI(supabase, user.id);
   } catch {}
 
