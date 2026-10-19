@@ -147,8 +147,20 @@ function matchCat(nodeCat, active) {
   return nc === active || nc.startsWith(active + "/");
 }
 
+/* 概念標籤：DB 欄位或 content meta 裡的 concepts */
+function conceptsOf(n) {
+  if (Array.isArray(n.concepts) && n.concepts.length) return n.concepts;
+  try {
+    const p = JSON.parse(n.content || "");
+    if (p && typeof p === "object" && !Array.isArray(p) && Array.isArray(p.concepts)) return p.concepts;
+  } catch {}
+  return [];
+}
 function render() {
-  const q = qEl.value.trim().toLowerCase();
+  let q = qEl.value.trim().toLowerCase();
+  /* IG 風格：#標籤 語法直接篩選概念標籤 */
+  let tagQ = null;
+  if (q.startsWith("#")) { tagQ = q.slice(1).trim(); q = ""; }
   let list = cache;
   let drafts = [];
   if (mode === "all") {
@@ -166,6 +178,20 @@ function render() {
   // 分類樹基於當前模式的列表（不含分類篩選），計數才準確
   const tree = buildCatTree(list);
   if (activeCat !== "全部") list = list.filter(n => matchCat(n.category, activeCat));
+  /* 標籤雲：依目前列表統計概念標籤（取前 16） */
+  const tagFreq = {};
+  list.forEach(n => conceptsOf(n).forEach(c => {
+    const k = String(c).trim();
+    if (k) tagFreq[k] = (tagFreq[k] || 0) + 1;
+  }));
+  const topTags = Object.entries(tagFreq).sort((a, b) => b[1] - a[1]).slice(0, 16);
+  if (tagQ) list = list.filter(n => conceptsOf(n).some(c => String(c).trim().toLowerCase() === tagQ));
+  const tagCloud = topTags.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+      <span style="font-size:11px;color:var(--paper-400);">#</span>
+      ${topTags.map(([t, c]) => `
+        <button data-tag="${esc(t)}" style="font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid ${tagQ === t.toLowerCase() ? "var(--brass-400)" : "oklch(1 0 0 / 0.12)"};background:${tagQ === t.toLowerCase() ? "oklch(0.74 0.14 80 / 0.12)" : "transparent"};color:${tagQ === t.toLowerCase() ? "var(--brass-300)" : "var(--paper-400)"};">#${esc(t)}<span style="opacity:.6;"> ${c}</span></button>`).join("")}
+      ${tagQ ? `<button data-tag-clear style="font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid var(--signal-red);background:transparent;color:var(--signal-red);">✕ 清除</button>` : ""}
+    </div>` : "";
   const catTabs = `<div class="cat-tabs" style="margin-bottom:16px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
       <button class="btn ${activeCat === "全部" ? "btn-primary" : "btn-ghost"}" data-kcat="全部" style="padding:6px 14px;font-size:13px;">全部（${list.length}）</button>
@@ -211,14 +237,14 @@ function render() {
   </div>` : "";
 
   if (!list.length && !drafts.length) {
-    v.innerHTML = catTabs + `<div class="state-empty">
-      <p>${q ? "沒有符合的節點" : (mode === "mine" ? "你還沒有建立知識節點" : "曙光寶庫是空的")}</p>
+    v.innerHTML = catTabs + tagCloud + `<div class="state-empty">
+      <p>${tagQ ? `沒有標為「#${esc(tagQ)}」的節點` : (q ? "沒有符合的節點" : (mode === "mine" ? "你還沒有建立知識節點" : "曙光寶庫是空的"))}</p>
     </div>`;
     bindCatTabs();
     return;
   }
 
-  v.innerHTML = catTabs + draftHtml + pageList.map(n => {
+  v.innerHTML = catTabs + tagCloud + draftHtml + pageList.map(n => {
     let body = n.explanation || n.answer || "";
     let bodyIsBlocks = false;
     let nodeMeta = {};
@@ -244,10 +270,13 @@ function render() {
     const isMine = n.user_id === user.id;
     const editBtn = isMine ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();location.href='node-editor.html?id=${n.id}'">編輯</button>` : "";
     const battleBtn = `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>`;
-    // 超緊湊單行卡片
+    // 超緊湊單行卡片（＋一行可點 hashtag）
+    const chips = nConcepts.slice(0, 4).map(c =>
+      `<button data-tag="${esc(c)}" onclick="event.stopPropagation();" style="font-size:11px;padding:1px 8px;border-radius:10px;cursor:pointer;border:1px solid oklch(1 0 0 / 0.12);background:transparent;color:var(--paper-400);">#${esc(c)}</button>`
+    ).join("");
     return `<div class="card node" data-id="${n.id}" style="padding:10px 14px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <span class="tag" style="border-color:var(--brass-400);color:var(--brass-400);font-size:11px;padding:2px 8px;flex-shrink:0;">${esc(nCategory)}</span>
+        <button data-kcat="${esc(nCategory)}" onclick="event.stopPropagation();" style="border:1px solid var(--brass-400);color:var(--brass-400);font-size:11px;padding:2px 8px;flex-shrink:0;border-radius:8px;background:transparent;cursor:pointer;">${esc(nCategory)}</button>
         <div class="title" style="font-size:14px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(title)}</div>
         <span data-upcount style="font-size:12px;color:var(--paper-400);flex-shrink:0;">▲ ${up}</span>
         <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -257,10 +286,27 @@ function render() {
           ${isMine ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;color:var(--signal-red);border-color:var(--signal-red);" onclick="event.stopPropagation();delNode('${n.id}', this)">刪除</button>` : ""}
         </div>
       </div>
+      ${chips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">${chips}</div>` : ""}
     </div>`;
   }).join("") + pageHtml;
 
   bindCatTabs();
+  /* hashtag / 分類 chip 點擊：事件委派 */
+  v.onclick = e => {
+    const tagBtn = e.target.closest("[data-tag]");
+    if (tagBtn) {
+      qEl.value = "#" + tagBtn.dataset.tag;
+      curPage = 1;
+      render();
+      return;
+    }
+    if (e.target.closest("[data-tag-clear]")) {
+      qEl.value = "";
+      curPage = 1;
+      render();
+      return;
+    }
+  };
   const pgPrev = document.getElementById("pg-prev");
   const pgNext = document.getElementById("pg-next");
   if (pgPrev) pgPrev.onclick = () => { if (curPage > 1) { curPage--; render(); window.scrollTo(0, 0); } };
