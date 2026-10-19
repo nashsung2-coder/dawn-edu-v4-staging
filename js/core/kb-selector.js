@@ -16,7 +16,7 @@ export async function initKbSelector(containerId, supabase, userId, onChange) {
   let own = [];
   try {
     const { data } = await supabase.from("knowledge_nodes")
-      .select("id,title").eq("user_id", userId).eq("is_public", true)
+      .select("id,title,category").eq("user_id", userId).eq("is_public", true)
       .order("created_at", { ascending: false }).limit(60);
     own = data || [];
   } catch {}
@@ -29,7 +29,7 @@ export async function initKbSelector(containerId, supabase, userId, onChange) {
     const ids = (fr || []).map(f => f.node_id).filter(id => !ownIds.has(String(id)));
     if (ids.length) {
       const { data: fn } = await supabase.from("knowledge_nodes")
-        .select("id,title").in("id", ids).eq("is_public", true);
+        .select("id,title,category").in("id", ids).eq("is_public", true);
       favs = fn || [];
     }
   } catch {}
@@ -39,13 +39,35 @@ export async function initKbSelector(containerId, supabase, userId, onChange) {
   const selected = new Set();
   const all = [...own, ...favs];
 
-  const groupHtml = (label, list) => list.length ? `
-    <div style="margin:8px 0 4px;font-size:12px;color:var(--paper-400);">${esc(label)}</div>
-    ${list.map(n => `
-      <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='oklch(1 0 0 / 0.04)'" onmouseout="this.style.background=''">
+  /* 依分類分組：數量多的在前，「未分類」永遠最後 */
+  const byCat = (list) => {
+    const m = new Map();
+    list.forEach(n => {
+      const c = (n.category || "").trim() || "未分類";
+      if (!m.has(c)) m.set(c, []);
+      m.get(c).push(n);
+    });
+    return [...m.entries()].sort((a, b) => {
+      if (a[0] === "未分類") return 1;
+      if (b[0] === "未分類") return -1;
+      return b[1].length - a[1].length || a[0].localeCompare(b[0], "zh-TW");
+    });
+  };
+
+  const nodeLabel = n => `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 8px 6px 18px;border-radius:8px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='oklch(1 0 0 / 0.04)'" onmouseout="this.style.background=''">
         <input type="checkbox" data-kb-id="${esc(String(n.id))}" style="accent-color:var(--brass-400);flex:none;">
         <span>${esc(n.title)}</span>
-      </label>`).join("")}` : "";
+      </label>`;
+
+  const groupHtml = (label, list) => {
+    if (!list.length) return "";
+    return `
+    <div style="margin:8px 0 4px;font-size:12px;color:var(--paper-400);">${esc(label)}</div>
+    ${byCat(list).map(([cat, nodes]) => `
+      <div style="margin:6px 0 2px 6px;font-size:11px;color:var(--brass-300);">${esc(cat)}（${nodes.length}）</div>
+      ${nodes.map(nodeLabel).join("")}`).join("")}`;
+  };
 
   box.innerHTML = `
     <div style="border:1px solid oklch(1 0 0 / 0.1);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:oklch(1 0 0 / 0.02);">
