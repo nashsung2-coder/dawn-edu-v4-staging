@@ -11,6 +11,7 @@
 <title>節點編輯器 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/motion.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .editor-layout { display: flex; gap: 0; min-height: calc(100vh - 60px); }
@@ -50,7 +51,7 @@
 .insert-item {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 14px 8px; border: 1px solid oklch(1 0 0 / 0.1); border-radius: 10px;
-  cursor: pointer; background: oklch(1 0 0 / 0.02); transition: all 150ms;
+  cursor: pointer; background: oklch(1 0 0 / 0.02); transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
   color: var(--paper-300); font-size: 12px;
 }
 .insert-item:hover { border-color: var(--brass-400); background: oklch(0.74 0.14 80 / 0.08); color: var(--paper-50); }
@@ -64,7 +65,7 @@
 }
 .version-item {
   padding: 10px 12px; border: 1px solid oklch(1 0 0 / 0.08); border-radius: 8px;
-  margin-bottom: 8px; cursor: pointer; transition: all 150ms;
+  margin-bottom: 8px; cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .version-item:hover { border-color: var(--brass-400); }
 .version-item .v-time { font-size: 12px; color: var(--paper-400); font-family: var(--font-mono); }

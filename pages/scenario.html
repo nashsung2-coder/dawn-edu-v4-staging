@@ -11,6 +11,7 @@
 <title>情境式學習 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/motion.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .sc-setup { max-width: 560px; }
@@ -33,13 +34,13 @@
   font-size: 13px; color: var(--paper-400);
 }
 .sc-progress .bar { height: 6px; background: oklch(1 0 0 / 0.08); border-radius: 3px; margin-top: 8px; overflow: hidden; }
-.sc-progress .bar div { height: 100%; background: linear-gradient(90deg, var(--brass-500), var(--brass-300)); border-radius: 3px; transition: width .5s; }
+.sc-progress .bar div { height: 100%; width: 100%; background: linear-gradient(90deg, var(--brass-500), var(--brass-300)); border-radius: 3px; }
 .sc-opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .sc-opt {
   text-align: left; padding: 12px 16px; border-radius: 10px; cursor: pointer;
   background: var(--ink-800); color: var(--paper-50); font-size: 14px;
   border: 1px solid oklch(1 0 0 / 0.1); font-family: var(--font-body);
-  transition: border-color 120ms;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 .sc-opt:hover:not(:disabled) { border-color: var(--brass-400); }
 .sc-opt:disabled { cursor: default; opacity: .6; }
@@ -66,6 +67,10 @@
     <p style="color:var(--paper-400);font-size:14px;">變成概念本身，用經歷去理解</p>
   </div>
   <div id="sc-view"></div>
+  <div style="margin-top:32px;max-width:800px;margin-left:auto;margin-right:auto;padding:0 16px;">
+    <h2 style="font-size:16px;margin-bottom:12px;">歷史紀錄</h2>
+    <div id="sc-history"></div>
+  </div>
 </main>
 <script src="../js/vendor/supabase.min.js"></script>
 <script type="module" src="../js/pages/scenario.js"></script>

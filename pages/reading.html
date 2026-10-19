@@ -11,6 +11,7 @@
 <title>AI 跨語言閱讀 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/motion.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .rd-setup { max-width: 560px; }
@@ -37,7 +38,7 @@
   background: transparent; color: var(--paper-50);
   border: 1px solid oklch(1 0 0 / 0.1); border-radius: 8px;
   padding: 12px 14px; margin-bottom: 8px; font-size: 14px; cursor: pointer;
-  font-family: var(--font-body); transition: border-color 120ms;
+  font-family: var(--font-body); transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 .rd-opt:hover:not(:disabled) { border-color: var(--brass-400); }
 .rd-opt:disabled { cursor: default; opacity: .85; }
@@ -67,6 +68,10 @@
     <p style="color:var(--paper-400);font-size:14px;">用你學過的知識，練你想學的語言</p>
   </div>
   <div id="rd-view"></div>
+  <div style="margin-top:32px;max-width:800px;margin-left:auto;margin-right:auto;padding:0 16px;">
+    <h2 style="font-size:16px;margin-bottom:12px;">歷史紀錄</h2>
+    <div id="rd-history"></div>
+  </div>
 </main>
 <script src="../js/vendor/supabase.min.js"></script>
 <script type="module" src="../js/pages/reading.js"></script>

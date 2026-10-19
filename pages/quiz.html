@@ -3,14 +3,15 @@
 <head>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="apple-touch-icon" href="../favicon.svg">
-<meta property="og:site_name" content="曙光教育">
+<meta property="og:site_name" content="曙光學習">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0a0e1f">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>知識對戰 — 曙光教育</title>
+<title>知識對戰 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
 <link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/motion.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 .qz-setup { max-width: 560px; }
@@ -20,7 +21,7 @@
   border: 1px solid oklch(1 0 0 / 0.08); border-radius: 3px;
   padding: 14px 16px; margin-bottom: 8px; font-size: 14px;
   cursor: pointer; font-family: var(--font-body);
-  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .opt-btn:hover:not(:disabled) { border-color: var(--brass-400); }
 .opt-btn:disabled { cursor: default; opacity: .85; }
@@ -48,6 +49,10 @@
     <h1>知識對戰</h1>
   </div>
   <div id="qz-view"></div>
+  <div style="margin-top:32px;">
+    <h2 style="font-size:16px;margin-bottom:12px;">對戰歷史</h2>
+    <div id="qz-history"></div>
+  </div>
 </main>
 <script src="../js/vendor/supabase.min.js"></script>
 <script type="module" src="../js/pages/quiz.js"></script>
