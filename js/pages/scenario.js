@@ -205,7 +205,16 @@ function renderSetup() {
 async function startScenario() {
   const concept = $("sc-concept").value.trim();
   if (!concept) { toast("請輸入或選擇一個概念"); return; }
-  view.innerHTML = `<p style="color:var(--paper-400);">AI 正在為你打造世界…</p>`;
+  view.innerHTML = `<p style="color:var(--paper-400);">AI 正在為你打造世界…</p>
+    <div class="skeleton" style="height:28px;width:42%;margin:18px 0 12px;"></div>
+    <div class="skeleton" style="height:16px;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:16px;width:92%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:16px;width:78%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:16px;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:16px;width:64%;margin-bottom:22px;"></div>
+    <div class="skeleton" style="height:48px;margin-bottom:10px;border-radius:12px;"></div>
+    <div class="skeleton" style="height:48px;margin-bottom:10px;border-radius:12px;"></div>
+    <div class="skeleton" style="height:48px;border-radius:12px;"></div>`;
   try {
     const kbRef = kbContent.trim()
       ? `\n\n以下是曙光寶庫中「${kbTitle}」的完整內容。請嚴格根據這份內容設計情境——身份、背景、知識點都必須出自這份內容，可以改寫成親身經歷的視角，但不要編造內容裡沒有的事實：\n---\n${kbContent.trim().slice(0, 5000)}\n---`

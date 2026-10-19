@@ -352,7 +352,10 @@ async function startGame(mode, topic) {
   }
 
   // 顯示載入
-  document.getElementById("game-menu").innerHTML = `<p style="color:var(--paper-400);">AI 正在準備題目…</p>`;
+  document.getElementById("game-menu").innerHTML = `<p style="color:var(--paper-400);">AI 正在準備題目…</p>
+    <div class="skeleton" style="height:20px;width:50%;margin:16px 0 12px;"></div>
+    <div class="skeleton" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
+    <div class="skeleton" style="height:44px;border-radius:12px;"></div>`;
 
   try {
     G.questions = await fetchQuestions(topic.trim(), 20);

@@ -219,7 +219,11 @@ async function nextQuestion() {
         <span style="font-size:12px;color:var(--paper-400);">已答 ${totalQ} 題 · 答對 ${totalCorrect}</span>
       </div>
       ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
-      <p style="color:var(--paper-400);">AI 正在出題…</p>
+      <div class="skeleton" style="height:20px;width:70%;margin:6px 0 18px;"></div>
+      <div class="skeleton" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
+      <div class="skeleton" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
+      <div class="skeleton" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
+      <div class="skeleton" style="height:44px;border-radius:12px;"></div>
     </div>`;
   try {
     const kbRef = kbCache.filter(k => k.text)

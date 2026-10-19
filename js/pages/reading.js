@@ -218,7 +218,15 @@ async function startReading() {
   const topic = topicSel ? topicSel.value : "";
   localStorage.setItem(`reading_settings_${user.id}`, JSON.stringify(settings));
 
-  view.innerHTML = `<p style="color:var(--paper-400);">AI 正在為你生成${settings.langName}文章…</p>`;
+  view.innerHTML = `<p style="color:var(--paper-400);">AI 正在為你生成${settings.langName}文章…</p>
+    <div class="skeleton" style="height:30px;width:55%;margin:18px 0 16px;"></div>
+    <div class="skeleton" style="height:15px;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;width:95%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;width:88%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;width:70%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;width:93%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;width:60%;"></div>`;
   try {
     const result = await generateArticle(topic);
     article = result.article;

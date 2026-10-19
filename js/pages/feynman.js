@@ -83,7 +83,10 @@ judgeBtn.onclick = async () => {
   judgeBtn.disabled = true;
   judgeBtn.textContent = "評估中…";
   setStep(3);
-  resultEl.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">AI 正在閱讀你的解釋…</p>`;
+  resultEl.innerHTML = `<p style="color:var(--paper-400);font-size:14px;">AI 正在閱讀你的解釋…</p>
+    <div class="skeleton" style="height:15px;margin:12px 0 10px;"></div>
+    <div class="skeleton" style="height:15px;width:90%;margin-bottom:10px;"></div>
+    <div class="skeleton" style="height:15px;width:75%;"></div>`;
 
   try {
     const reply = await ask(
@@ -137,7 +140,10 @@ async function socraticChallenge(topic, text, score, feedback) {
   const challengeEl = document.createElement("div");
   challengeEl.id = "socratic-box";
   challengeEl.style.cssText = "margin-top:20px;padding:16px;border-radius:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);";
-  challengeEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在思考要怎麼挑戰你…</p>`;
+  challengeEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在思考要怎麼挑戰你…</p>
+    <div class="skeleton" style="height:14px;margin-top:12px;"></div>
+    <div class="skeleton" style="height:14px;width:85%;margin-top:8px;"></div>
+    <div class="skeleton" style="height:14px;width:60%;margin-top:8px;"></div>`;
   resultEl.appendChild(challengeEl);
   // 自動滾動到蘇格拉底區塊
   setTimeout(() => challengeEl.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
@@ -175,7 +181,9 @@ async function answerSocratic(topic, questions) {
   const answer = answerEl.value.trim();
   if (answer.length < 10) { toast("多寫一點，讓蘇格拉底看到你的思考"); return; }
 
-  feedbackEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在審視你的回答…</p>`;
+  feedbackEl.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">蘇格拉底正在審視你的回答…</p>
+    <div class="skeleton" style="height:14px;margin-top:12px;"></div>
+    <div class="skeleton" style="height:14px;width:80%;margin-top:8px;"></div>`;
   try {
     const reply = await ask(
       `你是蘇格拉底式的導師。用繁體中文評估學生對挑戰問題的回答。
