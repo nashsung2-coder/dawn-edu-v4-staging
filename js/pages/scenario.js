@@ -155,22 +155,39 @@ function renderSetup() {
   (async () => {
     try {
       const { data: own } = await supabase.from("knowledge_nodes")
-        .select("title").eq("user_id", user.id).eq("is_public", true).limit(30);
-      let favTitles = [];
+        .select("title,category").eq("user_id", user.id).eq("is_public", true).limit(60);
+      let favNodes = [];
       try {
         const { data: favs } = await supabase.from("node_favorites").select("node_id").eq("user_id", user.id);
         if (favs?.length) {
           const ids = favs.map(f => f.node_id);
-          const { data: favNodes } = await supabase.from("knowledge_nodes").select("title").in("id", ids).eq("is_public", true);
-          if (favNodes) favTitles = favNodes.map(n => n.title);
+          const { data: fn } = await supabase.from("knowledge_nodes").select("title,category").in("id", ids).eq("is_public", true);
+          if (fn) favNodes = fn;
         }
       } catch {}
-      const ownTitles = (own || []).map(n => n.title);
-      const allTitles = [...new Set([...ownTitles, ...favTitles])];
-      if (allTitles.length) {
-        const ownOpts = ownTitles.map(t => `<option value="${esc(t)}">${esc(t)}（我的）</option>`).join("");
-        const favOpts = favTitles.filter(t => !ownTitles.includes(t)).map(t => `<option value="${esc(t)}">${esc(t)}（收藏）</option>`).join("");
-        $("sc-kb").innerHTML = `<option value="">— 直接輸入上面 —</option><optgroup label="我的寶庫">${ownOpts}</optgroup>${favOpts ? `<optgroup label="收藏的">${favOpts}</optgroup>` : ""}`;
+      const ownNodes = own || [];
+      const ownTitles = new Set(ownNodes.map(n => n.title));
+      favNodes = favNodes.filter(n => !ownTitles.has(n.title));
+      /* 依分類分組：「未分類」最後 */
+      const byCat = (list) => {
+        const m = new Map();
+        list.forEach(n => {
+          const c = (n.category || "").trim() || "未分類";
+          if (!m.has(c)) m.set(c, []);
+          m.get(c).push(n.title);
+        });
+        return [...m.entries()].sort((a, b) => {
+          if (a[0] === "未分類") return 1;
+          if (b[0] === "未分類") return -1;
+          return b[1].length - a[1].length || a[0].localeCompare(b[0], "zh-TW");
+        });
+      };
+      const optHtml = (list, tag) => byCat(list).map(([cat, titles]) =>
+        `<optgroup label="${esc(tag)}・${esc(cat)}">${titles.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</optgroup>`
+      ).join("");
+      const html = `<option value="">— 直接輸入上面 —</option>` + optHtml(ownNodes, "我的寶庫") + optHtml(favNodes, "收藏的");
+      if (ownNodes.length || favNodes.length) {
+        $("sc-kb").innerHTML = html;
         $("sc-kb").onchange = e => {
           if (e.target.value) {
             $("sc-concept").value = e.target.value;
