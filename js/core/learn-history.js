@@ -9,15 +9,32 @@
 export async function logLearnHistory(supabase, userId, opts) {
   const { type, topic, detail, link } = opts;
   try {
-    await supabase.from("learn_history").insert({
+    const { data } = await supabase.from("learn_history").insert({
       user_id: userId,
       type,
       topic: topic || "",
       detail: detail || "",
       link: link || "",
-    });
+    }).select("id").single();
+    return data?.id || null;
   } catch (e) {
     console.warn("記錄學習歷史失敗:", e.message);
+    return null;
+  }
+}
+
+/* 更新已存在的歷史紀錄（例如：開局寫「進行中」，結算時更新為最終成果） */
+export async function updateLearnHistory(supabase, id, opts) {
+  if (!id) return;
+  try {
+    const patch = {};
+    if (opts.detail !== undefined) patch.detail = opts.detail;
+    if (opts.topic !== undefined) patch.topic = opts.topic;
+    if (opts.link !== undefined) patch.link = opts.link;
+    if (!Object.keys(patch).length) return;
+    await supabase.from("learn_history").update(patch).eq("id", id);
+  } catch (e) {
+    console.warn("更新學習歷史失敗:", e.message);
   }
 }
 
