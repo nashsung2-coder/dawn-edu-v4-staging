@@ -1,19 +1,20 @@
 /* 曙光教育 v4 — Design Tokens
  * 深夜圖書館：墨藍＋暖紙＋黃銅
+ * 2026-10-19：依回饋降低整體對比（主文字改柔白、背景黑提亮、 accent 降飽和），減少刺眼感
  */
 :root {
-  --ink-950: oklch(0.16 0.03 260);
-  --ink-900: oklch(0.20 0.04 260);
-  --ink-800: oklch(0.26 0.05 260);
-  --paper-50: oklch(0.96 0.02 90);
-  --paper-200: oklch(0.88 0.03 90);
-  --paper-400: oklch(0.72 0.03 90);
-  --brass-300: oklch(0.82 0.12 85);
-  --brass-400: oklch(0.74 0.14 80);
-  --brass-600: oklch(0.60 0.12 80);
-  --teal-400: oklch(0.68 0.10 200);
-  --signal-green: oklch(0.72 0.14 150);
-  --signal-red: oklch(0.62 0.18 25);
+  --ink-950: oklch(0.21 0.03 260);
+  --ink-900: oklch(0.25 0.04 260);
+  --ink-800: oklch(0.30 0.05 260);
+  --paper-50: oklch(0.90 0.02 90);
+  --paper-200: oklch(0.82 0.025 90);
+  --paper-400: oklch(0.68 0.025 90);
+  --brass-300: oklch(0.78 0.08 85);
+  --brass-400: oklch(0.70 0.10 80);
+  --brass-600: oklch(0.58 0.09 80);
+  --teal-400: oklch(0.66 0.07 200);
+  --signal-green: oklch(0.70 0.10 150);
+  --signal-red: oklch(0.62 0.13 25);
 
   --font-display: "Noto Serif TC", serif;
   --font-body: "Noto Sans TC", sans-serif;
