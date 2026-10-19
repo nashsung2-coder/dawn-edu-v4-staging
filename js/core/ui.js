@@ -229,6 +229,18 @@ export async function renderTopbar(current) {
       </div>
     </header>
     <nav class="mobile-nav" id="mobile-nav">${mnavHtml}</nav>`);
+  /* Speculation Rules：hover 導覽連結即預渲染，頁面切換近乎即時 */
+  try {
+    if (!document.querySelector('script[type="speculationrules"]') && "HTMLScriptElement" in window) {
+      const urls = [...new Set(NAV.map(([h]) => h))].filter(h => h && !h.startsWith("http"));
+      const s = document.createElement("script");
+      s.type = "speculationrules";
+      s.textContent = JSON.stringify({
+        prerender: [{ source: "list", urls, eagerness: "moderate" }],
+      });
+      document.head.appendChild(s);
+    }
+  } catch {}
   const lo = document.getElementById("tb-logout");
   if (lo) lo.onclick = signOut;
   /* \u4e0b\u62c9\u9078\u55ae\u4e92\u52d5 */
