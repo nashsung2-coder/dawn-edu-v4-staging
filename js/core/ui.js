@@ -246,6 +246,16 @@ export async function renderTopbar(current) {
     const { initAmbient } = await import("./ambient.js");
     initAmbient();
   } catch {}
+  /* AI 免責聲明：互動功能頁在 page-head 下自動掛載 */
+  try {
+    const aiPages = ["quiz.html", "scenario.html", "feynman.html", "arcade.html", "reading.html"];
+    const cur = (location.pathname.split("/").pop() || "").split("?")[0];
+    if (aiPages.includes(cur) && !document.querySelector(".ai-disclaimer")) {
+      const anchor = document.querySelector("main .page-head") || document.querySelector("main h1");
+      if (anchor) anchor.insertAdjacentHTML("afterend",
+        `<p class="ai-disclaimer">由 AI 生成，不保證知識準確性，僅供學習參考。</p>`);
+    }
+  } catch {}
   const lo = document.getElementById("tb-logout");
   if (lo) lo.onclick = signOut;
   /* \u4e0b\u62c9\u9078\u55ae\u4e92\u52d5 */
@@ -378,6 +388,7 @@ async function initFloatingChat(current) {
         <button class="btn btn-ghost btn-sm" id="fc-close" style="padding:2px 8px;">✕</button>
       </div>
       <div id="fc-msgs"></div>
+      <div style="padding:4px 12px 0;font-size:10px;color:var(--paper-400);opacity:.75;">由 AI 生成，不保證知識準確性，僅供學習參考。</div>
       <div id="fc-input-row">
         <input class="input" id="fc-input" placeholder="問小曙…" style="font-size:13px;">
         <button class="btn btn-primary btn-sm" id="fc-send">送出</button>
