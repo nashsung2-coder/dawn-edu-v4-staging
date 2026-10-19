@@ -36,6 +36,39 @@ try {
   if (_sp.get("mode") === "mine") mode = "mine";
 } catch {}
 let cache = [];
+/* 追蹤標籤：使用者最多追蹤 10 個有興趣的標籤 */
+let followed = [];
+let followFilter = false;
+const FOLLOW_MAX = 10;
+
+async function fetchFollowed() {
+  try {
+    const { data } = await supabase.from("user_followed_tags")
+      .select("tag").eq("user_id", user.id).order("created_at");
+    followed = (data || []).map(r => r.tag);
+  } catch { followed = []; }
+}
+
+async function toggleFollow(tag) {
+  tag = String(tag).trim();
+  if (!tag) return;
+  const i = followed.indexOf(tag);
+  try {
+    if (i >= 0) {
+      await supabase.from("user_followed_tags").delete().eq("user_id", user.id).eq("tag", tag);
+      followed.splice(i, 1);
+      if (!followed.length) followFilter = false;
+      toast("已取消追蹤 #" + tag);
+    } else {
+      if (followed.length >= FOLLOW_MAX) { toast(`追蹤上限 ${FOLLOW_MAX} 個，先取消一個吧`); return; }
+      const { error } = await supabase.from("user_followed_tags").insert({ user_id: user.id, tag });
+      if (error) throw error;
+      followed.push(tag);
+      toast("已追蹤 #" + tag);
+    }
+  } catch (e) { toast("追蹤失敗：" + (e.message || e)); }
+  render();
+}
 
 function skeleton() {
   v.innerHTML = `<div class="skeleton" style="height:96px;margin-bottom:12px"></div>
@@ -178,18 +211,31 @@ function render() {
   // 分類樹基於當前模式的列表（不含分類篩選），計數才準確
   const tree = buildCatTree(list);
   if (activeCat !== "全部") list = list.filter(n => matchCat(n.category, activeCat));
-  /* 標籤雲：依目前列表統計概念標籤（取前 16） */
+  /* 追蹤篩選：只看有追蹤標籤的節點 */
+  const followedSet = new Set(followed);
+  if (followFilter && followed.length) {
+    list = list.filter(n => conceptsOf(n).some(c => followedSet.has(String(c).trim())));
+  }
+  /* 標籤雲：依目前列表統計概念標籤；追蹤的標籤置頂（取前 16） */
   const tagFreq = {};
   list.forEach(n => conceptsOf(n).forEach(c => {
     const k = String(c).trim();
     if (k) tagFreq[k] = (tagFreq[k] || 0) + 1;
   }));
-  const topTags = Object.entries(tagFreq).sort((a, b) => b[1] - a[1]).slice(0, 16);
+  const pinned = followed.filter(t => tagFreq[t]).map(t => [t, tagFreq[t]]);
+  const rest = Object.entries(tagFreq).sort((a, b) => b[1] - a[1])
+    .filter(([t]) => !followedSet.has(t)).slice(0, Math.max(0, 16 - pinned.length));
+  const showTags = [...pinned, ...rest];
+  const chipStyle = (t, isFollowed, isActive) =>
+    `font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid ${isActive ? "var(--brass-400)" : isFollowed ? "oklch(0.75 0.15 80 / 0.45)" : "oklch(1 0 0 / 0.12)"};background:${isActive ? "oklch(0.74 0.14 80 / 0.12)" : "transparent"};color:${isActive || isFollowed ? "var(--brass-300)" : "var(--paper-400)"};`;
   if (tagQ) list = list.filter(n => conceptsOf(n).some(c => String(c).trim().toLowerCase() === tagQ));
-  const tagCloud = topTags.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+  const tagCloud = (showTags.length || followed.length) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
       <span style="font-size:11px;color:var(--paper-400);">#</span>
-      ${topTags.map(([t, c]) => `
-        <button data-tag="${esc(t)}" style="font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid ${tagQ === t.toLowerCase() ? "var(--brass-400)" : "oklch(1 0 0 / 0.12)"};background:${tagQ === t.toLowerCase() ? "oklch(0.74 0.14 80 / 0.12)" : "transparent"};color:${tagQ === t.toLowerCase() ? "var(--brass-300)" : "var(--paper-400)"};">#${esc(t)}<span style="opacity:.6;"> ${c}</span></button>`).join("")}
+      ${followed.length ? `<button data-follow-filter style="${chipStyle("", false, followFilter)}">★ 追蹤（${followed.length}）</button>` : ""}
+      ${showTags.map(([t, c]) => {
+        const isF = followedSet.has(t);
+        return `<button data-tag="${esc(t)}" style="${chipStyle(t, isF, tagQ === t.toLowerCase())}">${isF ? "★ " : ""}#${esc(t)}<span style="opacity:.6;"> ${c}</span><span data-follow="${esc(t)}" title="${isF ? "取消追蹤" : "追蹤這個標籤"}" style="margin-left:6px;opacity:.8;">${isF ? "★" : "☆"}</span></button>`;
+      }).join("")}
       ${tagQ ? `<button data-tag-clear style="font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid var(--signal-red);background:transparent;color:var(--signal-red);">✕ 清除</button>` : ""}
     </div>` : "";
   const catTabs = `<div class="cat-tabs" style="margin-bottom:16px;">
@@ -293,9 +339,23 @@ function render() {
   bindCatTabs();
   /* hashtag / 分類 chip 點擊：事件委派 */
   v.onclick = e => {
+    const followBtn = e.target.closest("[data-follow]");
+    if (followBtn) {
+      e.stopPropagation();
+      toggleFollow(followBtn.dataset.follow);
+      return;
+    }
+    if (e.target.closest("[data-follow-filter]")) {
+      followFilter = !followFilter;
+      if (followFilter) qEl.value = "";
+      curPage = 1;
+      render();
+      return;
+    }
     const tagBtn = e.target.closest("[data-tag]");
     if (tagBtn) {
       qEl.value = "#" + tagBtn.dataset.tag;
+      followFilter = false;
       curPage = 1;
       render();
       return;
@@ -404,6 +464,7 @@ async function load() {
   skeleton();
   try {
     cache = await fetchNodes();
+    await fetchFollowed();
     render();
   } catch (e) {
     v.innerHTML = `<div class="state-empty">
