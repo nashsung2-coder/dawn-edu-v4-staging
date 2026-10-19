@@ -451,7 +451,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
     const safePos = btnIndex >= 0 ? btnIndex : pos;
     const slot = container.querySelector(".be-menu-slot");
     slot.innerHTML = `<div class="be-menu" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:16px;background:oklch(0.20 0.04 260);border:1px solid oklch(0.60 0.12 80 / 0.25);border-radius:12px;margin:8px 0;">${BLOCK_TYPES.map(t =>
-      `<button data-btype="${t.type}" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:10px;border:1px solid oklch(0.60 0.12 80 / 0.15);background:transparent;color:var(--paper-200);cursor:pointer;text-align:left;transition:all .15s;" onmouseover="this.style.background='oklch(0.74 0.14 80 / 0.1)';this.style.borderColor='var(--brass-400)'" onmouseout="this.style.background='transparent';this.style.borderColor='oklch(0.60 0.12 80 / 0.15)'">
+      `<button data-btype="${t.type}" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:10px;border:1px solid oklch(0.60 0.12 80 / 0.15);background:transparent;color:var(--paper-200);cursor:pointer;text-align:left;" onmouseover="this.style.background='oklch(0.74 0.14 80 / 0.1)';this.style.borderColor='var(--brass-400)'" onmouseout="this.style.background='transparent';this.style.borderColor='oklch(0.60 0.12 80 / 0.15)'">
         <span style="font-size:22px;line-height:1;">${t.icon}</span>
         <span><span style="display:block;font-size:13px;font-weight:600;">${t.label}</span><span style="display:block;font-size:11px;color:var(--paper-400);margin-top:2px;">${t.desc || ""}</span></span>
       </button>`

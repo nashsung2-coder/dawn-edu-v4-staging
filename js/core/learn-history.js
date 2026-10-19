@@ -94,7 +94,7 @@ export function renderHistoryList(items, emptyTextOrOpts) {
       groups[d].push(it);
     });
     return Object.entries(groups).map(([date, list]) => `
-      <div style="margin-bottom:12px;">
+      <div class="stagger" style="margin-bottom:12px;">
         <div style="font-size:12px;color:var(--paper-400);margin-bottom:6px;">${escH(date)}</div>
         ${list.map(it => `
           <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
@@ -116,7 +116,7 @@ export function renderHistoryList(items, emptyTextOrOpts) {
     groups[key].push(it);
   });
   return order.map(k => `
-    <div style="margin-bottom:16px;">
+    <div class="stagger" style="margin-bottom:16px;">
       <div style="font-size:14px;font-weight:700;margin-bottom:8px;">${escH(k)}</div>
       ${groups[k].map(it => `
         <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
