@@ -1,35 +1,53 @@
 /* 曙光學習 v4 — 環境氛圍
- * 滑鼠跟隨的暖金柔光＋背景視差，讓畫面活起來。
- * 只有 transform / opacity，走 GPU；閒置時也會緩慢漂移；
- * 尊重 prefers-reduced-motion，觸控裝置不啟用滑鼠跟隨。
+ * 深夜圖書館的燈光：三團大而淡的暖霧，沿各自的慢速軌道漂移；
+ * 滑鼠只給輕微視差（不是跟隨），讀作「氛圍」而非「一顆球在追你」。
+ * 只有 transform / opacity，走 GPU；尊重 prefers-reduced-motion；觸控裝置降級為純漂移。
  */
 export function initAmbient() {
   try {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (matchMedia("(pointer: coarse)").matches) return;
-    if (document.getElementById("ambient-glow")) return;
+    if (document.getElementById("ambient-wrap")) return;
+    const coarse = matchMedia("(pointer: coarse)").matches;
 
-    const glow = document.createElement("div");
-    glow.id = "ambient-glow";
-    glow.style.cssText =
-      "position:fixed;left:0;top:0;width:560px;height:560px;margin:-280px 0 0 -280px;" +
-      "border-radius:50%;pointer-events:none;z-index:0;" +
-      "background:radial-gradient(circle, oklch(0.74 0.14 80 / 0.09) 0%, transparent 65%);" +
-      "will-change:transform;";
-    document.body.prepend(glow);
+    const wrap = document.createElement("div");
+    wrap.id = "ambient-wrap";
+    wrap.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;";
+    /* 光霧：大尺寸、極淡、邊緣全透明 */
+    const blobs = [
+      { size: 900, x: 0.22, y: 0.28, amp: 70,  sp: 0.0035, ph: 0.0, op: 0.055, hue: "0.74 0.14 80" },   // 暖金・左上
+      { size: 1000, x: 0.80, y: 0.70, amp: 90, sp: 0.0028, ph: 2.1, op: 0.040, hue: "0.66 0.07 200" },  // 冷青・右下
+      { size: 700, x: 0.60, y: 0.15, amp: 50,  sp: 0.0042, ph: 4.2, op: 0.035, hue: "0.74 0.14 80" },   // 暖金・右上
+    ].map(b => {
+      const el = document.createElement("div");
+      el.style.cssText =
+        `position:absolute;left:0;top:0;width:${b.size}px;height:${b.size}px;` +
+        `margin:${-b.size / 2}px 0 0 ${-b.size / 2}px;border-radius:50%;` +
+        `background:radial-gradient(circle, oklch(${b.hue} / ${b.op}) 0%, transparent 70%);` +
+        "will-change:transform;";
+      wrap.appendChild(el);
+      return { ...b, el };
+    });
+    document.body.prepend(wrap);
 
     const bg = document.querySelector(".time-bg");
-    let tx = innerWidth / 2, ty = innerHeight / 2, x = tx, y = ty, t = Math.random() * 10;
-    addEventListener("pointermove", e => { tx = e.clientX; ty = e.clientY; }, { passive: true });
+    let mx = 0.5, my = 0.5, t = Math.random() * 100;
+    if (!coarse) {
+      addEventListener("pointermove", e => {
+        mx = e.clientX / innerWidth; my = e.clientY / innerHeight;
+      }, { passive: true });
+    }
     (function loop() {
-      t += 0.008;
-      /* 閒置漂移＋滑鼠跟隨（lerp 平滑） */
-      const gx = tx + Math.sin(t) * 36, gy = ty + Math.cos(t * 0.8) * 36;
-      x += (gx - x) * 0.07;
-      y += (gy - y) * 0.07;
-      glow.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
-      if (bg) {
-        const px = (x / innerWidth - 0.5) * -16, py = (y / innerHeight - 0.5) * -16;
+      t += 1;
+      const w = innerWidth, h = innerHeight;
+      for (const b of blobs) {
+        /* 各自慢速漂移＋滑鼠輕微視差（係數小到只覺得「有生命」） */
+        const dx = Math.sin(t * b.sp + b.ph) * b.amp + (coarse ? 0 : (mx - 0.5) * 36);
+        const dy = Math.cos(t * b.sp * 0.8 + b.ph) * b.amp + (coarse ? 0 : (my - 0.5) * 36);
+        b.el.style.transform =
+          `translate(${(b.x * w + dx).toFixed(1)}px,${(b.y * h + dy).toFixed(1)}px)`;
+      }
+      if (bg && !coarse) {
+        const px = (mx - 0.5) * -14, py = (my - 0.5) * -14;
         bg.style.transform = `translate(${px.toFixed(1)}px,${py.toFixed(1)}px) scale(1.04)`;
       }
       requestAnimationFrame(loop);
