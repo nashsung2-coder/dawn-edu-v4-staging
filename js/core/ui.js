@@ -241,6 +241,11 @@ export async function renderTopbar(current) {
       document.head.appendChild(s);
     }
   } catch {}
+  /* 環境氛圍：滑鼠跟隨柔光＋視差 */
+  try {
+    const { initAmbient } = await import("./ambient.js");
+    initAmbient();
+  } catch {}
   const lo = document.getElementById("tb-logout");
   if (lo) lo.onclick = signOut;
   /* \u4e0b\u62c9\u9078\u55ae\u4e92\u52d5 */
