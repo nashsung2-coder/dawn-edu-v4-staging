@@ -43,21 +43,30 @@ const LANGS = [
   { code: "th", name: "泰文", fw: "CEFR", levels: CEFR_LEVELS },
   { code: "vi", name: "越南文", fw: "CEFR", levels: CEFR_LEVELS },
 ];
+/* 程度標籤（下拉選單用）＋ 出題規格（餵給 AI 用：字彙帶、句型、篇幅，空泛形容詞校準不了模型） */
 const LEVEL_DESC = {
   CEFR: {
-    A1: "入門：最基礎的日常單字、短句", A2: "初級：日常生活常用表達、簡單句",
-    B1: "中級：熟悉主題的連貫敘述、複合句", B2: "中高級：抽象議題論述、長難句",
-    C1: "高級：學術與專業文本、細膩表達", C2: "精通：近母語者的精確度與文體掌握",
+    A1: { label: "入門", spec: "約 80–120 個英文單字；只用最高頻約 1000 個基礎單字；只用簡單現在式與過去式；每句平均不超過 10 個字；幾乎不用從屬子句；主題限具體日常生活（自我介紹、家庭、食物）；題目只考字面理解" },
+    A2: { label: "初級", spec: "約 150–200 個英文單字；高頻 2000 字範圍；可用 and/but/because/so 連接；簡單過去式與未來式；短段落；日常主題；題目考細節查找" },
+    B1: { label: "中級", spec: "約 250–350 個英文單字；3000–4000 字彙量；複合句、although/however 引導的從屬子句、第一第二條件句；主題為熟悉領域（學校、旅行、興趣），可含少量抽象討論；題目考主旨歸納與簡單推論" },
+    B2: { label: "中高級", spec: "約 300–400 個英文單字；5000 字以上字彙，含片語動詞與慣用搭配；被動語態、多重從屬子句；抽象議題論述（科技、環境、社會）；須能理解言外之意；題目考論點結構與言外之意" },
+    C1: { label: "高級", spec: "約 350–450 個英文單字；8000 字以上字彙，含低頻學術字彙與名詞化結構；長難句、多重嵌套子句；學術或專業文本；須理解隱含意義、語氣與文體差異；題目考細微語氣、論證手法評估" },
+    C2: { label: "精通", spec: "約 400–500 個英文單字；近母語者水準：低頻精確字彙、慣用語、雙關、文化典故、反諷幽默；文學性或高度抽象文本；複雜修辭與精確的文體掌控；題目考深層隱含意義、文體賞析與批判性理解" },
   },
   JLPT: {
-    N5: "入門：五十音、基礎單字、です・ます體短句", N4: "初級：日常會話、て形・ない形等基本變化",
-    N3: "中級：日常加部分抽象話題、複合句", N2: "中高級：新聞與論說文、敬語與複雜文法",
-    N1: "高級：學術文學文本、細膩語感與慣用語",
+    N5: { label: "入門", spec: "約 150–250 字；平假名、片假名、基礎漢字約 100 字；です・ます體；短句為主；日常生活主題；題目考字面理解" },
+    N4: { label: "初級", spec: "約 250–400 字；漢字約 300 字；て形・ない形・可能形・意向形等基本變化；日常會話與短文；題目考細節查找" },
+    N3: { label: "中級", spec: "約 400–600 字；漢字約 650 字；複合句、授受動詞、條件形、間接表達；日常加部分抽象話題；題目考主旨與推論" },
+    N2: { label: "中高級", spec: "約 600–800 字；漢字約 1000 字；新聞、論說文體；敬語、使役、被動、使役被動等複雜文法；理解文章論點結構；題目考論點與言外之意" },
+    N1: { label: "高級", spec: "約 800–1000 字；漢字約 2000 字；學術、文學、社論；慣用語、雙關、細膩語感；理解深層含義與作者立場；題目考深層解讀與批判理解" },
   },
   TOPIK: {
-    "1級": "入門：基礎單字、簡單句", "2級": "初級：日常生活對話",
-    "3級": "中級：熟悉主題的完整敘述", "4級": "中高級：社會議題、正式文體",
-    "5級": "高級：專業領域、抽象論述", "6級": "精通：近母語者水準",
+    "1級": { label: "入門", spec: "約 100–200 字；基礎單字約 800 個；簡單句；自我介紹、日常生活主題" },
+    "2級": { label: "初級", spec: "約 200–350 字；單字 1500–2000 個；-고/-지만 等基本連接詞；日常生活對話與短文" },
+    "3級": { label: "中級", spec: "約 350–500 字；單字約 3000 個；間接引語、被動形；熟悉主題的完整敘述" },
+    "4級": { label: "中高級", spec: "約 500–700 字；單字 4000 個以上；正式文體、新聞報導；社會議題論述" },
+    "5級": { label: "高級", spec: "約 700–900 字；單字 6000 個以上；專業領域文本；抽象論述與論證結構" },
+    "6級": { label: "精通", spec: "約 900–1100 字；近母語者水準；文學、社論；慣用語、文化背景知識；理解深層含義與批判觀點" },
   },
 };
 const langOf = code => LANGS.find(l => l.code === code) || LANGS[0];
@@ -67,8 +76,8 @@ function diffOptions(langCode, current) {
   const cur = ["auto", ...L.levels].includes(current) ? current : "auto";
   const opts = [`<option value="auto" ${cur === "auto" ? "selected" : ""}>AI 自動調整</option>`];
   for (const lv of L.levels) {
-    const short = (LEVEL_DESC[L.fw]?.[lv] || "").split("：")[0];
-    opts.push(`<option value="${lv}" ${cur === lv ? "selected" : ""}>${L.fw} ${lv}（${short}）</option>`);
+    const label = LEVEL_DESC[L.fw]?.[lv]?.label || "";
+    opts.push(`<option value="${lv}" ${cur === lv ? "selected" : ""}>${L.fw} ${lv}（${label}）</option>`);
   }
   return opts.join("");
 }
@@ -80,9 +89,9 @@ function diffDescFor(level, langCode) {
     const avgAcc = stats.total ? stats.correct / stats.total : 0.7;
     const lv = avgAcc > 0.85 ? L.levels[L.levels.length - 2]
       : avgAcc > 0.6 ? L.levels[Math.floor(L.levels.length / 2)] : L.levels[1];
-    return `${L.fw} ${lv}（${LEVEL_DESC[L.fw]?.[lv] || ""}）`;
+    return `${L.fw} ${lv}：${LEVEL_DESC[L.fw]?.[lv]?.spec || ""}`;
   }
-  return `${L.fw} ${level}（${LEVEL_DESC[L.fw]?.[level] || ""}）`;
+  return `${L.fw} ${level}：${LEVEL_DESC[L.fw]?.[level]?.spec || ""}`;
 }
 
 async function init() {
@@ -253,7 +262,7 @@ async function generateArticle(topicHint) {
   } catch {}
 
   const system = `你是一位${settings.langName}閱讀教材編寫專家。用繁體中文思考，但輸出${settings.langName}文章和題目。`;
-  const prompt = `主題：「${topic}」。寫一篇${settings.langName}短文（約 250-350 字），難度：${diffDesc}。${srcRef}
+  const prompt = `主題：「${topic}」。寫一篇${settings.langName}短文，難度規格如下——${diffDesc}。篇幅與用字必須符合規格，不可降級簡化。${srcRef}
 然後出 ${qCount} 道閱讀理解題：${shortQ}。
 選擇題每題 4 個選項，標明正確答案。
 輸出 JSON 格式：
