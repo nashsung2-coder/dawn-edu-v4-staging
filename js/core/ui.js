@@ -507,7 +507,23 @@ function fcAddMsg(role, text) {
   const box = document.getElementById("fc-msgs");
   const div = document.createElement("div");
   div.className = `fc-msg ${role}`;
-  div.innerHTML = esc(text).replace(/\n/g, "<br>");
+  /* AI 訊息：[HTML]...[/HTML] 走沙盒 iframe 只渲染結果；其餘走 md()（支援表格） */
+  let htmlMatch = role === "ai" ? text.match(/\[HTML\]([\s\S]*?)\[\/HTML\]/) : null;
+  if (!htmlMatch && role === "ai" && text.includes("[HTML]")) {
+    const idx = text.indexOf("[HTML]") + 6;
+    htmlMatch = [text.slice(idx - 6), text.slice(idx).trim()];
+  }
+  if (htmlMatch) {
+    const htmlContent = htmlMatch[1].trim();
+    const htmlStart = text.indexOf("[HTML]");
+    const textBefore = (htmlStart > 0 ? text.slice(0, htmlStart) : "").trim();
+    let inner = "";
+    if (textBefore) inner += `<div style="margin-bottom:8px;">${md(textBefore)}</div>`;
+    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid oklch(1 0 0 / 0.1);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
+    div.innerHTML = inner;
+  } else {
+    div.innerHTML = role === "ai" ? md(text) : esc(text).replace(/\n/g, "<br>");
+  }
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
