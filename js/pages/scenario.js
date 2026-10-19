@@ -32,8 +32,14 @@ async function fetchKbContentByTitle(title) {
 }
 
 /* JSON 模式請求：安全解析＋自動重試（AI 回傳偶爾被截斷導致 JSON 不完整） */
+function storyStructOk(d) {
+  if (!d || typeof d !== "object") return false;
+  const hasChoices = Array.isArray(d.choices) || Array.isArray(d.firstChoices);
+  const hasPoints = !d.firstChoices || Array.isArray(d.knowledgePoints);
+  return hasChoices && hasPoints;
+}
 async function askJson(system, user, validate, tries = 3) {
-  let lastErr = null;
+  let lastErr = null, best = null, bestLen = -1;
   for (let i = 0; i < tries; i++) {
     try {
       const raw = await ask(system, user, { model: "fast", json: true, max_tokens: 3000 });
@@ -45,10 +51,16 @@ async function askJson(system, user, validate, tries = 3) {
         if (!m) throw new Error("JSON 解析失敗");
         data = JSON.parse(m[0]);
       }
-      if (validate && !validate(data)) throw new Error("回傳格式不完整");
+      if (validate && !validate(data)) {
+        /* 長度不達標但結構完整：留作備選繼續重試，避免整局報錯 */
+        const len = (data.story || data.opening || "").length;
+        if (len > bestLen && storyStructOk(data)) { bestLen = len; best = data; }
+        throw new Error("回傳篇幅不足");
+      }
       return data;
     } catch (e) { lastErr = e; }
   }
+  if (best) return best;
   throw lastErr;
 }
 
@@ -195,13 +207,13 @@ async function startScenario() {
   "identity": "用戶的身份（一句話，包含時代、階層、處境，例：你是唐朝開元年間關中的一戶均田農民，家有五口，剛領到口分田）",
   "background": "世界背景設定（2-3 句，每句都要是後續抉擇的約束條件：稅制、地形、時局、身份限制）",
   "goal": "用戶在這個情境中的目標（一個具體的、需要權衡的目標）",
-  "opening": "開場白（約400字：先把完整背景一次講清楚——你是誰、身在何時何地、當時的稅制/制度/地形/時局如何壓在你身上、你當下的處境與目標；背景一次講足，不要擠牙膏。講完把情境推到兩難的最高點就停。重要：開場白裡絕對不要列出選項（不要寫 A. B. C.、不要寫『你面臨幾個選項』這類文字），選項會由系統另外顯示為按鈕。不要風景描寫，不要心理獨白，每句都要有資訊量）",
+  "opening": "開場白（約400字，至少300字、不可更短：先把完整背景一次講清楚——你是誰、身在何時何地、當時的稅制/制度/地形/時局如何壓在你身上、你當下的處境與目標；背景一次講足，不要擠牙膏。講完把情境推到兩難的最高點就停。重要：開場白裡絕對不要列出選項（不要寫 A. B. C.、不要寫『你面臨幾個選項』這類文字），選項會由系統另外顯示為按鈕。不要風景描寫，不要心理獨白，每句都要有資訊量）",
   "knowledgePoints": ["4-6 個機制性知識點（例：租庸調如何按丁徵收、均田制崩壞的連鎖條件）"],
   "firstChoices": ["選項 A（15 字內，代表一種知識視角）", "選項 B", "選項 C"]
 }
 只輸出 JSON。`;
     const data = await askJson(system, `概念：${concept}`,
-      d => d && d.opening && Array.isArray(d.firstChoices) && Array.isArray(d.knowledgePoints));
+      d => d && d.opening && d.opening.length >= 300 && Array.isArray(d.firstChoices) && Array.isArray(d.knowledgePoints));
     scenario = { concept, ...data };
     history = [];
     mastered = new Set();
@@ -281,7 +293,7 @@ async function doChoice(choice, isFree = false) {
 已掌握：${[...mastered].join("、") || "（還沒有）"}
 
 規則（嚴格遵守）：
-1. 篇幅與完整：每次回應約400字。先把這一幕的完整背景交代清楚（人物處境、相關的時代/地理/制度事實，一次講足，不擠牙膏），再推進抉擇。砍掉氣氛鋪陳；每一句都要麼揭示一個背景事實、要麼推進抉擇，不寫廢話。
+1. 篇幅與完整：每次回應約400字（至少300字、不可更短）。先把這一幕的完整背景交代清楚（人物處境、相關的時代/地理/制度事實，一次講足，不擠牙膏），再推進抉擇。砍掉氣氛鋪陳；每一句都要麼揭示一個背景事實、要麼推進抉擇，不寫廢話。
 2. 知識織入：用 NPC 的話或事件後果，自然揭露時代、地理、制度背景（例如：官差報出的稅額數字、鄰居因地形做出的不同選擇、時局變化如何收緊選項）。背景是抉擇的約束條件，不是旁白裝飾。
 3. 真抉擇：結尾的 3 個選項必須是兩難——每個選項都有代價，每個選項背後對應一種知識視角。不要出現明顯正確的選項；要讓用戶必須用剛學到的知識推理才能判斷利弊，而不是憑感覺選。
 4. 後果誠實：用戶的選擇要產生符合史實與知識邏輯的後果。好選擇也可能有代價；壞選擇要讓他明白錯在哪個知識環節。
@@ -289,7 +301,7 @@ async function doChoice(choice, isFree = false) {
 
 輸出 JSON：
 {
-  "story": "劇情文字（約400字：背景一次講完整，再把情境推到抉擇點就停。重要：劇情裡絕對不要列出選項（不要寫 A. B. C.），選項會由系統另外顯示為按鈕。可用 **粗體** 標出關鍵知識事實，可用「」表示 NPC 對話）",
+  "story": "劇情文字（約400字，至少300字、不可更短：背景一次講完整，再把情境推到抉擇點就停。重要：劇情裡絕對不要列出選項（不要寫 A. B. C.），選項會由系統另外顯示為按鈕。可用 **粗體** 標出關鍵知識事實，可用「」表示 NPC 對話）",
   "choices": ["選項 A（15 字內，兩難的一端）", "選項 B", "選項 C"],
   "newlyMastered": ["這次真正體會到的知識點（必須是 knowledgePoints 中的原話）"],
   "allDone": false
@@ -298,7 +310,7 @@ async function doChoice(choice, isFree = false) {
     const histText = history.slice(-4).map(h => `${h.role}: ${h.text}`).join("\n");
     const data = await askJson(system,
       `歷史：\n${histText}\n\n用戶選擇：${choice}${isFree ? "（自由輸入）" : ""}`,
-      d => d && d.story && Array.isArray(d.choices));
+      d => d && d.story && d.story.length >= 300 && Array.isArray(d.choices));
 
     (data.newlyMastered || []).forEach(k => mastered.add(k));
     history.push({ role: "user", text: choice }, { role: "ai", text: data.story });
