@@ -310,7 +310,7 @@ async function renderMasteryDashboard() {
               <span style="color:var(--brass-400);font-size:13px;">${r.mastery}%</span>
             </div>
             <div style="height:8px;background:var(--bg-3);border-radius:4px;overflow:hidden;">
-              <div style="height:100%;width:${r.mastery}%;background:linear-gradient(90deg,var(--brass-500),var(--brass-300));border-radius:4px;transition:width .5s;"></div>
+              <div class="bar-fill" style="height:100%;width:100%;background:linear-gradient(90deg,var(--brass-500),var(--brass-300));border-radius:4px;transform:scaleX(${(r.mastery / 100).toFixed(2)})"></div>
             </div>
             <div style="font-size:11px;color:var(--paper-400);margin-top:4px;">${r.nodes} 個節點 · ${r.cards} 張卡片</div>
           </div>

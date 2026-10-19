@@ -522,8 +522,8 @@ $("pub-confirm").onclick = async () => {
         <h3 style="font-size:22px;font-weight:700;color:#fff;margin:0 0 10px;letter-spacing:0.5px;">發布成功</h3>
         <p style="font-size:14px;line-height:1.7;color:#9aa4c0;margin:0 0 28px;">你的知識節點已經${modalIsPublic ? "公開" : "私人"}發布${modalIsPublic ? "，其他人可以在曙光寶庫看到它" : "，可在「我的節點」中找到它"}。</p>
         <div style="display:flex;gap:12px;justify-content:center;">
-          <button id="done-stay" style="padding:12px 24px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#cbd5e1;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;">繼續編輯</button>
-          <button id="done-view" style="padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.3);transition:all 0.2s;">前往曙光寶庫 →</button>
+          <button id="done-stay" style="padding:12px 24px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#cbd5e1;font-size:14px;font-weight:500;cursor:pointer;">繼續編輯</button>
+          <button id="done-view" style="padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,0.3);">前往曙光寶庫 →</button>
         </div>
       </div>`;
     document.body.appendChild(doneOverlay);

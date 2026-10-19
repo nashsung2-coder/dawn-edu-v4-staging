@@ -218,7 +218,7 @@ async function nextQuestion() {
         <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:oklch(0.75 0.15 80 / 0.15);color:var(--brass-300);">難度：${lv.nm}</span>
         <span style="font-size:12px;color:var(--paper-400);">已答 ${totalQ} 題 · 答對 ${totalCorrect}</span>
       </div>
-      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div style="height:100%;width:${(hardStreak / MASTERY_STREAK) * 100}%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transition:width .4s;"></div></div></div>` : ""}
+      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
       <p style="color:var(--paper-400);">AI 正在出題…</p>
     </div>`;
   try {
@@ -267,9 +267,9 @@ function renderQuestion() {
         <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:oklch(0.75 0.15 80 / 0.15);color:var(--brass-300);">難度：${lv.nm}</span>
         <span style="font-size:12px;color:var(--paper-400);">已答 ${totalQ} 題 · 答對 ${totalCorrect}</span>
       </div>
-      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div style="height:100%;width:${(hardStreak / MASTERY_STREAK) * 100}%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transition:width .4s;"></div></div></div>` : ""}
+      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
       <h2 style="margin-bottom:16px;font-size:17px;">${esc(q.question)}</h2>
-      <div id="qz-opts">${q.options.map((o, i) => {
+      <div id="qz-opts" class="stagger">${q.options.map((o, i) => {
         // 去除 AI 可能自帶的 "A:" "B." "C、" 等前綴，避免跟字母徽章重複
         const clean = String(o).replace(/^[A-D][:\.、\s]+/, "").trim();
         return `<button class="opt-btn" data-i="${i}"><span class="opt-key">${keys[i]}</span>${esc(clean)}</button>`;

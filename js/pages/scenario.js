@@ -252,12 +252,12 @@ function renderStory(storyHtml, choices) {
     <div class="sc-progress">
       <div>📍 ${esc(scenario.identity)}</div>
       <div style="margin-top:4px;">🎯 目標：${esc(scenario.goal)}</div>
-      <div class="bar"><div style="width:${progress}%"></div></div>
+      <div class="bar"><div class="bar-fill" style="transform:scaleX(${progress / 100})"></div></div>
       <div style="margin-top:6px;font-size:12px;">探索進度 ${progress}%（${mastered.size}/${scenario.knowledgePoints.length} 個知識點）</div>
       ${mastered.size ? `<div class="sc-mastered">${masteredList}</div>` : ""}
     </div>
     <div class="sc-story" id="sc-story">${storyHtml}</div>
-    <div class="sc-opts" id="sc-opts">
+    <div class="sc-opts stagger" id="sc-opts">
       ${choices.map((c, i) => `<button class="sc-opt" data-i="${i}">${esc(c)}</button>`).join("")}
     </div>
     <div class="sc-input-row">
