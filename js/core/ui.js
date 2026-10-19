@@ -169,11 +169,19 @@ export function md(src) {
     const items = m.trim().split("\n").map(l => `<li>${l.replace(/^[-\u2022] /, "")}</li>`).join("");
     return `<ul>${items}</ul>`;
   });
+  /* 表格 | 表頭 | 分隔 | 內容（前後強制斷段，確保獨立成塊） */
+  h = h.replace(/^(\|.+\|)\r?\n\|[\s:|-]+\|\r?\n((?:\|.+\|\r?\n?)+)/gm, (m, header, body) => {
+    const cells = r => r.split('|').slice(1, -1).map(c => c.trim());
+    const th = cells(header).map(c => `<th>${c}</th>`).join('');
+    const rows = body.trim().split('\n').map(r =>
+      `<tr>${cells(r).map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+    return `\n\n<div class="table-wrap"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>\n\n`;
+  });
   /* \u6bb5\u843d\uff1a\u96d9\u63db\u884c\u5206\u6bb5\uff0c\u55ae\u63db\u884c\u8f49 <br> */
   h = h.split(/\n{2,}/).map(p => {
     p = p.trim();
     if (!p) return "";
-    if (/^<(h\d|ul|ol|pre)/.test(p)) return p;
+    if (/^<(h\d|ul|ol|pre|div)/.test(p)) return p;
     return `<p>${p.replace(/\n/g, "<br>")}</p>`;
   }).join("");
   return h;
@@ -299,7 +307,7 @@ export async function renderTopbar(current) {
   try { initFloatingChat(current); } catch (e) { console.error("懸浮球初始化失敗:", e); }
   /* 每一頁底部自動掛載歷史紀錄（已有獨立歷史區塊的頁面會跳過） */
   try {
-    const { mountPageHistory } = await import("./learn-history.js");
+    const { mountPageHistory } = await import("./learn-history.js?v=sess002");
     mountPageHistory(supabase, user);
   } catch (e) { console.warn("歷史區塊掛載失敗:", e.message); }
 }
