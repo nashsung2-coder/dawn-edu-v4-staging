@@ -12,6 +12,7 @@ const NAV_GROUPS = [
     ["reading.html", "\u8de8\u8a9e\u8a00\u95b1\u8b80", "nav-quiz.webp"],
     ["feynman.html", "\u601d\u8faf\u5c0d\u8a71", "nav-feynman.webp"],
     ["learn.html", "\u5b78\u7fd2\u7e3d\u89bd", "nav-learn.webp"],
+    ["plan.html", "\u5b78\u7fd2\u6392\u7a0b", "nav-learn.webp"],
     ["bookshelf.html", "\u66f8\u67b6", "nav-bookshelf.webp"],
   ]},
   { label: "\u6aa2\u9a57", items: [

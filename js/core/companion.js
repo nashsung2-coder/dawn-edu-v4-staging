@@ -43,6 +43,24 @@ export async function buildLearningContext(supabase, userId) {
   } catch (e) {
     lines.push("(學習數據讀取失敗)");
   }
+  /* Google 日曆：今日行程＋空檔（已連結才注入，失敗就跳過） */
+  try {
+    const { isLinked, listEvents, freeSlotsForDay, fmtTime } = await import("./gcal.js");
+    if (await isLinked(userId)) {
+      const now = new Date();
+      const dayEnd = new Date(now); dayEnd.setHours(23, 59, 59, 999);
+      const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+      const events = await listEvents(now, weekEnd);
+      const todayEv = events.filter(e => new Date(e.start?.dateTime || e.start?.date).toDateString() === now.toDateString());
+      if (todayEv.length) {
+        lines.push(`今日行程：${todayEv.map(e => `${e.start?.dateTime ? fmtTime(new Date(e.start.dateTime)) : "整天"} ${e.summary || ""}`).join("；")}`);
+      } else lines.push("今日行程：無");
+      const slots = freeSlotsForDay(todayEv, now, 20);
+      if (slots.length) {
+        lines.push(`今日可用零碎時間：${slots.map(s => `${fmtTime(s.start)}–${fmtTime(s.end)}`).join("、")}（規劃學習時優先利用這些空檔）`);
+      }
+    }
+  } catch {}
   // 時間感知
   const h = new Date().getHours();
   const tod = h < 6 ? "深夜" : h < 12 ? "上午" : h < 18 ? "下午" : "晚上";
@@ -53,9 +71,9 @@ export async function buildLearningContext(supabase, userId) {
 /* 工具定義：AI 可以調用的平台功能 */
 export const COMPANION_TOOLS = {
   goto_page: {
-    desc: "導航到指定頁面。page 可選：review(複習), knowledge(曙光寶庫), socratic(蘇格拉底對話), feynman(費曼), quiz(對戰), universe(宇宙), island(群島), pet(靈獸), bookshelf(書架)。若 page 是 knowledge，可加 cat 參數直接進入特定分類的庫（例如 cat=\"物理\"）",
+    desc: "導航到指定頁面。page 可選：review(複習), knowledge(曙光寶庫), socratic(蘇格拉底對話), feynman(費曼), quiz(對戰), universe(宇宙), island(群島), pet(靈獸), bookshelf(書架), plan(學習排程/Google日曆)。若 page 是 knowledge，可加 cat 參數直接進入特定分類的庫（例如 cat=\"物理\"）",
     exec: (args) => {
-      const map = { review: "review.html", knowledge: "knowledge.html", socratic: "socratic.html", feynman: "feynman.html", quiz: "quiz.html", universe: "universe.html", island: "island.html", pet: "pet.html", bookshelf: "bookshelf.html" };
+      const map = { review: "review.html", knowledge: "knowledge.html", socratic: "socratic.html", feynman: "feynman.html", quiz: "quiz.html", universe: "universe.html", island: "island.html", pet: "pet.html", bookshelf: "bookshelf.html", plan: "plan.html" };
       let target = map[args.page] || "dashboard.html";
       // 曙光寶庫支援直接跳入特定分類（用絕對路徑避免相對路徑問題）
       if (args.page === "knowledge" && args.cat) {
