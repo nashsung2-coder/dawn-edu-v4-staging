@@ -1,8 +1,8 @@
 /* 學習排程：接上 Google 日曆，用零碎時間排複習 */
 import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc } from "../core/ui.js?v=fixed002";
-import { isLinked, linkCalendar, unlinkCalendar, captureProviderToken,
-         listEvents, insertEvent, freeSlotsForDay, fmtTime, fmtDay } from "../core/gcal.js";
+import { isLinked, linkCalendar, unlinkCalendar,
+         listEvents, insertEvent, freeSlotsForDay, fmtTime, fmtDay } from "../core/gcal.js?v=cal002";
 
 let user;
 const view = document.getElementById("plan-view");
@@ -12,14 +12,10 @@ function dayStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; 
 async function init() {
   await renderTopbar("plan");
   user = await requireAuth();
-  ({ supabase: _s } = await import("../core/supabase.js"));
-  /* 從 OAuth 跳回來：收下 refresh token */
-  await captureProviderToken();
-  const linked = await isLinked(user.id);
+  const linked = await isLinked();
   if (!linked) return renderLink();
   renderMain();
 }
-let _s;
 
 /* ---------- 未連結 ---------- */
 function renderLink() {
@@ -37,8 +33,10 @@ function renderLink() {
       </p>
     </div>`;
   document.getElementById("btn-link").onclick = async () => {
-    try { await linkCalendar(); }
-    catch (e) { toast("連結失敗：" + (e.message || e)); }
+    try {
+      await linkCalendar();
+      location.reload();
+    } catch (e) { toast("連結失敗：" + (e.message || e)); }
   };
 }
 
@@ -64,7 +62,7 @@ async function renderMain() {
     view.innerHTML = `<div class="card"><p style="color:var(--signal-red);">${esc(e.message)}</p>
       <button class="btn btn-ghost" id="btn-unlink" style="margin-top:12px;">解除連結重試</button></div>`;
     document.getElementById("btn-unlink").onclick = async () => {
-      await unlinkCalendar(user.id); location.reload();
+      await unlinkCalendar(); location.reload();
     };
   }
 }
@@ -142,7 +140,7 @@ function renderPlan(events, dueCards, upcoming, plan, now) {
     </div>`;
   document.getElementById("btn-unlink").onclick = async () => {
     if (!confirm("確定解除 Google 日曆連結？")) return;
-    await unlinkCalendar(user.id); location.reload();
+    await unlinkCalendar(); location.reload();
   };
   const btn = document.getElementById("btn-confirm");
   if (btn) btn.onclick = () => writePlan(plan);
