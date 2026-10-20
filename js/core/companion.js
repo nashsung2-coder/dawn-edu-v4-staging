@@ -45,8 +45,8 @@ export async function buildLearningContext(supabase, userId) {
   }
   /* Google 日曆：今日行程＋空檔（已連結才注入，失敗就跳過） */
   try {
-    const { isLinked, listEvents, freeSlotsForDay, fmtTime } = await import("./gcal.js");
-    if (await isLinked(userId)) {
+    const { isLinked, listEvents, freeSlotsForDay, fmtTime } = await import("./gcal.js?v=cal002");
+    if (await isLinked()) {
       const now = new Date();
       const dayEnd = new Date(now); dayEnd.setHours(23, 59, 59, 999);
       const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);

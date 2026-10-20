@@ -1,94 +1,92 @@
-/* 曙光學習 — Google 日曆整合
- * 連結：透過 Supabase OAuth 向 Google 多要 calendar.events 權限（offline access），
- * refresh token 存 user_calendar_tokens（RLS 保護）。
- * 使用：access token 先用 OAuth 當下那顆，過期後經 Worker /cal/token 刷新。
+/* 曙光學習 — Google 日曆整合（GIS 前端授權版）
+ * 用 Google Identity Services 在瀏覽器直接取得 access token，
+ * 不需 client secret、不需後端刷新。使用者在本機瀏覽器完成授權即可。
  */
-import { supabase } from "./supabase.js";
-
-const WORKER = "https://dawn-llm-proxy.nashsung2.workers.dev";
+const CLIENT_ID = "583042386888-ktguvbjpb4ior7j8qs4t4d8fpck77vgc.apps.googleusercontent.com";
 export const CAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
-const LS_KEY = "gcal_token_cache";
+const LS_TOKEN = "gcal_token_cache";
+const LS_GRANTED = "gcal_granted";
 
-/* ---------- 連結狀態 ---------- */
-export async function isLinked(userId) {
-  try {
-    const { data } = await supabase.from("user_calendar_tokens")
-      .select("user_id").eq("user_id", userId).maybeSingle();
-    return !!data;
-  } catch { return false; }
+let tokenClient = null;
+let gisReady = null;
+
+/* ---------- 載入 GIS 並建立 token client ---------- */
+function loadGIS() {
+  if (gisReady) return gisReady;
+  gisReady = new Promise((resolve, reject) => {
+    const init = () => {
+      try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: CAL_SCOPE,
+          callback: () => {}, /* 每次請求時覆寫 */
+        });
+        resolve();
+      } catch (e) { reject(e); }
+    };
+    if (window.google?.accounts?.oauth2) return init();
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.onload = init;
+    s.onerror = () => reject(new Error("GIS 載入失敗"));
+    document.head.appendChild(s);
+  });
+  return gisReady;
 }
 
-/* ---------- 啟動連結（整頁跳轉 OAuth，回來後由 captureProviderToken 收尾） ---------- */
+/* ---------- 要求一顆 token（prompt: "" 靜默 / "consent" 顯示授權） ---------- */
+function requestToken(prompt) {
+  return loadGIS().then(() => new Promise((resolve, reject) => {
+    tokenClient.callback = (resp) => {
+      if (resp.error) return reject(new Error(resp.error));
+      const tok = {
+        at: resp.access_token,
+        exp: Date.now() + (resp.expires_in || 3600) * 1000 - 5 * 60 * 1000,
+      };
+      localStorage.setItem(LS_TOKEN, JSON.stringify(tok));
+      localStorage.setItem(LS_GRANTED, "1");
+      resolve(tok.at);
+    };
+    tokenClient.requestAccessToken({ prompt });
+  }));
+}
+
+/* ---------- 對外 API ---------- */
+export async function isLinked() {
+  return localStorage.getItem(LS_GRANTED) === "1";
+}
+
+/* 互動式連結（由使用者點擊觸發，會跳 Google 授權視窗） */
 export async function linkCalendar() {
-  const redirectTo = location.href.split("#")[0];
-  const { data: { user } } = await supabase.auth.getUser();
-  const hasGoogle = (user?.identities || []).some(i => i.provider === "google");
-  const opts = {
-    scopes: CAL_SCOPE,
-    queryParams: { access_type: "offline", prompt: "consent" },
-    redirectTo,
-  };
-  const { error } = hasGoogle
-    ? await supabase.auth.signInWithOAuth({ provider: "google", options: opts })
-    : await supabase.auth.linkIdentity({ provider: "google", options: opts });
-  if (error) throw error;
+  await requestToken("consent");
 }
 
-/* ---------- OAuth 回來後：把 provider refresh token 存進 DB（冪等） ---------- */
-export async function captureProviderToken() {
+export async function unlinkCalendar() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const rt = session?.provider_refresh_token;
-    const uid = session?.user?.id;
-    if (!rt || !uid) return false;
-    const { error } = await supabase.from("user_calendar_tokens").upsert({
-      user_id: uid, refresh_token: rt, updated_at: new Date().toISOString(),
-    });
-    if (error) return false;
-    /* 順手快取當下的 access token */
-    if (session.provider_token) {
-      localStorage.setItem(LS_KEY, JSON.stringify({
-        at: session.provider_token, exp: Date.now() + 50 * 60 * 1000,
-      }));
+    const c = JSON.parse(localStorage.getItem(LS_TOKEN) || "null");
+    if (c?.at && window.google?.accounts?.oauth2) {
+      await new Promise(r => google.accounts.oauth2.revoke(c.at, r));
     }
-    return true;
-  } catch { return false; }
-}
-
-/* ---------- 解除連結 ---------- */
-export async function unlinkCalendar(userId) {
-  try {
-    await supabase.from("user_calendar_tokens").delete().eq("user_id", userId);
-    localStorage.removeItem(LS_KEY);
   } catch {}
+  localStorage.removeItem(LS_TOKEN);
+  localStorage.removeItem(LS_GRANTED);
 }
 
-/* ---------- 取得有效的 access token ---------- */
 export async function getAccessToken() {
   try {
-    const c = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+    const c = JSON.parse(localStorage.getItem(LS_TOKEN) || "null");
     if (c?.at && c.exp > Date.now() + 60 * 1000) return c.at;
   } catch {}
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return null;
-  const r = await fetch(`${WORKER}/cal/token`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
-    body: "{}",
-  });
-  if (!r.ok) return null;
-  const d = await r.json();
-  if (!d.access_token) return null;
-  localStorage.setItem(LS_KEY, JSON.stringify({
-    at: d.access_token, exp: Date.now() + (d.expires_in || 3600) * 1000 - 5 * 60 * 1000,
-  }));
-  return d.access_token;
+  if (localStorage.getItem(LS_GRANTED) !== "1") return null;
+  try { return await requestToken(""); }
+  catch { return null; }
 }
 
 /* ---------- Google Calendar API ---------- */
 async function gcal(path, opts = {}) {
   const at = await getAccessToken();
-  if (!at) throw new Error("日曆 token 失效，請重新連結");
+  if (!at) throw new Error("日曆授權失效，請重新連結");
   const r = await fetch(`https://www.googleapis.com/calendar/v3${path}`, {
     ...opts,
     headers: { Authorization: `Bearer ${at}`, "Content-Type": "application/json", ...(opts.headers || {}) },
