@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../favicon.svg">
+<meta property="og:site_name" content="曙光學習">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0e1f">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>學習排程 — 曙光學習</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/motion.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+.plan-event { display:flex; gap:10px; align-items:baseline; padding:8px 0; border-bottom:1px dashed oklch(1 0 0 / 0.08); font-size:14px; }
+.plan-event:last-child { border-bottom:none; }
+.plan-event .t { color:var(--brass-300); font-family:var(--font-mono); font-size:12px; white-space:nowrap; }
+.plan-slot { display:flex; gap:10px; align-items:center; padding:10px 12px; border:1px solid oklch(1 0 0 / 0.08); border-radius:12px; margin-bottom:8px; font-size:14px; }
+.plan-slot input { width:18px; height:18px; accent-color:var(--brass-400); flex:none; }
+.plan-slot .when { color:var(--brass-300); font-family:var(--font-mono); font-size:12px; white-space:nowrap; }
+.plan-day { font-size:13px; color:var(--paper-400); margin:18px 0 8px; }
+</style>
+</head>
+<body>
+<main class="main">
+  <div class="page-head">
+    <div class="en">Study Planner</div>
+    <h1>學習排程</h1>
+    <p style="color:var(--paper-400);font-size:14px;">接上你的 Google 日曆，把複習塞進零碎時間</p>
+  </div>
+  <div id="plan-view"></div>
+</main>
+<script src="../js/vendor/supabase.min.js"></script>
+<script type="module" src="../js/pages/plan.js?v=cal001"></script>
+</body>
+</html>
