@@ -443,12 +443,9 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
 
   function showMenu(pos) {
     syncFromDOM();
-    // 用 DOM 順序重新計算正確的插入位置（避免索引錯亂）
-    const blockEls = [...container.querySelectorAll(".be-block")];
-    const addBtns = [...container.querySelectorAll("[data-add]")];
-    const btnIndex = addBtns.findIndex(b => +b.dataset.add === pos);
-    // 插入位置 = 該按鈕在 DOM 中的順序
-    const safePos = btnIndex >= 0 ? btnIndex : pos;
+    // pos = 被點擊的＋按鈕在所有＋按鈕中的 DOM 順序，直接等於插入位置
+    //（每個＋都在對應區塊之前，最後一個在尾端），不經 data-add 轉換，避免索引錯亂
+    const safePos = Math.max(0, Math.min(pos | 0, blocks.length));
     const slot = container.querySelector(".be-menu-slot");
     slot.innerHTML = `<div class="be-menu" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:16px;background:oklch(0.20 0.04 260);border:1px solid oklch(0.60 0.12 80 / 0.25);border-radius:12px;margin:8px 0;">${BLOCK_TYPES.map(t =>
       `<button data-btype="${t.type}" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:10px;border:1px solid oklch(0.60 0.12 80 / 0.15);background:transparent;color:var(--paper-200);cursor:pointer;text-align:left;" onmouseover="this.style.background='oklch(0.74 0.14 80 / 0.1)';this.style.borderColor='var(--brass-400)'" onmouseout="this.style.background='transparent';this.style.borderColor='oklch(0.60 0.12 80 / 0.15)'">
@@ -460,7 +457,7 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
       btn.onclick = () => {
         syncFromDOM();
         _pushHistory();
-        const insertAt = Math.min(safePos, blocks.length);
+        const insertAt = safePos;
         blocks.splice(insertAt, 0, newBlock(btn.dataset.btype));
         render();
         // 滾動到新插入的區塊
@@ -509,8 +506,13 @@ export function createEditor(container, esc, initialBlocks, opts = {}) {
         }
       });
     }
-    container.querySelectorAll("[data-add]").forEach(btn => {
-      btn.onclick = e => { e.stopPropagation(); showMenu(+btn.dataset.add); };
+    container.querySelectorAll(".be-add-btn").forEach(btn => {
+      btn.onclick = e => {
+        e.stopPropagation();
+        // 用按鈕在 DOM 中的實際順序當插入位置，不依賴 data-add 數值
+        const idx = [...container.querySelectorAll(".be-add-btn")].indexOf(e.currentTarget);
+        showMenu(idx >= 0 ? idx : 0);
+      };
     });
 
     // 圖片上傳：轉為 base64 存入
