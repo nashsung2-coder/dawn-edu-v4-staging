@@ -10,8 +10,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>主控台 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
-<link rel="stylesheet" href="../css/tokens.css">
-<link rel="stylesheet" href="../css/motion.css">
+<link rel="stylesheet" href="../css/tokens.css?v=theme001">
+<link rel="stylesheet" href="../css/motion.css?v=theme001">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
 /* 對話優先主控台 */
 .cp-hero { display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
 .cp-avatar { width:56px; height:56px; border-radius:50%; overflow:hidden; flex-shrink:0; }
-.cp-chat-card { flex:1; background:oklch(1 0 0 / 0.03); border:1px solid oklch(1 0 0 / 0.08); border-radius:16px; padding:16px; min-width:0; }
+.cp-chat-card { flex:1; background:var(--wash-03); border:1px solid var(--wash-08); border-radius:16px; padding:16px; min-width:0; }
 .cp-greeting { font-size:14px; line-height:1.8; margin-bottom:12px; }
 .cp-msgs { display:flex; flex-direction:column; gap:10px; max-height:300px; overflow-y:auto; margin-bottom:12px; }
 .cp-msg { padding:10px 14px; border-radius:12px; font-size:13.5px; line-height:1.75; max-width:92%; }
@@ -28,13 +28,13 @@
 .cp-input-row { display:flex; gap:8px; }
 .cp-input-row .input { flex:1; border-radius:20px; padding:10px 16px; font-size:14px; }
 .cp-suggest { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-.cp-suggest .chip { font-size:12px; padding:6px 12px; border-radius:99px; border:1px solid oklch(1 0 0 / 0.12); background:transparent; color:var(--paper-300); cursor:pointer; }
+.cp-suggest .chip { font-size:12px; padding:6px 12px; border-radius:99px; border:1px solid var(--wash-12); background:transparent; color:var(--paper-300); cursor:pointer; }
 .cp-suggest .chip:hover { border-color:var(--brass-400); color:var(--brass-300); }
 .typing span { animation:blink 1s infinite; } .typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
 @keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }
 /* 下方功能區 */
 .stat-row { display:flex; gap:10px; flex-wrap:wrap; }
-.stat { flex:1; min-width:90px; text-align:center; padding:10px 6px; background:oklch(1 0 0 / 0.03); border-radius:10px; }
+.stat { flex:1; min-width:90px; text-align:center; padding:10px 6px; background:var(--wash-03); border-radius:10px; }
 .stat .num { font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--brass-300); }
 .stat .lbl { font-size:11px; color:var(--paper-400); margin-top:2px; }
 .quick-links { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }

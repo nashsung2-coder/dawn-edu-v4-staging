@@ -10,8 +10,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>知識對戰 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
-<link rel="stylesheet" href="../css/tokens.css">
-<link rel="stylesheet" href="../css/motion.css">
+<link rel="stylesheet" href="../css/tokens.css?v=theme001">
+<link rel="stylesheet" href="../css/motion.css?v=theme001">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
 .opt-btn {
   display: block; width: 100%; text-align: left;
   background: var(--ink-800); color: var(--paper-50);
-  border: 1px solid oklch(1 0 0 / 0.08); border-radius: 3px;
+  border: 1px solid var(--wash-08); border-radius: 3px;
   padding: 14px 16px; margin-bottom: 8px; font-size: 14px;
   cursor: pointer; font-family: var(--font-body);
   transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
@@ -31,13 +31,13 @@
 .opt-btn.wrong { border-color: var(--signal-red); background: oklch(0.62 0.18 25 / 0.12); }
 .opt-key {
   display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center;
-  border-radius: 2px; background: oklch(1 0 0 / 0.08);
+  border-radius: 2px; background: var(--wash-08);
   font-family: var(--font-mono); font-size: 13px; font-weight: 700;
   margin-right: 10px; color: var(--brass-300);
 }
 .q-progress { display: flex; gap: 6px; margin-bottom: 16px; }
 .q-progress i {
-  flex: 1; height: 4px; border-radius: 2px; background: oklch(1 0 0 / 0.1);
+  flex: 1; height: 4px; border-radius: 2px; background: var(--wash-10);
 }
 .q-progress i.done { background: var(--brass-400); }
 .q-progress i.cur { background: var(--brass-300); }
