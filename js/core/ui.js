@@ -1,6 +1,7 @@
 /* v4 \u6838\u5fc3\uff1a\u5171\u7528 UI\uff08\u9802\u6b04\u3001\u6642\u6bb5\u80cc\u666f\u3001toast\uff09 */
 import { getUser, getProfile, signOut, supabase } from "./supabase.js";
 import { buildLearningContext, companionChat } from "./companion.js";
+import { applyTheme, startThemeWatcher, themeToggleHTML, bindThemeToggle, greetBarHTML, refreshGreetBar } from "./theme.js?v=theme001";
 
 const NAV_GROUPS = [
   { label: "\u4e3b\u63a7\u53f0", items: [
@@ -189,8 +190,10 @@ export function md(src) {
 }
 
 /* \u6e32\u67d3\u9802\u6b04\uff1bcurrent \u70ba\u7576\u524d\u9801\u9762\u6a94\u540d */
+let _tbName = "";
 export async function renderTopbar(current) {
-  applyTimeBg();
+  applyTheme(true);
+  startThemeWatcher((slot) => refreshGreetBar(_tbName));
   const user = await getUser();
   let pts = 0, name = "";
   if (user) {
@@ -228,7 +231,7 @@ export async function renderTopbar(current) {
   document.body.insertAdjacentHTML("afterbegin", `
     <header class="topbar">
       <a class="brand" href="dashboard.html">曙光<span>學習</span></a>
-      <nav class="nav">${nav}</nav>
+      <nav class="nav">${nav}</nav>${themeToggleHTML()}
       <button class="nav-toggle" id="nav-toggle" aria-label="\u9078\u55ae">${ICO.menu}</button>
       <div class="user-chip">
         ${user ? `<span class="pts">${pts.toLocaleString()}</span> \u661f\u7802
@@ -237,7 +240,10 @@ export async function renderTopbar(current) {
         : `<a class="btn btn-primary" style="padding:6px 16px;font-size:13px;" href="index.html">\u767b\u5165</a>`}
       </div>
     </header>
-    <nav class="mobile-nav" id="mobile-nav">${mnavHtml}</nav>`);
+    <nav class="mobile-nav" id="mobile-nav">${mnavHtml}</nav>
+    ${greetBarHTML(name)}`);
+  _tbName = name;
+  bindThemeToggle();
   /* Speculation Rules：hover 導覽連結即預渲染，頁面切換近乎即時 */
   try {
     if (!document.querySelector('script[type="speculationrules"]') && "HTMLScriptElement" in window) {
@@ -252,7 +258,7 @@ export async function renderTopbar(current) {
   } catch {}
   /* 環境氛圍：滑鼠跟隨柔光＋視差 */
   try {
-    const { initAmbient } = await import("./ambient.js");
+    const { initAmbient } = await import("./ambient.js?v=theme001");
     initAmbient();
   } catch {}
   /* AI 免責聲明：互動功能頁在 page-head 下自動掛載 */
