@@ -1,7 +1,7 @@
 /* 島嶼 v6：曙光寶庫群島 — 每個寶庫分類長出一座專屬島嶼。
    思辨對話與知識對戰是曙光寶庫的附加品：它們的產出化為知識節點，滋養群島。 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=theme001";
 
 await renderTopbar("island.html");
 const user = await requireAuth();

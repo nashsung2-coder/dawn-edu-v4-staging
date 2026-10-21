@@ -2,7 +2,7 @@
 /* 草稿 → 本地儲存（localStorage）；發布 → Supabase；版本 → 快照紀錄 */
 import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
 import { ask, MODELS } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=theme001";
 import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed002";
 
 const params = new URLSearchParams(location.search);
@@ -251,11 +251,11 @@ function showConflictDialog(remoteBlocks, localBlocks) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;">
           <div>
             <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--brass-300);">對方的版本（${remoteBlocks.length} 個區塊）</div>
-            <div id="conflict-remote" style="border:1px solid oklch(1 0 0 / 0.1);border-radius:8px;padding:8px;"></div>
+            <div id="conflict-remote" style="border:1px solid var(--wash-10);border-radius:8px;padding:8px;"></div>
           </div>
           <div>
             <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--brass-300);">你的版本（${localBlocks.length} 個區塊）</div>
-            <div id="conflict-local" style="border:1px solid oklch(1 0 0 / 0.1);border-radius:8px;padding:8px;"></div>
+            <div id="conflict-local" style="border:1px solid var(--wash-10);border-radius:8px;padding:8px;"></div>
           </div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">

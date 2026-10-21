@@ -1,6 +1,6 @@
 /* 商店頁：商品列表 / 購買 / 背包 / 雷達圖詳情 */
 import { supabase, getUser, getProfile } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme001";
 
 await renderTopbar("market.html");
 const user = await requireAuth();
@@ -34,13 +34,13 @@ function radarChart(item) {
   let grid = "";
   for (const frac of [0.25, 0.5, 0.75, 1]) {
     const pts = STATS.map((_, i) => pt(i, frac * 100).join(",")).join(" ");
-    grid += `<polygon points="${pts}" fill="none" stroke="oklch(1 0 0 / 0.12)" stroke-width="1"/>`;
+    grid += `<polygon points="${pts}" fill="none" stroke="var(--wash-12)" stroke-width="1"/>`;
   }
   /* 軸線＋標籤 */
   let axes = "";
   STATS.forEach(([key, label], i) => {
     const [x, y] = pt(i, 100);
-    axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="oklch(1 0 0 / 0.12)"/>`;
+    axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--wash-12)"/>`;
     const [lx, ly] = pt(i, 125);
     axes += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
       fill="var(--paper-400)" font-size="11">${label}</text>`;

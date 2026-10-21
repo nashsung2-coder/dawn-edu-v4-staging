@@ -1,6 +1,6 @@
 /* v4 登入/註冊頁 */
 import { supabase, getUser, signInWithGoogle } from "../core/supabase.js";
-import { applyTimeBg, toast } from "../core/ui.js?v=fixed001";
+import { applyTimeBg, toast } from "../core/ui.js?v=theme001";
 
 applyTimeBg();
 

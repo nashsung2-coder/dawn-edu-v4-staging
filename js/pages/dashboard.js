@@ -1,8 +1,8 @@
 /* 主控台 v2：小曙對話優先 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, md } from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, md } from "../core/ui.js?v=theme001";
 import { buildLearningContext, companionChat, companionGreeting } from "../core/companion.js";
-import { getRecentHistory, renderHistoryList } from "../core/learn-history.js";
+import { getRecentHistory, renderHistoryList } from "../core/learn-history.js?v=sess002";
 
 const $ = id => document.getElementById(id);
 let learningContext = "";
@@ -48,7 +48,7 @@ function addMsg(role, text) {
     const textBefore = (htmlStart > 0 ? text.slice(0, htmlStart) : "").trim();
     let inner = "";
     if (textBefore) inner += `<div style="margin-bottom:8px;">${esc(textBefore).replace(/\n/g, "<br>")}</div>`;
-    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid oklch(1 0 0 / 0.1);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
+    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid var(--wash-10);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
     div.innerHTML = inner;
   } else {
     div.innerHTML = md(text);
@@ -58,7 +58,7 @@ function addMsg(role, text) {
     const btn = document.createElement("button");
     btn.className = "html-explain-btn";
     btn.textContent = "HTML 圖解";
-    btn.style.cssText = "margin-top:8px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid oklch(1 0 0 / 0.15);background:transparent;color:var(--brass-300);cursor:pointer;";
+    btn.style.cssText = "margin-top:8px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid var(--wash-15);background:transparent;color:var(--brass-300);cursor:pointer;";
     btn.onclick = () => requestHtmlExplain(text);
     div.appendChild(btn);
   }
@@ -124,7 +124,7 @@ async function send(text) {
     clearTimeout(safetyTimer);
     // 記錄到學習歷程
     try {
-      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI } = await import("../core/learn-history.js?v=sess002");
       await logLearnHistory(supabase, user.id, {
         type: "小曙對話",
         topic: text.slice(0, 50),

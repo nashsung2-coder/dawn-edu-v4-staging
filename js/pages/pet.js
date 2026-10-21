@@ -1,6 +1,6 @@
 /* 靈獸頁：讀取/互動/孵化 */
 import { supabase, getUser } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme001";
 
 await renderTopbar("pet.html");
 const user = await requireAuth();
@@ -121,7 +121,7 @@ function renderPet(pet) {
         <input class="input" id="p-name" value="${esc(pet.name || "")}" maxlength="12">
       </div>
       <button class="btn btn-ghost" id="p-rename">儲存</button>
-      <div style="margin-top:16px;padding:12px;background:oklch(1 0 0 / 0.04);border-radius:3px;">
+      <div style="margin-top:16px;padding:12px;background:var(--wash-04);border-radius:3px;">
         <div class="label" style="margin-bottom:4px;">夥伴加成</div>
         <div style="font-size:13px;color:var(--paper-300);">
           Lv.${pet.level} 靈獸為你帶來 <b style="color:var(--brass-300);">+${pet.level}%</b> 星砂獲得加成

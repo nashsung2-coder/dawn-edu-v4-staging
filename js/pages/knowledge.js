@@ -1,6 +1,6 @@
 /* 曙光寶庫 v4：公開節點瀏覽 + 我的節點 + 搜尋 + 按讚 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile} from "../core/ui.js?v=theme001";
 import { createEditor, renderBlocks, blocksText, newBlock } from "../core/blocks.js?v=fixed002";
 
 await renderTopbar("knowledge.html");
@@ -227,7 +227,7 @@ function render() {
     .filter(([t]) => !followedSet.has(t)).slice(0, Math.max(0, 16 - pinned.length));
   const showTags = [...pinned, ...rest];
   const chipStyle = (t, isFollowed, isActive) =>
-    `font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid ${isActive ? "var(--brass-400)" : isFollowed ? "oklch(0.75 0.15 80 / 0.45)" : "oklch(1 0 0 / 0.12)"};background:${isActive ? "oklch(0.74 0.14 80 / 0.12)" : "transparent"};color:${isActive || isFollowed ? "var(--brass-300)" : "var(--paper-400)"};`;
+    `font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid ${isActive ? "var(--brass-400)" : isFollowed ? "oklch(0.75 0.15 80 / 0.45)" : "var(--wash-12)"};background:${isActive ? "oklch(0.74 0.14 80 / 0.12)" : "transparent"};color:${isActive || isFollowed ? "var(--brass-300)" : "var(--paper-400)"};`;
   if (tagQ) list = list.filter(n => conceptsOf(n).some(c => String(c).trim().toLowerCase() === tagQ));
   const tagCloud = (showTags.length || followed.length) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
       <span style="font-size:11px;color:var(--paper-400);">#</span>
@@ -318,7 +318,7 @@ function render() {
     const battleBtn = `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();verifyNode('${n.id}')">驗證</button>`;
     // 超緊湊單行卡片（＋一行可點 hashtag）
     const chips = nConcepts.slice(0, 4).map(c =>
-      `<button data-tag="${esc(c)}" onclick="event.stopPropagation();" style="font-size:11px;padding:1px 8px;border-radius:10px;cursor:pointer;border:1px solid oklch(1 0 0 / 0.12);background:transparent;color:var(--paper-400);">#${esc(c)}</button>`
+      `<button data-tag="${esc(c)}" onclick="event.stopPropagation();" style="font-size:11px;padding:1px 8px;border-radius:10px;cursor:pointer;border:1px solid var(--wash-12);background:transparent;color:var(--paper-400);">#${esc(c)}</button>`
     ).join("");
     return `<div class="card node" data-id="${n.id}" style="padding:10px 14px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:12px;">

@@ -1,7 +1,7 @@
 /* v4 複習：SM-2 間隔重複 + 挑戰模式（對戰化） */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme001";
 
 await renderTopbar("review.html");
 const user = await requireAuth();

@@ -1,6 +1,6 @@
 /* v4 學習總覽 */
 import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
-import { renderTopbar, requireAuth, toast, esc, once, ensureProfile, ICO } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, once, ensureProfile, ICO } from "../core/ui.js?v=theme001";
 
 /* timeout 保護：避免無限卡住 */
 function withTimeout(promise, ms, label) {

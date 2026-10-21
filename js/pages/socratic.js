@@ -1,6 +1,6 @@
 /* 蘇格拉底對話 v2：GPT 式介面 + 右側知識整理區 */
 import { supabase} from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme001";
 import { ask, chat, MODELS} from "../core/llm.js";
 
 const $ = id => document.getElementById(id);

@@ -1,6 +1,6 @@
 /* 知識節點獨立閱讀頁：像電子書/部落格一樣打開 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, ensureProfile } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, ensureProfile } from "../core/ui.js?v=theme001";
 // 本地定義 esc，不依賴 ui.js 導出
 const htmlEsc = (s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])));
 import { renderBlocks, blocksText } from "../core/blocks.js?v=fixed002";
@@ -47,9 +47,9 @@ if (!nodeId) {
         </div>
         <h1 style="font-size:24px;margin-bottom:8px;line-height:1.4;">${htmlEsc(n.title)}</h1>
         ${question ? `<p style="font-size:15px;color:var(--brass-300);margin-bottom:20px;line-height:1.7;">${htmlEsc(question)}</p>` : ""}
-        <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:16px 0;"></div>
+        <div style="border-top:1px solid var(--wash-08);margin:16px 0;"></div>
         <div class="blocks-content">${blocks.length ? renderBlocks(blocks, htmlEsc) : `<p style="color:var(--paper-400);">${htmlEsc(n.content || "")}</p>`}</div>
-        <div style="border-top:1px solid oklch(1 0 0 / 0.08);margin:24px 0 16px;"></div>
+        <div style="border-top:1px solid var(--wash-08);margin:24px 0 16px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="node-verify">開始驗證對戰</button>
           <button class="btn btn-ghost btn-sm" id="node-scenario">進入情境學習</button>

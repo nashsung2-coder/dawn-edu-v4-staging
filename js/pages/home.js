@@ -1,6 +1,6 @@
 /* 我的家：個人學習小窩 — 統計、最近動態、快捷入口 */
 import { supabase, getProfile } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, esc, ensureProfile} from "../core/ui.js?v=theme001";
 
 await renderTopbar("home.html");
 const user = await requireAuth();
@@ -103,7 +103,7 @@ try {
     <div class="card">
       <h2 style="margin-bottom:12px;">最近動態</h2>
       ${recent && recent.length ? recent.map(r => `
-        <div style="padding:8px 0;border-bottom:1px solid oklch(1 0 0 / 0.06);display:flex;justify-content:space-between;">
+        <div style="padding:8px 0;border-bottom:1px solid var(--wash-06);display:flex;justify-content:space-between;">
           <span>${esc(r.question || "對戰")}</span>
           <span class="num-sm" style="color:var(--brass-400);">${r.quiz_score ?? 0} 分</span>
         </div>`).join("") : `<p style="color:var(--paper-400);">還沒有動態，去對戰一場吧！</p>`}

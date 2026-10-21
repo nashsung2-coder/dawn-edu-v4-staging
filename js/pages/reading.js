@@ -1,6 +1,6 @@
 /* AI 跨語言閱讀：用學過的知識練想學的語言 */
-import { renderTopbar, requireAuth, esc, toast } from "../core/ui.js";
-import { renderTypeHistory } from "../core/learn-history.js";
+import { renderTopbar, requireAuth, esc, toast } from "../core/ui.js?v=theme001";
+import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { ask } from "../core/llm.js";
 import { blocksText } from "../core/blocks.js";
 
@@ -18,7 +18,7 @@ let answers = [];       // 每題作答紀錄
 async function saveSnap(extra = {}) {
   if (!sessionId) return;
   try {
-    const { saveLearnSession } = await import("../core/learn-history.js");
+    const { saveLearnSession } = await import("../core/learn-history.js?v=sess002");
     saveLearnSession(supabase, sessionId, {
       settings, article, questions, currentQ, score, answers,
       done: false, ...extra,
@@ -124,7 +124,7 @@ async function init() {
   try {
     const sid = new URLSearchParams(location.search).get("session");
     if (sid) {
-      const { loadLearnSession } = await import("../core/learn-history.js");
+      const { loadLearnSession } = await import("../core/learn-history.js?v=sess002");
       const row = await loadLearnSession(supabase, sid, user.id);
       const st = row?.state;
       if (st?.article && st?.questions?.length) {
@@ -235,7 +235,7 @@ async function startReading() {
     answers = [];
     /* 建立學習會話：每答一題存快照，歷史可點開回到當時的題目 */
     try {
-      const { createLearnSession } = await import("../core/learn-history.js");
+      const { createLearnSession } = await import("../core/learn-history.js?v=sess002");
       sessionId = await createLearnSession(supabase, user.id, "AI閱讀", article.title || article.topic);
     } catch {}
     renderArticle();
@@ -393,7 +393,7 @@ function renderResult() {
   /* 寫入學習歷程（帶 session，點開可回到這次閱讀） */
   (async () => {
     try {
-      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js?v=sess002");
       await saveSnap({ done: true, acc, mins });
       await logLearnHistory(supabase, user.id, {
         type: "AI閱讀",

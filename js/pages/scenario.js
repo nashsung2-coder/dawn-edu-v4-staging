@@ -1,6 +1,6 @@
 /* 情境式學習：化身概念，用經歷去理解 */
-import { renderTopbar, requireAuth, esc, toast, md } from "../core/ui.js";
-import { renderTypeHistory } from "../core/learn-history.js";
+import { renderTopbar, requireAuth, esc, toast, md } from "../core/ui.js?v=theme001";
+import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { ask } from "../core/llm.js";
 import { blocksText } from "../core/blocks.js";
 
@@ -69,7 +69,7 @@ async function askJson(system, user, validate, tries = 3) {
 async function saveSnap(extra = {}) {
   if (!sessionId) return;
   try {
-    const { saveLearnSession } = await import("../core/learn-history.js");
+    const { saveLearnSession } = await import("../core/learn-history.js?v=sess002");
     saveLearnSession(supabase, sessionId, {
       scenario, history,
       mastered: [...mastered],
@@ -81,7 +81,7 @@ async function saveSnap(extra = {}) {
 
 function storyHtmlFromHistory() {
   return history.map(h => h.role === "user"
-    ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
+    ? `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed var(--wash-15);"><b style="color:var(--brass-300);">你：</b>${esc(h.text)}</div>`
     : `<div style="margin-top:12px;">${md(h.text.replace(/\\n/g, "\n"))}</div>`).join("");
 }
 
@@ -104,7 +104,7 @@ async function init() {
 /* 從快照恢復：回到當時的對話進度；已結束的顯示結算 */
 async function restoreSession(sid) {
   try {
-    const { loadLearnSession } = await import("../core/learn-history.js");
+    const { loadLearnSession } = await import("../core/learn-history.js?v=sess002");
     const row = await loadLearnSession(supabase, sid, user.id);
     const st = row?.state;
     if (!st?.scenario) return false;
@@ -248,14 +248,14 @@ async function startScenario() {
     historyId = null;
     /* 建立學習會話：之後每回合存快照，歷史可點開恢復 */
     try {
-      const { createLearnSession } = await import("../core/learn-history.js");
+      const { createLearnSession } = await import("../core/learn-history.js?v=sess002");
       sessionId = await createLearnSession(supabase, user.id, "情境學習", concept);
     } catch {}
     renderStory(md(data.opening), data.firstChoices);
     saveSnap();
     /* 開局即寫歷史（進行中）：沒完成離開也有紀錄，點開可回來繼續 */
     try {
-      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js?v=sess002");
       historyId = await logLearnHistory(supabase, user.id, {
         type: "情境學習",
         topic: concept,
@@ -316,7 +316,7 @@ async function doChoice(choice, isFree = false) {
   turnCount++;
 
   const storyEl = $("sc-story");
-  storyEl.innerHTML += `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed oklch(1 0 0 / 0.15);"><b style="color:var(--brass-300);">你：</b>${esc(choice)}</div>`;
+  storyEl.innerHTML += `<div style="margin-top:16px;padding-top:16px;border-top:1px dashed var(--wash-15);"><b style="color:var(--brass-300);">你：</b>${esc(choice)}</div>`;
   storyEl.innerHTML += `<div style="margin-top:8px;color:var(--paper-400);">…</div>`;
   storyEl.scrollTop = storyEl.scrollHeight;
 
@@ -451,7 +451,7 @@ ${histText}
 
     /* 寫入學習歷程（帶 session，點開可回到這次旅程）：開局已寫過就更新同一筆 */
     try {
-      const { logLearnHistory, updateLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      const { logLearnHistory, updateLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js?v=sess002");
       await saveSnap({ done: true, result: data });
       const detail = `扮演${scenario.identity}・${turnCount} 回合・掌握度 ${data.mastery}%`;
       if (historyId) {

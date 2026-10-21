@@ -1,6 +1,6 @@
 /* 學習排程：接上 Google 日曆，用零碎時間排複習 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc } from "../core/ui.js?v=theme001";
 import { isLinked, linkCalendar, unlinkCalendar,
          listEvents, insertEvent, freeSlotsForDay, fmtTime, fmtDay } from "../core/gcal.js?v=cal002";
 

@@ -1,7 +1,7 @@
 /* 星艦解碼：街機射擊答題遊戲（本地運行） */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile, parseAIJson } from "../core/ui.js";
-import { renderTypeHistory } from "../core/learn-history.js";
+import { renderTopbar, requireAuth, esc, ensureProfile, parseAIJson } from "../core/ui.js?v=theme001";
+import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { initKbSelector } from "../core/kb-selector.js";
 import { chat, MODELS } from "../core/llm.js";
 import { blocksText } from "../core/blocks.js";
@@ -423,7 +423,7 @@ async function endGame(completed) {
       }
       // 寫入學習歷程（帶 session，點開可看戰績、用相同主題再玩）
       try {
-        const { logLearnHistory, refreshHistoryUI, createLearnSession, saveLearnSession, sessionLink } = await import("../core/learn-history.js");
+        const { logLearnHistory, refreshHistoryUI, createLearnSession, saveLearnSession, sessionLink } = await import("../core/learn-history.js?v=sess002");
         const sid = await createLearnSession(supabase, user.id, "街機", G.conquest?.name || G.topic || "星艦解碼");
         if (sid) {
           saveLearnSession(supabase, sid, {
@@ -566,7 +566,7 @@ async function init() {
   try {
     const sid = new URLSearchParams(location.search).get("session");
     if (sid) {
-      const { loadLearnSession } = await import("../core/learn-history.js");
+      const { loadLearnSession } = await import("../core/learn-history.js?v=sess002");
       const row = await loadLearnSession(supabase, sid, user.id);
       const st = row?.state;
       if (st && st.done) {

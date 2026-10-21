@@ -1,7 +1,7 @@
 /* v4 費曼討論：解釋 → 與 AI 討論 → 整理存入課本 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask, MODELS } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=theme001";
 import { initKbSelector } from "../core/kb-selector.js";
 import { blocksText } from "../core/blocks.js";
 
@@ -65,7 +65,7 @@ let sessionId = null;   // learn_sessions id（恢復進度用）
 async function saveSnap(extra = {}) {
   if (!sessionId) return;
   try {
-    const { saveLearnSession } = await import("../core/learn-history.js");
+    const { saveLearnSession } = await import("../core/learn-history.js?v=sess002");
     saveLearnSession(supabase, sessionId, {
       topic: topicEl.value.trim(), text: textEl.value.trim(),
       lastScore, lastFeedback, socratic: socraticHistory,
@@ -101,7 +101,7 @@ judgeBtn.onclick = async () => {
     /* 建立學習會話：之後每次回覆存快照，歷史可點開回到當時的討論 */
     if (!sessionId) {
       try {
-        const { createLearnSession } = await import("../core/learn-history.js");
+        const { createLearnSession } = await import("../core/learn-history.js?v=sess002");
         sessionId = await createLearnSession(supabase, user.id, "思辨對話", topic);
       } catch {}
     }
@@ -223,7 +223,7 @@ async function saveToTextbook() {
     if (error) throw error;
     /* 記錄到學習歷程（帶 session，點開可回到這次討論） */
     try {
-      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+      const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js?v=sess002");
       await saveSnap({ done: true });
       await logLearnHistory(supabase, user.id, {
         type: "思辨對話",
@@ -282,7 +282,7 @@ document.querySelectorAll("#fy-suggest button").forEach(b => {
 /* 從歷史點開：回到當時的討論（可繼續回應蘇格拉底的挑戰） */
 async function restoreFeynman(sid) {
   try {
-    const { loadLearnSession } = await import("../core/learn-history.js");
+    const { loadLearnSession } = await import("../core/learn-history.js?v=sess002");
     const row = await loadLearnSession(supabase, sid, user.id);
     const st = row?.state;
     if (!st?.topic || !st?.text) return false;
@@ -335,13 +335,13 @@ async function restoreFeynman(sid) {
   try {
     const sid = new URLSearchParams(location.search).get("session");
     if (sid && await restoreFeynman(sid)) {
-      const { renderTypeHistory } = await import("../core/learn-history.js");
+      const { renderTypeHistory } = await import("../core/learn-history.js?v=sess002");
       renderTypeHistory(supabase, user.id, "fy-history", "思辨對話");
       return;
     }
   } catch {}
   try {
-    const { renderTypeHistory } = await import("../core/learn-history.js");
+    const { renderTypeHistory } = await import("../core/learn-history.js?v=sess002");
     renderTypeHistory(supabase, user.id, "fy-history", "思辨對話");
   } catch {}
 })();

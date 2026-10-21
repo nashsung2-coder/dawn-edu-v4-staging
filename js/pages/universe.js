@@ -1,7 +1,7 @@
 /* v4 宇宙遊戲：星球征服 — 完整可玩版 */
 import { supabase } from "../core/supabase.js";
 import { chat, MODELS } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, applyTimeBg, ICO } from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, applyTimeBg, ICO } from "../core/ui.js?v=theme001";
 
 applyTimeBg();
 await renderTopbar("universe.html");
@@ -119,7 +119,13 @@ function showPanel(pid) {
   panel.classList.add("show");
   document.getElementById("btn-close").onclick = () => panel.classList.remove("show");
   const bc = document.getElementById("btn-conquer");
-  if (bc) bc.onclick = () => startBattle(p);
+  if (bc) bc.onclick = () => {
+    // 跳轉到街機遊戲進行征服戰（內在整合：射擊答題）
+    try {
+      sessionStorage.setItem("arcade_conquest", JSON.stringify({ planet_id: p.id, theme: p.theme, name: p.name }));
+    } catch {}
+    location.href = "arcade.html?mode=conquest";
+  };
 }
 
 /* ===== 征服戰鬥（重寫：題目+日誌同屏） ===== */
@@ -226,12 +232,12 @@ function askQuestionUI(battle, q, idx) {
     const qEl = document.getElementById("battle-question");
     const keys = ["A", "B", "C", "D"];
     qEl.innerHTML = `
-      <div style="background:oklch(1 0 0/0.04);border-radius:10px;padding:14px;margin:12px 0;">
+      <div style="background:var(--wash-04);border-radius:10px;padding:14px;margin:12px 0;">
         <div style="font-size:12px;color:var(--paper-400);margin-bottom:8px;">第 ${idx + 1} / ${battle.questions.length} 題</div>
         <p style="margin:0 0 12px;font-size:14px;line-height:1.6;">${esc(q.q)}</p>
         <div style="display:grid;gap:8px;">
           ${q.opts.map((o, i) => `
-            <button class="q-opt" data-k="${keys[i]}" style="text-align:left;padding:10px 12px;border-radius:8px;border:1px solid oklch(1 0 0/0.12);background:transparent;color:var(--paper-100);cursor:pointer;font-size:13px;">
+            <button class="q-opt" data-k="${keys[i]}" style="text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--wash-12);background:transparent;color:var(--paper-100);cursor:pointer;font-size:13px;">
               <b style="color:var(--brass-300);">${keys[i]}</b> ${esc(o)}
             </button>`).join("")}
         </div>
@@ -322,7 +328,7 @@ async function finishBattle(battle, log) {
   } else {
     const dmgNeeded = battle.hp;
     document.getElementById("battle-question").innerHTML = `
-      <div style="text-align:center;padding:20px;background:oklch(1 0 0/0.03);border-radius:12px;margin:12px 0;">
+      <div style="text-align:center;padding:20px;background:var(--wash-03);border-radius:12px;margin:12px 0;">
         <div style="font-size:40px;margin-bottom:8px;">💔</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;">征服失敗</div>
         <div style="font-size:13px;color:var(--paper-400);">答對 ${battle.correct}/${battle.questions.length} 題<br>守衛還剩 ${dmgNeeded} 血量</div>
@@ -351,7 +357,7 @@ async function showHistory() {
   panel.innerHTML = `
     <h3>戰鬥紀錄</h3>
     ${(data || []).length ? (data.map(b => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid oklch(1 0 0/0.06);font-size:13px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--wash-06);font-size:13px;">
         <span style="font-size:18px;">${b.won ? "🏆" : "💔"}</span>
         <div style="flex:1;">
           <div>${esc(b.planets?.name || "未知星球")}</div>

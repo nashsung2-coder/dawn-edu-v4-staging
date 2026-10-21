@@ -1,9 +1,9 @@
 /* v4 知識對戰 v2：自適應難度 + 知識內容驗證 + 掌握度追蹤 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, parseAIJson} from "../core/ui.js?v=fixed002";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, parseAIJson} from "../core/ui.js?v=theme001";
 import { initKbSelector } from "../core/kb-selector.js";
-import { renderTypeHistory } from "../core/learn-history.js";
+import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { blocksText } from "../core/blocks.js";
 
 await renderTopbar("quiz.html");
@@ -38,7 +38,7 @@ let sessionId = null;     // learn_sessions id（恢復進度用）
 async function saveSnap(extra = {}) {
   if (!sessionId) return;
   try {
-    const { saveLearnSession } = await import("../core/learn-history.js");
+    const { saveLearnSession } = await import("../core/learn-history.js?v=sess002");
     saveLearnSession(supabase, sessionId, {
       mode, topic, knowledgeContent, level, streak, hardStreak,
       totalQ, totalCorrect, history, currentQ,
@@ -50,7 +50,7 @@ async function saveSnap(extra = {}) {
 /* 從歷史點開：回到當時的對戰進度 */
 async function restoreQuizSession(sid) {
   try {
-    const { loadLearnSession } = await import("../core/learn-history.js");
+    const { loadLearnSession } = await import("../core/learn-history.js?v=sess002");
     const row = await loadLearnSession(supabase, sid, user.id);
     const st = row?.state;
     if (!st?.topic) { renderSetup(); return; }
@@ -76,7 +76,7 @@ function renderRestoredSummary(st) {
       <h2>「${esc(topic)}」的對戰紀錄</h2>
       <div class="q-score">${score}</div>
       <p style="color:var(--paper-400);margin:8px 0;">答對 ${totalCorrect} / ${totalQ} 題${st.mastered ? "・已掌握" : ""}</p>
-      <div style="text-align:left;margin:16px 0;max-height:200px;overflow-y:auto;border:1px solid oklch(1 0 0 / 0.08);border-radius:8px;padding:12px;">
+      <div style="text-align:left;margin:16px 0;max-height:200px;overflow-y:auto;border:1px solid var(--wash-08);border-radius:8px;padding:12px;">
         ${history.map((h, i) => `<div style="font-size:12px;margin-bottom:6px;"><span style="color:${h.ok ? "var(--leaf-green)" : "var(--signal-red)"};">${h.ok ? "✓" : "✗"}</span> ${esc(h.q.slice(0, 40))}… <span style="color:var(--paper-400);">[${h.level}]</span></div>`).join("")}
       </div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
@@ -204,7 +204,7 @@ async function startBattle() {
   totalQ = 0; totalCorrect = 0; history = [];
   /* 建立學習會話：每題存快照，歷史可點開回到當時的題目 */
   try {
-    const { createLearnSession } = await import("../core/learn-history.js");
+    const { createLearnSession } = await import("../core/learn-history.js?v=sess002");
     sessionId = await createLearnSession(supabase, user.id, "知識對戰", topic);
   } catch {}
   await nextQuestion();
@@ -218,7 +218,7 @@ async function nextQuestion() {
         <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:oklch(0.75 0.15 80 / 0.15);color:var(--brass-300);">難度：${lv.nm}</span>
         <span style="font-size:12px;color:var(--paper-400);">已答 ${totalQ} 題 · 答對 ${totalCorrect}</span>
       </div>
-      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
+      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:var(--wash-08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
       <div class="skeleton" style="height:20px;width:70%;margin:6px 0 18px;"></div>
       <div class="skeleton" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
       <div class="skeleton" style="height:44px;margin-bottom:10px;border-radius:12px;"></div>
@@ -271,14 +271,14 @@ function renderQuestion() {
         <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:oklch(0.75 0.15 80 / 0.15);color:var(--brass-300);">難度：${lv.nm}</span>
         <span style="font-size:12px;color:var(--paper-400);">已答 ${totalQ} 題 · 答對 ${totalCorrect}</span>
       </div>
-      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:oklch(1 0 0 / 0.08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
+      ${hardStreak > 0 ? `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--paper-400);margin-bottom:4px;">掌握進度 ${hardStreak}/${MASTERY_STREAK}</div><div style="height:6px;border-radius:3px;background:var(--wash-08);"><div class="bar-fill" style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#c09030,#f0d080);transform:scaleX(${(hardStreak / MASTERY_STREAK).toFixed(2)})"></div></div></div>` : ""}
       <h2 style="margin-bottom:16px;font-size:17px;">${esc(q.question)}</h2>
       <div id="qz-opts" class="stagger">${q.options.map((o, i) => {
         // 去除 AI 可能自帶的 "A:" "B." "C、" 等前綴，避免跟字母徽章重複
         const clean = String(o).replace(/^[A-D][:\.、\s]+/, "").trim();
         return `<button class="opt-btn" data-i="${i}"><span class="opt-key">${keys[i]}</span>${esc(clean)}</button>`;
       }).join("")}</div>
-      <div id="qz-explain" style="display:none;margin-top:16px;padding:12px;border-radius:8px;background:oklch(1 0 0 / 0.04);font-size:13px;line-height:1.7;"></div>
+      <div id="qz-explain" style="display:none;margin-top:16px;padding:12px;border-radius:8px;background:var(--wash-04);font-size:13px;line-height:1.7;"></div>
       <button class="btn btn-ghost" id="qz-stop" style="margin-top:16px;width:100%;">結束對戰</button>
     </div>`;
   view.querySelectorAll(".opt-btn").forEach(b => {
@@ -357,14 +357,14 @@ async function finish(mastered) {
       <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">${mastered ? "MASTERED" : "RESULT"}</div>
       ${mastered ? `<div style="font-size:48px;margin-bottom:8px;">🏆</div><h2>完全掌握！</h2><p style="color:var(--paper-400);">你在「${LEVELS[maxLevel]?.nm || ""}」難度連續答對，已掌握「${esc(topic)}」</p>`
         : `<div class="q-score">${score}</div><p style="color:var(--paper-400);margin:8px 0;">答對 ${totalCorrect} / ${totalQ} 題 · 最高難度：${LEVELS[maxLevel]?.nm || "—"}</p>`}
-      <div style="text-align:left;margin:16px 0;max-height:200px;overflow-y:auto;border:1px solid oklch(1 0 0 / 0.08);border-radius:8px;padding:12px;">
+      <div style="text-align:left;margin:16px 0;max-height:200px;overflow-y:auto;border:1px solid var(--wash-08);border-radius:8px;padding:12px;">
         ${history.map((h, i) => `<div style="font-size:12px;margin-bottom:6px;"><span style="color:${h.ok ? "var(--leaf-green)" : "var(--signal-red)"};">${h.ok ? "✓" : "✗"}</span> ${esc(h.q.slice(0, 40))}… <span style="color:var(--paper-400);">[${h.level}]</span></div>`).join("")}
       </div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;">
         <button class="btn btn-primary" id="qz-again">再戰一場</button>
         <button class="btn btn-ghost" id="qz-home">回總覽</button>
       </div>
-      <div style="border-top:1px solid oklch(1 0 0 / 0.08);padding-top:12px;">
+      <div style="border-top:1px solid var(--wash-08);padding-top:12px;">
         <p style="font-size:12px;color:var(--paper-400);margin-bottom:8px;">把這場對戰整理成知識節點，滋養你的群島</p>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
           <input class="input" id="qz-cat" placeholder="分類（例：物理）" style="width:130px;" maxlength="12">
@@ -410,7 +410,7 @@ async function finish(mastered) {
   }
   /* 記錄到學習歷程（帶 session，點開可回到這場對戰） */
   try {
-    const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js");
+    const { logLearnHistory, refreshHistoryUI, sessionLink } = await import("../core/learn-history.js?v=sess002");
     await saveSnap({ done: true, mastered, score });
     await logLearnHistory(supabase, user.id, {
       type: "知識對戰",

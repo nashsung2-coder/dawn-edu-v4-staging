@@ -1,6 +1,6 @@
 /* 新手指引：心理測驗 → 選角色 → 選交通工具 → 選服裝 */
 import { supabase } from "../core/supabase.js";
-import { requireAuth, toast, esc, applyTimeBg } from "../core/ui.js?v=fixed002";
+import { requireAuth, toast, esc, applyTimeBg } from "../core/ui.js?v=theme001";
 
 applyTimeBg();
 const user = await requireAuth();
