@@ -84,7 +84,7 @@ button:disabled { cursor: default; }
   to   { background-position: 200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, oklch(1 0 0 / 0.04) 25%, oklch(1 0 0 / 0.10) 50%, oklch(1 0 0 / 0.04) 75%);
+  background: linear-gradient(90deg, var(--wash-04) 25%, var(--wash-10) 50%, var(--wash-04) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s var(--ease-in-out) infinite;
   border-radius: 8px;
