@@ -3,7 +3,7 @@
 import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
 import { ask, MODELS } from "../core/llm.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=theme001";
-import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=fixed002";
+import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=draftfix001";
 
 const params = new URLSearchParams(location.search);
 const editId = params.get("id"); // 編輯現有節點時帶 id
@@ -144,17 +144,20 @@ setInterval(updateWordCount, 2000);
 
 /* ---------- 載入：草稿優先，其次為已發布節點 ---------- */
 async function loadInitial() {
-  // 1. 先看本地草稿
-  try {
-    const raw = localStorage.getItem(draftKey());
-    if (raw) {
-      const d = JSON.parse(raw);
-      applyData(d);
-      setStatus(publishedNodeId ? "published" : "draft", "已還原本地草稿");
-      renderVersionList();
-      return;
-    }
-  } catch {}
+  // 新增模式一律從空白開始（不還原上次的 new 草稿）；
+  // 只有「編輯現有節點」時才還原該節點的本地草稿
+  if (editId) {
+    try {
+      const raw = localStorage.getItem(draftKey());
+      if (raw) {
+        const d = JSON.parse(raw);
+        applyData(d);
+        setStatus("published", "已還原本地草稿");
+        renderVersionList();
+        return;
+      }
+    } catch {}
+  }
   // 2. 編輯現有節點：從資料庫載入
   if (editId) {
     const { data, error } = await supabase.from("knowledge_nodes").select("*").eq("id", editId).single();
