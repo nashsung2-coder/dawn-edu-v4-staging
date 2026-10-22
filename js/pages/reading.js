@@ -1,5 +1,5 @@
 /* AI 跨語言閱讀：用學過的知識練想學的語言 */
-import { renderTopbar, requireAuth, esc, toast } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, esc, toast } from "../core/ui.js?v=theme002";
 import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { ask } from "../core/llm.js";
 import { blocksText } from "../core/blocks.js";

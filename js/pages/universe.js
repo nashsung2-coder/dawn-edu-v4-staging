@@ -1,7 +1,7 @@
 /* v4 宇宙遊戲：星球征服 — 完整可玩版 */
 import { supabase } from "../core/supabase.js";
 import { chat, MODELS } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, applyTimeBg, ICO } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, applyTimeBg, ICO } from "../core/ui.js?v=theme002";
 
 applyTimeBg();
 await renderTopbar("universe.html");

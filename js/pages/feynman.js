@@ -1,7 +1,7 @@
 /* v4 費曼討論：解釋 → 與 AI 討論 → 整理存入課本 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask, MODELS } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, esc, md, ensureProfile } from "../core/ui.js?v=theme002";
 import { initKbSelector } from "../core/kb-selector.js";
 import { blocksText } from "../core/blocks.js";
 

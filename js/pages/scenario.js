@@ -1,5 +1,5 @@
 /* 情境式學習：化身概念，用經歷去理解 */
-import { renderTopbar, requireAuth, esc, toast, md } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, esc, toast, md } from "../core/ui.js?v=theme002";
 import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { ask } from "../core/llm.js";
 import { blocksText } from "../core/blocks.js";

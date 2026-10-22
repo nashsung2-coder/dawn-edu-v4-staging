@@ -1,6 +1,6 @@
 /* 商店頁：商品列表 / 購買 / 背包 / 雷達圖詳情 */
 import { supabase, getUser, getProfile } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme002";
 
 await renderTopbar("market.html");
 const user = await requireAuth();

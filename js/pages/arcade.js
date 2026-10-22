@@ -1,6 +1,6 @@
 /* 星艦解碼：街機射擊答題遊戲（本地運行） */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, esc, ensureProfile, parseAIJson } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, esc, ensureProfile, parseAIJson } from "../core/ui.js?v=theme002";
 import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { initKbSelector } from "../core/kb-selector.js";
 import { chat, MODELS } from "../core/llm.js";

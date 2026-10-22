@@ -2,7 +2,7 @@
 /* 草稿 → 本地儲存（localStorage）；發布 → Supabase；版本 → 快照紀錄 */
 import { supabase, getProfile } from "../core/supabase.js?v=fixed002";
 import { ask, MODELS } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile } from "../core/ui.js?v=theme002";
 import { BLOCK_TYPES, newBlock, createEditor, renderBlocks, blocksText } from "../core/blocks.js?v=draftfix001";
 
 const params = new URLSearchParams(location.search);

@@ -1,6 +1,6 @@
 /* 知識節點獨立閱讀頁：像電子書/部落格一樣打開 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, ensureProfile } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, ensureProfile } from "../core/ui.js?v=theme002";
 // 本地定義 esc，不依賴 ui.js 導出
 const htmlEsc = (s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])));
 import { renderBlocks, blocksText } from "../core/blocks.js?v=fixed002";

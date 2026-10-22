@@ -1,6 +1,6 @@
 /* 主控台 v2：小曙對話優先 */
 import { supabase } from "../core/supabase.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, md } from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, md } from "../core/ui.js?v=theme002";
 import { buildLearningContext, companionChat, companionGreeting } from "../core/companion.js";
 import { getRecentHistory, renderHistoryList } from "../core/learn-history.js?v=sess002";
 
@@ -48,7 +48,7 @@ function addMsg(role, text) {
     const textBefore = (htmlStart > 0 ? text.slice(0, htmlStart) : "").trim();
     let inner = "";
     if (textBefore) inner += `<div style="margin-bottom:8px;">${esc(textBefore).replace(/\n/g, "<br>")}</div>`;
-    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid var(--wash-10);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
+    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid var(--wash-10);border-radius:12px;background:var(--iframe-bg);" srcdoc="${esc(htmlContent)}"></iframe>`;
     div.innerHTML = inner;
   } else {
     div.innerHTML = md(text);

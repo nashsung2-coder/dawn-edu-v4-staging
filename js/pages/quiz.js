@@ -1,7 +1,7 @@
 /* v4 知識對戰 v2：自適應難度 + 知識內容驗證 + 掌握度追蹤 */
 import { supabase, getUser } from "../core/supabase.js";
 import { ask } from "../core/llm.js";
-import { renderTopbar, requireAuth, toast, esc, ensureProfile, parseAIJson} from "../core/ui.js?v=theme001";
+import { renderTopbar, requireAuth, toast, esc, ensureProfile, parseAIJson} from "../core/ui.js?v=theme002";
 import { initKbSelector } from "../core/kb-selector.js";
 import { renderTypeHistory } from "../core/learn-history.js?v=sess002";
 import { blocksText } from "../core/blocks.js";
