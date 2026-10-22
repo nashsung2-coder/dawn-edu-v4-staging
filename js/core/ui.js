@@ -1,7 +1,7 @@
 /* v4 \u6838\u5fc3\uff1a\u5171\u7528 UI\uff08\u9802\u6b04\u3001\u6642\u6bb5\u80cc\u666f\u3001toast\uff09 */
 import { getUser, getProfile, signOut, supabase } from "./supabase.js";
 import { buildLearningContext, companionChat } from "./companion.js";
-import { applyTheme, startThemeWatcher, themeToggleHTML, bindThemeToggle, greetBarHTML, refreshGreetBar } from "./theme.js?v=theme001";
+import { applyTheme, startThemeWatcher, themeToggleHTML, bindThemeToggle, greetBarHTML, refreshGreetBar } from "./theme.js?v=theme002";
 
 const NAV_GROUPS = [
   { label: "\u4e3b\u63a7\u53f0", items: [
@@ -258,7 +258,7 @@ export async function renderTopbar(current) {
   } catch {}
   /* 環境氛圍：滑鼠跟隨柔光＋視差 */
   try {
-    const { initAmbient } = await import("./ambient.js?v=theme001");
+    const { initAmbient } = await import("./ambient.js?v=theme002");
     initAmbient();
   } catch {}
   /* AI 免責聲明：互動功能頁在 page-head 下自動掛載 */
@@ -526,7 +526,7 @@ function fcAddMsg(role, text) {
     const textBefore = (htmlStart > 0 ? text.slice(0, htmlStart) : "").trim();
     let inner = "";
     if (textBefore) inner += `<div style="margin-bottom:8px;">${md(textBefore)}</div>`;
-    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid oklch(1 0 0 / 0.1);border-radius:12px;background:#1a1a2e;" srcdoc="${esc(htmlContent)}"></iframe>`;
+    inner += `<iframe sandbox="allow-same-origin" style="width:100%;min-height:300px;border:1px solid var(--wash-10);border-radius:12px;background:var(--iframe-bg);" srcdoc="${esc(htmlContent)}"></iframe>`;
     div.innerHTML = inner;
   } else {
     div.innerHTML = role === "ai" ? md(text) : esc(text).replace(/\n/g, "<br>");

@@ -4,7 +4,7 @@
  * 只有 transform / opacity，走 GPU；尊重 prefers-reduced-motion；觸控裝置降級為純漂移。
  * 調色跟著時段走（dawn:slot 事件）：拂曉粉金、正午明亮、黃昏紫霞、深夜暖金＋冷青。
  */
-import { SLOTS } from "./theme.js?v=theme001";
+import { SLOTS } from "./theme.js?v=theme002";
 
 const HUES_BY_SLOT = Object.fromEntries(SLOTS.map(s => [s.id, s.hues]));
 function slotHues() {
