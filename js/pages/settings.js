@@ -1,6 +1,7 @@
 /* v4 設定頁 */
 import { supabase, getProfile, signOut } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile} from "../core/ui.js?v=theme002";
+import { isEnabled as crEnabled, setEnabled as crSetEnabled } from "../core/classroom.js?v=cr001";
 
 await renderTopbar("settings.html");
 const user = await requireAuth();
@@ -57,6 +58,16 @@ try {
       <p class="label" style="margin-bottom:12px;">下載你的學習歷程（JSON）</p>
       <button class="btn btn-ghost" id="s-export">匯出學習歷程</button>
       <div id="s-export-fb"></div>
+    </div>
+
+    <div class="card span6">
+      <h2>選用功能</h2>
+      <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:14px;">
+        <input type="checkbox" id="s-feat-classroom" style="width:18px;height:18px;accent-color:var(--brass-400);margin-top:2px;flex:none;">
+        <span><b>Google Classroom 整合</b><br>
+        <span style="font-size:13px;color:var(--paper-400);">在主控台顯示待交作業，並可同步到學習排程。啟用後需再連結你的 Google 帳號授權（唯讀）。</span></span>
+      </label>
+      <div id="s-feat-fb"></div>
     </div>
 
     <div class="card span6">
@@ -124,6 +135,14 @@ try {
     } catch (e) {
       fb("s-export-fb", "匯出失敗：" + e.message, false);
     }
+  };
+
+  /* 選用功能：Google Classroom */
+  const crBox = document.getElementById("s-feat-classroom");
+  crBox.checked = crEnabled();
+  crBox.onchange = () => {
+    crSetEnabled(crBox.checked);
+    fb("s-feat-fb", crBox.checked ? "已啟用：到主控台按「連結 Classroom」完成授權" : "已停用", true);
   };
 
   /* 登出 */

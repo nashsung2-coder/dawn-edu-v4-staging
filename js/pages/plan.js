@@ -2,7 +2,9 @@
 import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc } from "../core/ui.js?v=theme002";
 import { isLinked, linkCalendar, unlinkCalendar,
-         listEvents, insertEvent, freeSlotsForDay, fmtTime, fmtDay } from "../core/gcal.js?v=cal002";
+         listEvents, insertEvent, insertAllDayEvent, freeSlotsForDay, fmtTime, fmtDay } from "../core/gcal.js?v=cal003";
+import { isEnabled as crEnabled, isLinked as crLinked, linkClassroom,
+         upcomingWork, fmtDue } from "../core/classroom.js?v=cr001";
 
 let user;
 const view = document.getElementById("plan-view");
@@ -131,6 +133,10 @@ function renderPlan(events, dueCards, upcoming, plan, now) {
       <p style="font-size:14px;">逾期 <b style="color:var(--signal-red);">${dueCards.length}</b> 張・本週到期 <b>${upcoming.length}</b> 張</p>
       ${dueCards.length + upcoming.length === 0 ? `<p style="font-size:13px;color:var(--paper-400);margin-top:8px;">太棒了，目前沒有待複習，排程會以維持為主。</p>` : ""}
     </div>
+    ${crEnabled() ? `<div class="card" style="margin-bottom:16px;" id="cr-plan-card">
+      <h2 style="font-size:16px;margin-bottom:4px;">Classroom 待交作業</h2>
+      <div id="cr-plan-list"><p style="font-size:13px;color:var(--paper-400);">讀取中…</p></div>
+    </div>` : ""}
     <div class="card">
       <h2 style="font-size:16px;margin-bottom:4px;">建議排程（未來 7 天）</h2>
       <p style="font-size:13px;color:var(--paper-400);margin-bottom:12px;">依照你的行事曆空檔排入零碎時間，確認後寫進 Google 日曆。</p>
@@ -144,6 +150,61 @@ function renderPlan(events, dueCards, upcoming, plan, now) {
   };
   const btn = document.getElementById("btn-confirm");
   if (btn) btn.onclick = () => writePlan(plan);
+  if (crEnabled()) renderClassroomCard().catch(e => console.error("classroom 載入失敗:", e));
+}
+
+/* ---------- Classroom 待交作業卡 ---------- */
+async function renderClassroomCard() {
+  const box = document.getElementById("cr-plan-list");
+  if (!box) return;
+  if (!await crLinked()) {
+    box.innerHTML = `<p style="font-size:13px;color:var(--paper-400);margin-bottom:10px;">連結後可把作業截止日寫進行事曆。</p>
+      <button class="btn btn-ghost btn-sm" id="cr-plan-link">連結 Classroom</button>`;
+    document.getElementById("cr-plan-link").onclick = async () => {
+      try { await linkClassroom(); renderClassroomCard(); }
+      catch (e) { toast("連結失敗：" + e.message); }
+    };
+    return;
+  }
+  try {
+    const items = await upcomingWork();
+    if (!items.length) {
+      box.innerHTML = `<p style="font-size:13px;color:var(--paper-400);">近 7 天沒有待交作業。</p>`;
+      return;
+    }
+    box.innerHTML = items.slice(0, 10).map((it, i) => {
+      const f = fmtDue(it.due);
+      const d = new Date(it.due);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return `<div class="plan-event">
+        <span class="t" style="color:${f.over ? "var(--signal-red)" : "var(--brass-300)"};">${esc(f.text)}</span>
+        <span style="flex:1;"><b>${esc(it.course)}</b> ${esc(it.title)}</span>
+        <button class="btn btn-ghost btn-sm" data-cr-add="${i}" data-iso="${iso}"
+          data-title="${esc(it.title)}" data-course="${esc(it.course)}" data-link="${esc(it.link)}">＋行事曆</button>
+      </div>`;
+    }).join("");
+    box.querySelectorAll("[data-cr-add]").forEach(btn => {
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          await insertAllDayEvent({
+            summary: `繳交｜${btn.dataset.title}`,
+            description: `課程：${btn.dataset.course}\nClassroom：${btn.dataset.link}\n由曙光學習排入`,
+            date: btn.dataset.iso,
+          });
+          toast("已加入行事曆");
+          btn.textContent = "已加入";
+        } catch (e) {
+          toast("加入失敗：" + e.message);
+          btn.disabled = false;
+        }
+      };
+    });
+  } catch (e) {
+    box.innerHTML = `<p style="font-size:13px;color:var(--signal-red);">讀取失敗：${esc(e.message)}</p>
+      <button class="btn btn-ghost btn-sm" id="cr-plan-retry" style="margin-top:8px;">重試</button>`;
+    document.getElementById("cr-plan-retry").onclick = () => renderClassroomCard();
+  }
 }
 
 async function writePlan(plan) {

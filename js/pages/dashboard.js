@@ -3,6 +3,7 @@ import { supabase } from "../core/supabase.js";
 import { renderTopbar, requireAuth, toast, esc, ensureProfile, md } from "../core/ui.js?v=theme002";
 import { buildLearningContext, companionChat, companionGreeting } from "../core/companion.js";
 import { getRecentHistory, renderHistoryList } from "../core/learn-history.js?v=sess002";
+import { isEnabled as crEnabled, isLinked as crLinked, linkClassroom, upcomingWork, fmtDue } from "../core/classroom.js?v=cr001";
 
 const $ = id => document.getElementById(id);
 let learningContext = "";
@@ -225,6 +226,47 @@ async function startAha() {
   saveChatHistory();
 }
 
+/* ---------- Google Classroom 待交作業（選用功能） ---------- */
+async function renderClassroom() {
+  const sec = document.getElementById("cr-section");
+  const box = document.getElementById("cp-classroom");
+  if (!sec || !box || !crEnabled()) return;
+  sec.style.display = "";
+  if (!await crLinked()) {
+    box.innerHTML = `<div class="card" style="padding:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;font-size:14px;">連結 Google Classroom，在主控台直接看到各科待交作業。</div>
+      <button class="btn btn-primary btn-sm" id="cr-link-btn">連結 Classroom</button>
+    </div>`;
+    document.getElementById("cr-link-btn").onclick = async () => {
+      try { await linkClassroom(); renderClassroom(); }
+      catch (e) { toast("連結失敗：" + e.message); }
+    };
+    return;
+  }
+  box.innerHTML = `<div class="card" style="padding:16px;"><div style="font-size:13px;color:var(--paper-400);">讀取 Classroom 作業…</div></div>`;
+  try {
+    const items = await upcomingWork();
+    if (!items.length) {
+      box.innerHTML = `<div class="card" style="padding:16px;"><div style="font-size:14px;color:var(--paper-400);">近 7 天沒有待交作業，好好享受空閒吧。</div></div>`;
+      return;
+    }
+    const rows = items.slice(0, 6).map(it => {
+      const f = fmtDue(it.due);
+      return `<a href="${it.link}" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px dashed var(--wash-08);text-decoration:none;color:inherit;">
+        <span style="font-size:12px;color:var(--brass-300);white-space:nowrap;">${esc(it.course)}</span>
+        <span style="flex:1;font-size:14px;">${esc(it.title)}</span>
+        <span style="font-size:12px;white-space:nowrap;color:${f.over ? "var(--signal-red)" : f.urgent ? "var(--brass-300)" : "var(--paper-400)"};">${esc(f.text)}</span>
+      </a>`;
+    }).join("");
+    box.innerHTML = `<div class="card" style="padding:16px;">${rows}
+      ${items.length > 6 ? `<div style="font-size:12px;color:var(--paper-400);margin-top:8px;">還有 ${items.length - 6} 份，到學習排程看完整清單</div>` : ""}</div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="card" style="padding:16px;"><div style="font-size:13px;color:var(--signal-red);">讀取失敗：${esc(e.message)}</div>
+      <button class="btn btn-ghost btn-sm" id="cr-retry" style="margin-top:8px;">重試</button></div>`;
+    document.getElementById("cr-retry").onclick = () => renderClassroom();
+  }
+}
+
 async function init() {
   try {
     await renderTopbar("dashboard.html");
@@ -262,7 +304,7 @@ async function init() {
 
     // 小曙主動打招呼：全新用戶先彈出完整平台導引（讀完確認才放行；有對話紀錄或已導引過就不用）
     if (isNewUser && !hasHistory && !guideDone) {
-      const { showPlatformGuide } = await import("../core/guide.js");
+      const { showPlatformGuide } = await import("../core/guide.js?v=cr001");
       showPlatformGuide({ onDone: () => { finishGuide(); guideWelcome(); } });
     } else if (isNewUser && !hasHistory) {
       $("cp-greeting").innerHTML = `嗨，我是小曙，你的學習陪伴者！<br><br>我跟其他 AI 不一樣——我不會直接給你答案，而是用問題帶你自己想通。<br><br>要不要體驗 1 分鐘看看？`;
@@ -327,6 +369,9 @@ async function init() {
     } catch {
       $("cp-suggestions-list").innerHTML = `<div style="color:var(--paper-400);">載入失敗</div>`;
     }
+
+    // Google Classroom 待交作業（選用功能）
+    renderClassroom().catch(e => console.error("classroom 載入失敗:", e));
 
     // 近 5 天學習紀錄
     try {

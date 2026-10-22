@@ -123,7 +123,7 @@ try {
   /* 平台導引：隨時可以重開來看 */
   try {
     document.getElementById("home-guide").onclick = async () => {
-      const { showPlatformGuide } = await import("../core/guide.js");
+      const { showPlatformGuide } = await import("../core/guide.js?v=cr001");
       showPlatformGuide();
     };
   } catch {}
