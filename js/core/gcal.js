@@ -116,6 +116,21 @@ export async function insertEvent({ summary, description, start, end }) {
   });
 }
 
+/* 全天事件（date: "YYYY-MM-DD"） */
+export async function insertAllDayEvent({ summary, description, date }) {
+  const d = new Date(date + "T12:00:00");
+  const next = new Date(d.getTime() + 86400000);
+  const iso = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  return gcal(`/calendars/primary/events`, {
+    method: "POST",
+    body: JSON.stringify({
+      summary, description,
+      start: { date: iso(d) }, end: { date: iso(next) },
+      extendedProperties: { private: { dawn: "plan" } },
+    }),
+  });
+}
+
 /* ---------- 空檔計算：某日 08:00–22:00 內、事件之間的縫隙 ---------- */
 export function freeSlotsForDay(events, day, minMinutes = 20) {
   const start = new Date(day); start.setHours(8, 0, 0, 0);
