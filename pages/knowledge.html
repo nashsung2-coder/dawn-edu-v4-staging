@@ -10,8 +10,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>曙光寶庫 — 曙光學習</title>
 <link rel="manifest" href="../manifest.json">
-<link rel="stylesheet" href="../css/tokens.css?v=theme001">
-<link rel="stylesheet" href="../css/motion.css?v=theme001">
+<link rel="stylesheet" href="../css/tokens.css?v=theme002">
+<link rel="stylesheet" href="../css/motion.css?v=theme002">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -42,10 +42,10 @@
   </div>
 
   <!-- 提問引導：學習入口 -->
-  <div class="card" id="ask-hero" style="margin-bottom:20px;background:linear-gradient(135deg, oklch(0.24 0.05 260), oklch(0.20 0.04 280));border:1px solid oklch(0.60 0.12 80 / 0.25);">
+  <div class="card" id="ask-hero" style="margin-bottom:20px;background:var(--hero-bg);border:1px solid oklch(0.60 0.12 80 / 0.25);">
     <div class="en" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--brass-400);margin-bottom:8px;">ASK TO LEARN</div>
     <h2 style="margin-bottom:12px;">你想學什麼？</h2>
-    <p style="color:var(--paper-300);font-size:14px;margin-bottom:16px;">不只收納知識，文化與趣味收藏也在這裡。問一個問題，曙光寶庫帶你找到答案，再用思辨對話、對戰、複習把它變成你的。</p>
+    <p style="color:var(--paper-200);font-size:14px;margin-bottom:16px;">不只收納知識，文化與趣味收藏也在這裡。問一個問題，曙光寶庫帶你找到答案，再用思辨對話、對戰、複習把它變成你的。</p>
     <div class="search-row" style="margin-bottom:12px;">
       <input class="input" id="ask-q" type="search" placeholder="例如：為什麼天空是藍色的？" aria-label="問一個問題開始學習">
       <button class="btn btn-primary" id="ask-go">開始學習</button>
@@ -57,7 +57,7 @@
       <button class="btn btn-ghost btn-sm ask-example" data-q="勾股定理為什麼成立？">勾股定理為什麼成立？</button>
     </div>
     <div id="ask-actions" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid oklch(0.60 0.12 80 / 0.15);">
-      <div style="font-size:13px;color:var(--paper-300);margin-bottom:10px;">已為你搜尋「<span id="ask-keyword" style="color:var(--brass-300);"></span>」相關節點，選擇下一步：</div>
+      <div style="font-size:13px;color:var(--paper-200);margin-bottom:10px;">已為你搜尋「<span id="ask-keyword" style="color:var(--brass-300);"></span>」相關節點，選擇下一步：</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary btn-sm" id="ask-feynman">用費曼說服深入</button>
         <button class="btn btn-primary btn-sm" id="ask-quiz">出題對戰檢驗</button>
