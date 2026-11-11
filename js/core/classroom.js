@@ -132,17 +132,17 @@ async function mySubmissionState(courseId, workId) {
 
 function dueDateOf(w) {
   if (!w.dueDate) return null;
-  const d = new Date(w.dueDate.year, w.dueDate.month - 1, w.dueDate.day);
-  if (w.dueTime) d.setHours(w.dueTime.hours || 23, w.dueTime.minutes || 59, 0, 0);
-  else d.setHours(23, 59, 0, 0);
-  return d;
+  const { year, month, day } = w.dueDate;
+  const { hours = 0, minutes = 0, seconds = 0, nanos = 0 } = w.dueTime ?? { hours: 23, minutes: 59 };
+  // Classroom 提供的日期與時間皆為 UTC。
+  return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, Math.floor(nanos / 1e6)));
 }
 
 /* 未繳交的作業：近 7 天逾期＋未來到期，依截止日排序 */
 export async function upcomingWork({ force = false } = {}) {
   try {
     const cached = JSON.parse(localStorage.getItem(LS_WORK) || "null");
-    if (!force && cached?.ts && Date.now() - cached.ts < WORK_TTL) return cached.data;
+    if (!force && cached?.version === 2 && Date.now() - cached.ts < WORK_TTL) return cached.data;
   } catch {}
   const courses = await listCourses();
   const nameOf = Object.fromEntries(courses.map(c => [c.id, c.name]));
@@ -166,9 +166,9 @@ export async function upcomingWork({ force = false } = {}) {
   const check = items.slice(0, 20);
   const states = await Promise.all(check.map(i => mySubmissionState(i.courseId, i.id)));
   const done = new Set(["TURNED_IN", "RETURNED"]);
-  items = items.filter((it, i) => i >= check.length || !done.has(states[i]));
-  items = items.map((it, i) => ({ ...it, state: i < check.length ? states[i] : null }));
-  try { localStorage.setItem(LS_WORK, JSON.stringify({ ts: Date.now(), data: items })); } catch {}
+  items = items.map((it, i) => ({ ...it, state: states[i] ?? null }))
+    .filter(it => !done.has(it.state));
+  try { localStorage.setItem(LS_WORK, JSON.stringify({ version: 2, ts: Date.now(), data: items })); } catch {}
   return items;
 }
 
